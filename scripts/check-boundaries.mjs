@@ -44,6 +44,15 @@ for (const name of ["core", "player"]) {
     issues.push(`${name}: forbidden bundled code`);
 }
 if (issues.length) throw new Error(issues.join("\n"));
+const editor = JSON.parse(
+  await readFile("packages/editor/package.json", "utf8"),
+);
+for (const dependency of Object.keys(editor.dependencies ?? {}))
+  if (!["@spatialdeck/core", "@spatialdeck/player"].includes(dependency))
+    throw new Error(`Unexpected editor dependency: ${dependency}`);
+for (const peer of ["react", "react-dom"])
+  if (!editor.peerDependencies?.[peer])
+    throw new Error(`Missing editor peer: ${peer}`);
 console.log(
-  "Boundaries: 2 packages passed; no DOM in core, React/editor or dynamic compilation",
+  "Boundaries: core/player isolated; editor depends on core/player and React peers",
 );

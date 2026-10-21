@@ -71,6 +71,7 @@ export class NavigationMachine {
   private serial = 0;
   private generation = 0;
   private destroying = false;
+  private replacing = false;
   private hidden = false;
   private reduced = false;
   constructor(
@@ -111,7 +112,9 @@ export class NavigationMachine {
     });
   }
   private guard(): Promise<NavigationResult> | undefined {
-    return this.destroying || this.state.status === "destroyed"
+    return this.destroying ||
+      this.replacing ||
+      this.state.status === "destroyed"
       ? this.error("PLAYER_DESTROYED", "Player is destroyed")
       : undefined;
   }
@@ -317,6 +320,41 @@ export class NavigationMachine {
     });
     this.changed();
     return Promise.resolve({ status: "completed" });
+  }
+  /** The player supplies a validated snapshot. No cancelled destination is visited. */
+  replaceDocument(document: ProjectDocument): void {
+    if (this.destroying || this.replacing) return;
+    this.replacing = true;
+    ++this.generation;
+    const previous = this.getState();
+    this.cancel();
+    if (this.destroying) {
+      this.replacing = false;
+      return;
+    }
+    this.document = document;
+    const retained = document.paths.find(
+      (p) =>
+        p.id === previous.pathId &&
+        p.nodes.some((n) => n.id === previous.nodeId),
+    );
+    const path =
+      retained ?? document.paths.find((p) => p.id === document.defaultPathId);
+    const nodeId = retained ? previous.nodeId : path?.startNodeId;
+    this.state = {
+      status: "empty",
+      pathId: path?.id ?? null,
+      nodeId: null,
+      sceneId: null,
+      history: [],
+      camera: null,
+      transition: null,
+      choices: [],
+      diagnostics: [],
+    };
+    if (path && nodeId) this.commit(this.visit(path.id, nodeId), false, true);
+    this.replacing = false;
+    this.changed();
   }
   setHidden(hidden: boolean): void {
     this.tick();

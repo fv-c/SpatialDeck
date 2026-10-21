@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import ts from "typescript-eslint";
+import hooks from "eslint-plugin-react-hooks";
 export default ts.config(
   {
     ignores: [
@@ -10,10 +11,18 @@ export default ts.config(
       "playwright-report/**",
     ],
   },
+  {
+    files: ["**/*.tsx"],
+    plugins: { "react-hooks": hooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "error",
+    },
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {
-    files: ["**/*.{js,mjs,ts}"],
+    files: ["**/*.{js,mjs,ts,tsx}"],
     languageOptions: {
       globals: {
         console: "readonly",

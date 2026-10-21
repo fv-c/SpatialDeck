@@ -1,12 +1,14 @@
-# SpatialDeck 0.1 Core
+# SpatialDeck 0.2 Studio
 
 Motore TypeScript e player DOM/CSS 3D per presentazioni spaziali, senza React.
-Questa fase supporta scene piatte con testo e percorsi lineari; non include Studio.
+Studio React permette di creare scene, modificarne spazio e testo, salvare/riaprire JSON e presentare con lo stesso player. Schema 1.0.0: scene piatte e percorsi lineari.
 
 - [Architettura e contratto](docs/PROJECT_SPEC.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Guida sviluppatori e API](docs/DEVELOPMENT.md)
-- [Verifica 0.1, screenshot e limiti](docs/verification/phase-0.1.md)
+- [Guida autore Studio](docs/AUTHORING.md)
+- [Verifica 0.2, roundtrip e screenshot](docs/verification/phase-0.2.md)
+- [Verifica storica 0.1](docs/verification/phase-0.1.md)
 
 ## Avvio
 
@@ -14,10 +16,12 @@ Richiede **Node 24.22.0** e **pnpm 12.14.0**. Dipendenze e primo download dei br
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm dev:playground
+pnpm dev:studio
 ```
 
-Aprire `/core` all'indirizzo locale stampato da Vite. La pagina contiene due player indipendenti, tre scene, controlli API, scorciatoie locali, vista testuale e riduzione del movimento.
+Studio è su `http://127.0.0.1:5174` (o porta stampata da Vite). `pnpm dev:playground` avvia la demo vanilla separata. Entrambi i server usano i sorgenti e non richiedono una build preliminare.
+
+Per la demo vanilla aprire `/core` all'indirizzo locale stampato da Vite. La pagina contiene due player indipendenti, tre scene, controlli API, scorciatoie locali, vista testuale e riduzione del movimento.
 
 ```sh
 pnpm typecheck
@@ -31,7 +35,7 @@ pnpm browsers:install
 pnpm test:e2e
 ```
 
-`test:e2e` compila e prova la demo **production**. Su macOS 14 esegue Chromium e Firefox con Playwright **1.64.1**, poi WebKit con il runner dedicato **1.61.1**. Su Linux e macOS più recenti esegue tutti e tre con **1.64.1**. La suite è condivisa senza copie o skip; report e trace dei due runner sono separati.
+`test:e2e` compila e prova playground e Studio **production**. Su macOS 14 esegue Chromium e Firefox con Playwright **1.64.1**, poi WebKit con il runner dedicato **1.61.1**. Su Linux e macOS più recenti esegue tutti e tre con **1.64.1**. La suite è condivisa senza copie o skip; report e trace dei due runner sono separati.
 
 `pnpm browsers:install` installa i browser delle versioni appropriate al sistema. Per provare soltanto WebKit su macOS 14:
 

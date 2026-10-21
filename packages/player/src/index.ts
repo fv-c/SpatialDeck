@@ -29,6 +29,7 @@ export interface PlayerOptions {
 }
 export interface Player {
   mount(container: HTMLElement, document: unknown): Promise<Result<void>>;
+  updateDocument(document: unknown): Promise<Result<void>>;
   destroy(): void;
   goTo(
     target: { pathId?: string; nodeId: string },
@@ -62,6 +63,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     clock: PlayerClock | undefined,
     frame: number | undefined,
     destroyed = false,
+    updating = false,
     outlineOpen = false,
     spatialSupported = true,
     focusRequested = false,
@@ -128,8 +130,40 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     el.className = className;
     return el;
   };
+  let resizeView = () => {};
+  const buildScenes = () => {
+    if (!doc || !world || !viewport) return;
+    scenes.clear();
+    world.replaceChildren();
+    viewport.style.width = `${doc.settings.viewport.width}px`;
+    viewport.style.height = `${doc.settings.viewport.height}px`;
+    viewport.style.perspective = `${doc.settings.viewport.perspective}px`;
+    for (const scene of doc.scenes) {
+      const wrapper = element("div", "sd-scene");
+      wrapper.dataset.sceneId = scene.id;
+      wrapper.hidden = !scene.visible;
+      const matrix = getWorldMatrix(doc, scene.id);
+      if (matrix.ok)
+        wrapper.style.transform = `matrix3d(${matrix.value.join(",")})`;
+      const content = element("article", "sd-content");
+      content.style.width = `${scene.size[0]}px`;
+      content.style.height = `${scene.size[1]}px`;
+      const title = element("h2");
+      title.textContent = scene.title;
+      title.tabIndex = -1;
+      content.append(title);
+      for (const block of scene.blocks) {
+        const text = element("p");
+        text.textContent = block.data.text;
+        content.append(text);
+      }
+      wrapper.append(content);
+      world.append(wrapper);
+      scenes.set(scene.id, { wrapper, content, title });
+    }
+  };
   const render = () => {
-    if (!root || !machine || !doc || destroyed) return;
+    if (!root || !machine || !doc || destroyed || updating) return;
     const s = machine.getState();
     if (
       focusRequested &&
@@ -268,29 +302,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       live = element("p", "sd-live");
       live.setAttribute("aria-live", "polite");
       live.setAttribute("aria-atomic", "true");
-      for (const scene of doc.scenes) {
-        const wrapper = element("div", "sd-scene");
-        wrapper.dataset.sceneId = scene.id;
-        wrapper.hidden = !scene.visible;
-        const matrix = getWorldMatrix(doc, scene.id);
-        if (matrix.ok)
-          wrapper.style.transform = `matrix3d(${matrix.value.join(",")})`;
-        const content = element("article", "sd-content");
-        content.style.width = `${scene.size[0]}px`;
-        content.style.height = `${scene.size[1]}px`;
-        const title = element("h2");
-        title.textContent = scene.title;
-        title.tabIndex = -1;
-        content.append(title);
-        for (const block of scene.blocks) {
-          const text = element("p");
-          text.textContent = block.data.text;
-          content.append(text);
-        }
-        wrapper.append(content);
-        world.append(wrapper);
-        scenes.set(scene.id, { wrapper, content, title });
-      }
+      buildScenes();
       root.append(controls, stage, outline, live, emptyMessage);
       host.append(root);
       const listen = (
@@ -409,6 +421,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
             void player[command]();
           }
         });
+      resizeView = resize;
       const observer = new win.ResizeObserver(resize);
       observer.observe(stage);
       cleanup.push(() => observer.disconnect());
@@ -417,6 +430,39 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       render();
       resize();
       emit("ready", { instanceId });
+      return { ok: true, value: undefined, diagnostics: [] };
+    },
+    async updateDocument(input) {
+      if (destroyed) return failure("PLAYER_DESTROYED", "Player is destroyed");
+      if (!machine) return failure("PLAYER_UNMOUNTED", "Player is not mounted");
+      if (updating)
+        return failure("UPDATE_IN_PROGRESS", "Document update is in progress");
+      const validated = validateDocument(input);
+      if (!validated.ok) return validated;
+      updating = true;
+      focusRequested = false;
+      machine.replaceDocument(validated.value);
+      if (destroyed) {
+        updating = false;
+        return failure(
+          "PLAYER_DESTROYED",
+          "Player was destroyed during update",
+        );
+      }
+      doc = validated.value;
+      pathRendered = undefined;
+      root?.setAttribute("aria-label", doc.metadata.title || "SpatialDeck");
+      buildScenes();
+      machine.setReduced(
+        outlineOpen ||
+          manualReduced ||
+          doc.settings.presentation.motion === "reduced" ||
+          media?.matches === true,
+      );
+      resizeView();
+      updating = false;
+      render();
+      emit("documentchange", { instanceId });
       return { ok: true, value: undefined, diagnostics: [] };
     },
     destroy() {

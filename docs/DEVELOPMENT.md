@@ -1,4 +1,4 @@
-# Sviluppo e API 0.1
+# Sviluppo e API 0.2
 
 ## Struttura verificata
 
@@ -12,6 +12,8 @@
 | `packages/core/src/events`                | Payload degli eventi tipizzati                                                  |
 | `packages/player/src/index.ts`            | Factory, DOM, input, accessibilità e risorse per istanza                        |
 | `packages/player/src/browser.ts`          | Entrypoint di build che raccoglie anche il CSS                                  |
+| `packages/editor`                         | Store immutabile, comandi atomici, React UI, file e IndexedDB                   |
+| `apps/studio`                             | App React/Vite locale su porta 5174                                             |
 | `apps/playground`                         | Demo Vite vanilla con due player su `/core`                                     |
 | `examples/core-three-scenes/project.json` | Esempio normativo di tre scene, conservato in 1.0.0                             |
 | `scripts`                                 | Generazione, verifica confini e budget bundle                                   |
@@ -50,7 +52,7 @@ Il primo comando installa Chromium/Firefox della 1.64.1 e WebKit della 1.61.1 su
 
 `scripts/e2e-plan.mjs` decide il piano da piattaforma, release e filtri; `scripts/run-e2e.mjs` risolve il CLI dal pacchetto corretto e verifica la versione esatta prima di avviarlo. Su Linux il piano contiene soltanto il runner corrente per tutti e tre i browser. Una versione diversa da quella attesa o un runner fallito produce exit non zero. I 12 test di instradamento coprono Linux, macOS 14 e successivi, filtri e guardie del comando dedicato.
 
-`tests/e2e/core.spec.ts` è l'unica suite. L'adapter `tests/e2e/runner.ts` carica test/expect dalla versione selezionata; il suo controllo di versione impedisce una risoluzione accidentale del pacchetto root nel runner di compatibilità. `tests/e2e/config.ts` condivide server, worker e opzioni; le due configurazioni selezionano i browser. Non si copiano sorgenti e non si eliminano test per eseguire WebKit.
+`tests/e2e/core.spec.ts` e `tests/e2e/editor.spec.ts` sono le suite condivise dai due runner. L'adapter `tests/e2e/runner.ts` caricano test/expect dalla versione selezionata; il suo controllo di versione impedisce una risoluzione accidentale del pacchetto root nel runner di compatibilità. `tests/e2e/config.ts` condivide server, worker e opzioni; le due configurazioni selezionano i browser. Non si copiano sorgenti e non si eliminano test per eseguire WebKit.
 
 Report/trace vengono scritti in `test-results/current/` e `test-results/webkit-macos14/`; il launcher registra versioni, progetti, exit e conteggi in `test-results/e2e-summary.json`. Il comando dedicato aggiorna il riepilogo per la propria esecuzione. Il rapporto permanente conserva i risultati della suite completa in `docs/verification/e2e-results.json`.
 
@@ -107,17 +109,18 @@ La validazione applica schema strict, finitezza, ID/riferimenti, visibilità dei
 
 `PlayerClock` espone `now()`, `request(callback)` e `cancel(id)`. `NavigationOptions` accetta `durationMs` intera tra 0 e 60000 e `signal` compatibile con AbortSignal. Il clock normale usa performance.now e RAF; nessun timer governa l'interpolazione.
 
-| Metodo                             | Risultato                                                                                                 |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `mount(container, document)`       | `Promise<Result<void>>`; primo nodo immediato, ready prima della risoluzione                              |
-| `goTo({pathId?,nodeId}, options?)` | `Promise<NavigationResult>`; node ID identifica una visita target anche se più nodi usano la stessa scena |
-| `next({edgeId?}?)`, `prev()`       | Navigazione dalla visita completata; prev usa la history effettiva                                        |
-| `setPath(pathId)`                  | Seleziona start immediatamente e azzera history; un path vuoto porta a empty                              |
-| `getState()`                       | Snapshot indipendente: status, pathId/nodeId/sceneId, history, camera, transition, choices, diagnostics   |
-| `on(event, handler)`               | Unsubscribe locale; handler lancianti isolati, riportati come HANDLER_ERROR                               |
-| `destroy()`                        | Idempotente; cancella pending, emette destroy e rimuove tutte le risorse possedute                        |
+| Metodo                             | Risultato                                                                                                                                                      |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mount(container, document)`       | `Promise<Result<void>>`; primo nodo immediato, ready prima della risoluzione                                                                                   |
+| `goTo({pathId?,nodeId}, options?)` | `Promise<NavigationResult>`; node ID identifica una visita target anche se più nodi usano la stessa scena                                                      |
+| `next({edgeId?}?)`, `prev()`       | Navigazione dalla visita completata; prev usa la history effettiva                                                                                             |
+| `setPath(pathId)`                  | Seleziona start immediatamente e azzera history; un path vuoto porta a empty                                                                                   |
+| `getState()`                       | Snapshot indipendente: status, pathId/nodeId/sceneId, history, camera, transition, choices, diagnostics                                                        |
+| `on(event, handler)`               | Unsubscribe locale; handler lancianti isolati, riportati come HANDLER_ERROR                                                                                    |
+| `updateDocument(document)`         | Valida prima; annulla la transizione senza visite fantasma, conserva nodo/path se presenti altrimenti start, azzera history, aggiorna DOM e camera senza focus |
+| `destroy()`                        | Idempotente; cancella pending, emette destroy e rimuove tutte le risorse possedute                                                                             |
 
-`NavigationResult.status`: completed, noop, cancelled, choice-required oppure error. Nel modello lineare non occorre choice-required. I codici includono UNKNOWN_NODE, UNKNOWN_PATH, UNKNOWN_EDGE, INVALID_DURATION, PLAYER_UNMOUNTED e PLAYER_DESTROYED. Eventi attivi: ready, navigationstart, navigationcancel, scenechange, navigationend, diagnostic, destroy; choice è tipizzato per il risultato comune, senza grafi in questa fase. documentchange/mediaerror appartengono alle fasi che introducono le relative operazioni.
+`NavigationResult.status`: completed, noop, cancelled, choice-required oppure error. Nel modello lineare non occorre choice-required. I codici includono UNKNOWN_NODE, UNKNOWN_PATH, UNKNOWN_EDGE, INVALID_DURATION, PLAYER_UNMOUNTED e PLAYER_DESTROYED. Eventi attivi: ready, navigationstart, navigationcancel, scenechange, navigationend, diagnostic, documentchange, destroy; choice è tipizzato per il risultato comune, senza grafi in questa fase. documentchange segue un aggiornamento riuscito; mediaerror resta nella fase contenuti.
 
 Ordine: eventuale cancel precedente, start nuovo, scenechange e end al commit, poi Promise completed. Nessuna visita annullata entra nella history. Noop e comandi invalidi non interrompono il piano valido; 10 next ravvicinati mirano sempre al successore dell'ultima visita completata. La posizione corrente è campionata prima della sostituzione. AbortSignal conserva la posa visuale. Il tempo attivo si congela quando il documento è hidden. Il cambio reduced motion completa subito con un solo commit.
 
@@ -131,4 +134,16 @@ Sicurezza: textContent per contenuti, nessun eval/innerHTML, nessuna rete obblig
 
 ## Limiti e prossima fase
 
-WebKit locale verificato con il runner macOS 14 dedicato e CI Linux con Playwright 1.64.1 superata sui tre browser; la prova Safari reale rimane non eseguita: [evidenza](verification/phase-0.1.md). Non sono misurati heap dopo GC, benchmark 100 scene o timing p95: sono gate successivi di stabilizzazione, non prestazioni dichiarate. Nessun editor, parent, grafo, timeline, blocco oltre text, import/export, deploy o pubblicazione è implementato. Per 0.2 partire da questo modello/player, aggiungere updateDocument atomico e la relativa UI secondo il prompt dedicato.
+WebKit locale verificato con il runner macOS 14 dedicato e CI Linux con Playwright 1.64.1 superata sui tre browser; la prova Safari reale rimane non eseguita: [evidenza](verification/phase-0.1.md). Non sono misurati heap dopo GC, benchmark 100 scene o timing p95: sono gate successivi di stabilizzazione, non prestazioni dichiarate. Studio 0.2 è implementato con schema 1.0.0 invariato: [guida autore](AUTHORING.md), [verifica](verification/phase-0.2.md). Parent, grafi, timeline, blocchi oltre text, CLI/export, deploy e pubblicazione rimangono fuori fase.
+
+## Editor e integrazione Studio
+
+`@spatialdeck/editor` esporta `Studio`, `EditorStore`, comandi (`createScene`, `editScene`, `deleteScene`), `emptyProject`, `RecoveryRepository`, `Autosave` e CSS pubblico. React/React DOM 19.3.1 sono peer; core/player non dipendono da React. `Studio` accetta store/repository opzionali e `onPlayer(player, present)` per integrazioni. L'app espone esplicitamente `window.studio` con store/repository e riferimenti ai player, come il playground vanilla espone le sue istanze.
+
+`EditorStore.getSnapshot()` restituisce documento e sessione congelati; `subscribe` è compatibile con `useSyncExternalStore`. `execute(edit, selectNew?)` clona, applica e convalida prima del commit. Undo/redo usano snapshot prima/dopo, con espulsione dei più vecchi oltre **100 comandi oppure 20 MiB UTF-8 complessivi**; un comando singolo oltre il budget viene applicato ma escluso dalla history. Selezione, camera mappa, dirty e history non entrano nel JSON. `beginDrag/moveDrag/endDrag/cancelDrag` mantengono un solo comando e permettono Escape. Preview coalesciata via RAF; salvataggio usa il medesimo documento validato.
+
+Le modifiche strutturali aggiornano il percorso principale preservando nodi/edge non coinvolti. I vicini ricuciti ricevono defaultTransition; undo ripristina esattamente riferimenti e transizioni. Scene referenziate da altri percorsi non si possono eliminare: messaggio con nomi e conteggi. Un principale con visite ripetute o ordine diverso dalle scene rifiuta le modifiche strutturali; apertura, contenuti e trasformazioni rimangono disponibili senza perdere dati.
+
+IndexedDB `spatialdeck-studio` v1 contiene `documents` (head per projectId) e `recovery` (projectId/revision). Una sola transazione readwrite confronta la revisione attesa, scrive entrambi e rimuove le revisioni oltre le ultime dieci. L'autosave serializza le scritture, attende 750 ms e non riscrive snapshot identici. Il recupero adotta la revisione scelta senza reclamarne una nuova. Conflitti/quota/permessi producono warning persistenti, mai sostituzione del documento attivo; download JSON disponibile. Flush su save e visibilitychange come best effort, nessuna garanzia unload. Recovery è una proposta esplicita, non un backup.
+
+`pnpm dev:studio` e `pnpm dev:playground` risolvono i sorgenti con Vite, anche senza dist. La suite E2E avvia due server production sulle porte 4173/4174, sempre senza backend. L'editor di libreria produce ESM, dichiarazioni e `editor.css` comprensivo del CSS player.

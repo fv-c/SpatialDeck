@@ -1,0 +1,29 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+const source = (path: string) => new URL(path, import.meta.url).pathname;
+export default defineConfig({
+  root: source("."),
+  plugins: [react()],
+  resolve: {
+    alias: [
+      {
+        find: /^@spatialdeck\/editor$/,
+        replacement: source("../../packages/editor/src/browser.ts"),
+      },
+      {
+        find: /^@spatialdeck\/core$/,
+        replacement: source("../../packages/core/src/index.ts"),
+      },
+      {
+        find: /^@spatialdeck\/player$/,
+        replacement: source("../../packages/player/src/index.ts"),
+      },
+      {
+        find: "@spatialdeck/player/style.css",
+        replacement: source("../../packages/player/src/style.css"),
+      },
+    ],
+  },
+  build: { target: ["chrome120", "firefox120", "safari17"] },
+  server: { host: "127.0.0.1", port: 5174 },
+});

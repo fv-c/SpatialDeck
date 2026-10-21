@@ -6,8 +6,10 @@
     "noEmit": true,
     "paths": {
       "@spatialdeck/core": ["./packages/core/src/index.ts"],
-      "@spatialdeck/player": ["./packages/player/src/index.ts"]
-    }
+      "@spatialdeck/player": ["./packages/player/src/index.ts"],
+      "@spatialdeck/editor": ["./packages/editor/src/index.ts"]
+    },
+    "jsx": "react-jsx"
   },
   "include": [
     "packages/**/*.ts",
@@ -15,6 +17,8 @@
     "tests/**/*.ts",
     "tools/**/*.ts",
     "scripts/**/*.test.ts",
-    "*.ts"
+    "*.ts",
+    "packages/**/*.tsx",
+    "apps/**/*.tsx"
   ]
 }

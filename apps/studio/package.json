@@ -1,0 +1,16 @@
+{
+  "name": "@spatialdeck/studio",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@spatialdeck/editor": "workspace:*",
+    "@spatialdeck/core": "workspace:*",
+    "@spatialdeck/player": "workspace:*",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

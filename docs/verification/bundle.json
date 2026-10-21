@@ -1,5 +1,5 @@
 {
-  "jsGzipBytes": 17823,
+  "jsGzipBytes": 18180,
   "cssGzipBytes": 662,
   "budgets": {
     "js": 102400,
@@ -12,7 +12,7 @@
     },
     {
       "file": "consumer.js",
-      "gzipBytes": 17823
+      "gzipBytes": 18180
     }
   ]
 }
