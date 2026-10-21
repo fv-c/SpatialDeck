@@ -1,12 +1,12 @@
 # Verifica SpatialDeck 0.1 Core
 
-Data: 21 ottobre 2026. Codice 0.1 implementato; **WebKit locale sbloccato con il runner dedicato 1.61.1 per macOS 14**. La suite completa passa sui tre motori senza skip. Il runner principale e la CI Linux mantengono Playwright 1.64.1; la CI remota e Safari reale non sono stati eseguiti in questa sessione. Nessuna fase 0.2 avviata.
+Data: 21 ottobre 2026. Codice 0.1 implementato; **WebKit locale sbloccato con il runner dedicato 1.61.1 per macOS 14**. La suite completa passa sui tre motori senza skip. Il runner principale e la CI Linux mantengono Playwright 1.64.1; la [CI remota è passata](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) con 85 unità e 30 E2E, zero skip. Safari reale non è stato eseguito. Nessuna fase 0.2 avviata.
 
 ## Stato iniziale e perimetro
 
 Checkout iniziale: LICENSE, PROJECT_SPEC e ROADMAP tracciati; `prompts/` già presente e non tracciato. Nessun sorgente applicativo. Nessun AGENTS su disco nei percorsi applicabili; applicate le istruzioni AGENTS fornite nella chat. Specifica e roadmap lette prima dei sorgenti; LICENSE e prompt preservati. Tutti i path proposti per 0.1 sono ora reali. Differenze additive: entrypoint `player/src/browser.ts` per raccogliere CSS in build senza import CSS nelle dichiarazioni pubbliche; generatori e controlli nella directory `scripts`; prove riproducibili e artefatti sotto `docs/verification`.
 
-Implementati i pacchetti applicativi core, player e playground e il solo workspace di tooling privato `tools/webkit-macos14`. Nessun editor/React, parent/grafo/timeline, blocco oltre text, media/plugin concreto, CLI/import/export o servizio remoto. Manifest privati: SPDX GPL-only/or-later non inventato dal solo testo della licenza. Nessun commit, push, tag, deploy o publish.
+Implementati i pacchetti applicativi core, player e playground e il solo workspace di tooling privato `tools/webkit-macos14`. Nessun editor/React, parent/grafo/timeline, blocco oltre text, media/plugin concreto, CLI/import/export o servizio remoto. Manifest privati: SPDX GPL-only/or-later non inventato dal solo testo della licenza. Commit e push successivamente autorizzati ed eseguiti sul commit `07916cc`; nessun tag, deploy o publish.
 
 ## Ambiente riproducibile
 
@@ -38,10 +38,10 @@ Aprire `/core`. Avvio Vite vanilla verificato; la prima suite browser è stata e
 - Compatibilità: `tools/webkit-macos14/package.json` fissa `@playwright/test@1.61.1`, configurazione WebKit dedicata. Il comando rifiuta sistemi diversi da macOS 14.
 - Suite unica: `tests/e2e/core.spec.ts` carica test/expect tramite l'adapter che verifica il pin selezionato; nessuna copia dei test, nessuno skip.
 - `pnpm test:e2e` su questo Mac esegue Chromium/Firefox con 1.64.1 e WebKit con 1.61.1. `pnpm test:e2e:webkit:macos14` esegue soltanto i 10 WebKit; `--project=webkit` è disponibile anche sul comando generale.
-- In Linux il launcher sceglie unicamente la 1.64.1 per Chromium/Firefox/WebKit. Il workflow installa tutti e tre e avvia `pnpm test:e2e`; 12 test di instradamento verificano anche questa scelta, ma non sostituiscono un'esecuzione Linux reale.
+- In Linux il launcher sceglie unicamente la 1.64.1 per Chromium/Firefox/WebKit. Il workflow installa tutti e tre e avvia `pnpm test:e2e`; 12 test di instradamento verificano anche questa scelta; il successivo run remoto ha confermato 30 E2E passati su Linux.
 - JSON/trace isolati in `test-results/current/` e `test-results/webkit-macos14/`; riepilogo della singola invocazione in `test-results/e2e-summary.json`. L'ultimo comando dedicato può sovrascrivere il riepilogo locale, mentre l'evidenza permanente sotto conserva la precedente suite completa.
 
-La baseline applicativa, gli screenshot Chromium e il bundle core/player sono invariati. Non sono state modificate dipendenze di produzione o installazioni globali.
+La baseline applicativa e il bundle core/player sono invariati; gli screenshot locali restano conservati. Non sono state modificate dipendenze di produzione o installazioni globali.
 
 ## Comandi ed esiti finali
 
@@ -67,7 +67,15 @@ I comandi sono stati eseguiti con il PATH locale sopra indicato. Gli esiti corre
 
 Totale corrente: **115 test passati**, zero fail/skip (85 unità + 30 E2E). [e2e-results.json](e2e-results.json) conserva esiti, versione e profilo per ogni test della suite completa. Le misure precedenti di 93 pass/10 skip e il primo fallimento WebKit sono storiche; il runner dedicato ora dimostra anche le 10 prove WebKit sul prodotto reale.
 
-La CI Linux configura frozen install, typecheck/lint/format/unit/build, confini/bundle e **tutti e tre i browser con 1.64.1**, con upload dei report separati. **Workflow aggiornato ma CI remota non eseguita**: questo Mac non dimostra il pass di WebKit 1.64.1 su Linux. Nessun commit/push è stato effettuato per avviare job remoti.
+## Verifica remota Linux dopo commit e push
+
+Implementazione pubblicata su `origin/main` con commit `07916ccaf27cf7e6d210ac5d1f4ef8cc8d1e2901`. Il workflow [Core, run 39596586324](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) è concluso con **success** su Ubuntu 26.04.1, Node 24.22.0, pnpm 12.14.0 e Playwright **1.64.1**.
+
+Tutti gli step sono passati: frozen install, typecheck, lint, format, 85 unità, build, confini/bundle, installazione dei tre browser e suite E2E production. Risultato browser: **Chromium 10/10, Firefox 10/10, WebKit 10/10; zero fail, skip o flaky**. Il riepilogo scaricato dall'artefatto conferma `platform: linux`, un solo profilo `current`, versione `1.64.1` e tre progetti. Le 85 unità più i 30 E2E costituiscono **115 test passati in CI**, distinti dai 115 pass locali.
+
+Evidenza permanente: [ci-linux.json](ci-linux.json), con SHA, run/job/artifact ID, digest dell'archivio, riepilogo originale e ogni test E2E. L'artefatto `verification` è stato scaricato tramite il connettore GitHub e controllato; non è una deduzione dal solo badge verde. I report locali in `e2e-results.json` restano separati. Il bundle Linux coincide con quello locale: 17 823 byte JS e 662 byte CSS gzip.
+
+L'hook locale `.git/hooks/pre-commit` mantiene `prompts/` fuori dai commit e visibile nel checkout: i sei prompt locali sono rimasti intatti e non pubblicati. `.tools`, dipendenze e output di build restano ignorati. Il successivo commit di documentazione registra questa verifica dell'implementazione `07916cc`; non cambia il codice già provato.
 
 Errori riscontrati e corretti prima del risultato finale: dichiarazioni ES-only delle API standard nel core; lint del controllo caratteri asset; import CSS nelle dichiarazioni pubbliche; misura CSS del consumer minimo; annullamento rientrante da handler; focus nel passaggio tra due titoli e durante la modifica di un input. Il primo tentativo WebKit era stato interrotto (130) dopo tre errori identici; lo skip provvisorio è ora rimosso. È stato corretto anche il tipo del parametro `args` nel nuovo helper JS durante il typecheck, prima degli esiti finali. Il runner dedicato risolve il blocco locale senza modificare Playwright o le prove applicative.
 
@@ -98,18 +106,18 @@ Screenshot reali Chromium della build production con preset Desktop Chrome (view
 
 ## Gate e limiti aperti
 
-| Criterio 0.1                                       | Stato                                                                              |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Installazione/strict/lint/format/build/CI iniziale | Verificato localmente; workflow Linux aggiornato, esecuzione remota non effettuata |
-| Schema 1.0.0, semantica, diagnostica, roundtrip    | Verificato                                                                         |
-| Tre scene vanilla, API, tastiera e due istanze     | Dimostrato su Chromium/Firefox 1.64.1 e WebKit 1.61.1                              |
-| History/cancel/clock/reduced motion/eventi         | Verificato                                                                         |
-| Destroy/outline/focus                              | Verificato sui tre motori locali; 50 cicli e zero risorse residue per motore       |
-| Budget core+player e confini                       | Verificato; bundle invariato                                                       |
-| Runner WebKit macOS 14                             | **10 pass, nessuno skip**, pin 1.61.1 isolato e riproducibile                      |
-| Selezione runner e pin CI                          | 12 unità passate; Linux sceglie soltanto 1.64.1 per i tre browser                  |
-| E2E Linux con 1.64.1                               | Configurati; **esecuzione non effettuata in questa sessione**                      |
+| Criterio 0.1                                       | Stato                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Installazione/strict/lint/format/build/CI iniziale | Verificato localmente e nel run Linux sopra collegato                        |
+| Schema 1.0.0, semantica, diagnostica, roundtrip    | Verificato                                                                   |
+| Tre scene vanilla, API, tastiera e due istanze     | Dimostrato su Chromium/Firefox 1.64.1 e WebKit 1.61.1                        |
+| History/cancel/clock/reduced motion/eventi         | Verificato                                                                   |
+| Destroy/outline/focus                              | Verificato sui tre motori locali; 50 cicli e zero risorse residue per motore |
+| Budget core+player e confini                       | Verificato; bundle invariato                                                 |
+| Runner WebKit macOS 14                             | **10 pass, nessuno skip**, pin 1.61.1 isolato e riproducibile                |
+| Selezione runner e pin CI                          | 12 unità passate; Linux sceglie soltanto 1.64.1 per i tre browser            |
+| E2E Linux con 1.64.1                               | **30 pass (10 per motore), zero skip**, esecuzione remota verificata         |
 
 Non eseguiti Safari/Chrome/Edge installati, mobile fisico o screen reader: nessuna compatibilità o certificazione dichiarata; verifiche estese previste prima di 1.0. Heap dopo GC e benchmark 100 scene/p95 non misurati; il teardown dimostra i contatori di risorse, non un profilo heap o FPS garantiti. Spazio numericamente limitato dalla specifica.
 
-La verifica locale macOS 14 è risolta. Per chiudere la matrice del runner corrente rimane da eseguire il workflow Linux con tutti e tre i browser 1.64.1. Per 0.2 conservare schema/fixture 1.0.0, aggiungere updateDocument atomico al player condiviso e verificare le regressioni prima della UI; nessun lavoro 0.2 svolto qui.
+La verifica locale macOS 14 e la matrice Linux del runner corrente sono passate. Restano le prove di Safari reale e le verifiche di stabilizzazione già indicate. Per 0.2 conservare schema/fixture 1.0.0, aggiungere updateDocument atomico al player condiviso e verificare le regressioni prima della UI; nessun lavoro 0.2 svolto qui.

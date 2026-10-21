@@ -181,6 +181,16 @@
     "platform": "linux",
     "runner": "1.64.1",
     "projects": ["chromium", "firefox", "webkit"],
-    "status": "configured, not executed remotely in this session"
+    "status": "success",
+    "runId": 39596586324,
+    "runUrl": "https://github.com/fv-c/SpatialDeck/actions/runs/39596586324",
+    "commit": "07916ccaf27cf7e6d210ac5d1f4ef8cc8d1e2901",
+    "os": "Ubuntu 26.04.1",
+    "node": "24.22.0",
+    "pnpm": "12.14.0",
+    "unitPassed": 85,
+    "e2ePassed": 30,
+    "skipped": 0,
+    "evidence": "ci-linux.json"
   }
 }

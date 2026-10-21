@@ -39,6 +39,6 @@ pnpm test:e2e
 pnpm test:e2e:webkit:macos14
 ```
 
-La CI Linux mantiene Playwright 1.64.1 e tutti e tre i browser. La verifica locale WebKit passa con il runner di compatibilità; la CI remota e Safari reale non sono stati eseguiti in questa sessione.
+La CI Linux è [verificata sul commit 07916cc](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) con Playwright 1.64.1: 85 unità e 30 E2E passati, zero skip, sui tre browser. Il runner locale di compatibilità WebKit resta verificato su macOS 14; Safari reale non è stato provato.
 
 `LICENSE` originale GPL v3 conservata. I manifest restano privati e non fissano per deduzione GPL-3.0-only oppure GPL-3.0-or-later: la scelta SPDX va chiarita prima del packaging pubblico.

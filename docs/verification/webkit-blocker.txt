@@ -30,8 +30,9 @@ Resolution, 2026-10-21 (explicitly authorized):
 - pnpm test:e2e:webkit:macos14: exit 0, 10 passed, 0 failed, 0 skipped.
 - WebKit reports version 26.5 with the compatibility runner.
 - CI Linux installs Chromium/Firefox/WebKit and runs all with 1.64.1;
-  the remote workflow has not been executed in this session.
-- No patches to node_modules, global installs, commit or push.
+  remote run 39596586324 passed: 30 E2E, 0 failed, 0 skipped.
+- No patches to node_modules or global installs. Commit/push subsequently authorized;
+  implementation delivered as 07916cc, with successful Linux CI verification.
 
 Upstream diagnosis: https://github.com/microsoft/playwright/issues/42964
 Current results: docs/verification/e2e-results.json
