@@ -1,0 +1,88 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { format } from "prettier";
+import Ajv from "ajv/dist/2020.js";
+import standalone from "ajv/dist/standalone/index.js";
+const schema = JSON.parse(
+  await readFile(
+    new URL(
+      "../packages/core/schema/project-1.0.0.schema.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+const ajv = new Ajv({
+  strict: true,
+  allErrors: true,
+  code: { source: true, esm: true },
+  inlineRefs: true,
+});
+const validate = ajv.compile(schema);
+// A standalone module, never the Ajv compiler, enters the browser graph.
+let source = standalone(ajv, validate);
+source = source.replace(
+  /const (\w+) = require\("ajv\/dist\/runtime\/([^"/]+)"\)\.default;/g,
+  'import $1Module from "ajv/dist/runtime/$2.js"; const $1 = $1Module.default ?? $1Module;',
+);
+await writeFile(
+  new URL("../packages/core/src/document/validator.js", import.meta.url),
+  source + "\n",
+);
+const names = {
+  id: "Id",
+  coord: "Coordinate",
+  size: "Size",
+  vec3: "Vec3",
+  transition: "Transition",
+  extensions: "Extensions",
+  block: "TextBlock",
+  scene: "Scene",
+  asset: "Asset",
+  node: "PathNode",
+  edge: "PathEdge",
+  path: "ScenePath",
+};
+const type = (s) => {
+  if (s.$ref) return names[s.$ref.split("/").at(-1)];
+  if ("const" in s) return JSON.stringify(s.const);
+  if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(" | ");
+  if (s.anyOf) return s.anyOf.map(type).join(" | ");
+  if (s.type === "array")
+    return s.prefixItems
+      ? "[" + s.prefixItems.map(type).join(", ") + "]"
+      : `Array<${type(s.items)}>`;
+  if (s.type === "object")
+    return (
+      "{" +
+      Object.entries(s.properties ?? {})
+        .map(
+          ([k, v]) =>
+            `${JSON.stringify(k)}${s.required?.includes(k) ? "" : "?"}: ${type(v)};`,
+        )
+        .join("") +
+      (s.additionalProperties && typeof s.additionalProperties === "object"
+        ? `[key: string]: ${type(s.additionalProperties)};`
+        : "") +
+      "}"
+    );
+  return (
+    {
+      string: "string",
+      number: "number",
+      integer: "number",
+      boolean: "boolean",
+      null: "null",
+    }[s.type] ?? "JsonValue"
+  );
+};
+await writeFile(
+  new URL("../packages/core/src/document/types.ts", import.meta.url),
+  await format(
+    "// Generated from schema; edit the schema, then pnpm generate.\nexport type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };\n" +
+      Object.entries(schema.$defs)
+        .map(([k, v]) => `export type ${names[k]} = ${type(v)};`)
+        .join("\n") +
+      `\nexport type ProjectDocument = ${type(schema)};\n`,
+    { parser: "typescript" },
+  ),
+);

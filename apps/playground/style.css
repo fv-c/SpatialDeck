@@ -1,0 +1,70 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #dbe5f8;
+  background: #111a2a;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 1400px;
+  margin: auto;
+  padding: 24px;
+}
+h1 {
+  font-size: clamp(32px, 5vw, 64px);
+  margin: 12px 0;
+}
+header {
+  margin-bottom: 32px;
+}
+header p {
+  max-width: 740px;
+  line-height: 1.6;
+}
+#demos {
+  display: grid;
+  gap: 36px;
+}
+.demo nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.player-host {
+  height: 560px;
+  border: 2px solid #7286aa;
+}
+.player-host > input {
+  position: absolute;
+  z-index: 3;
+  right: 40px;
+  margin-top: 12px;
+  width: 150px;
+}
+output {
+  display: block;
+  padding-top: 10px;
+}
+:focus-visible {
+  outline: 3px solid #eabf56;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  main {
+    padding: 12px;
+  }
+  .player-host {
+    height: 420px;
+  }
+  .player-host > input {
+    display: none;
+  }
+}

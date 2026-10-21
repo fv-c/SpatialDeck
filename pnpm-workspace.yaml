@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - apps/*
+  - tools/webkit-macos14
+strictPeerDependencies: true
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - vite@8.3.5

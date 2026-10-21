@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+.tools
+**/dist
+packages/core/src/document/validator.js
+playwright-report
+test-results
+prompts
+docs/PROJECT_SPEC.md
+docs/ROADMAP.md

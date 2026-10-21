@@ -1,0 +1,38 @@
+{
+  "name": "spatialdeck",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": "24.22.0",
+    "pnpm": "12.14.0"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "typecheck": "pnpm generate && tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm generate && vitest run",
+    "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
+    "test:e2e:webkit:macos14": "pnpm build && node scripts/run-e2e.mjs --webkit-macos14",
+    "browsers:install": "node scripts/run-e2e.mjs --install",
+    "build": "pnpm generate && pnpm --filter @spatialdeck/core build && pnpm --filter @spatialdeck/player build && pnpm --filter @spatialdeck/playground build",
+    "dev:playground": "vite --config apps/playground/vite.config.ts",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5",
+    "@playwright/test": "1.64.1",
+    "eslint": "10.13.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.72.0",
+    "prettier": "3.9.10",
+    "@types/node": "24.19.2",
+    "ajv": "8.20.0"
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "demo-core",
+  "metadata": {
+    "title": "Tre luoghi",
+    "language": "it",
+    "author": "SpatialDeck example"
+  },
+  "settings": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "perspective": 1000
+    },
+    "presentation": {
+      "fit": "contain",
+      "motion": "system",
+      "defaultTransition": {
+        "durationMs": 600,
+        "easing": "ease-in-out"
+      }
+    }
+  },
+  "requiredCapabilities": ["linear"],
+  "scenes": [
+    {
+      "id": "intro",
+      "title": "Introduzione",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 540],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "t1",
+          "type": "text",
+          "data": {
+            "text": "SpatialDeck"
+          }
+        }
+      ],
+      "notes": "Aprire il discorso",
+      "extensions": {}
+    },
+    {
+      "id": "detail",
+      "title": "Dettaglio",
+      "position": [1400, 300, -500],
+      "rotation": [15, 25, 10],
+      "scale": 0.7,
+      "size": [800, 600],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "t2",
+          "type": "text",
+          "data": {
+            "text": "Una prospettiva diversa"
+          }
+        }
+      ],
+      "notes": "",
+      "extensions": {}
+    },
+    {
+      "id": "end",
+      "title": "Conclusione",
+      "position": [-800, 1200, 200],
+      "rotation": [0, -20, -15],
+      "scale": 1.4,
+      "size": [1100, 500],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "t3",
+          "type": "text",
+          "data": {
+            "text": "Collegare le idee"
+          }
+        }
+      ],
+      "notes": "",
+      "extensions": {}
+    }
+  ],
+  "assets": [],
+  "paths": [
+    {
+      "id": "main",
+      "name": "Principale",
+      "startNodeId": "n1",
+      "nodes": [
+        {
+          "id": "n1",
+          "sceneId": "intro",
+          "holdMs": 1000
+        },
+        {
+          "id": "n2",
+          "sceneId": "detail",
+          "holdMs": 1000
+        },
+        {
+          "id": "n3",
+          "sceneId": "end",
+          "holdMs": 1000
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "transition": {
+            "durationMs": 600,
+            "easing": "ease-in-out"
+          }
+        },
+        {
+          "id": "e2",
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "transition": {
+            "durationMs": 600,
+            "easing": "ease-in-out"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultPathId": "main",
+  "extensions": {}
+}

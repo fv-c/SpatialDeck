@@ -1,0 +1,18 @@
+{
+  "jsGzipBytes": 17823,
+  "cssGzipBytes": 662,
+  "budgets": {
+    "js": 102400,
+    "css": 20480
+  },
+  "artifacts": [
+    {
+      "file": "consumer.css",
+      "gzipBytes": 662
+    },
+    {
+      "file": "consumer.js",
+      "gzipBytes": 17823
+    }
+  ]
+}

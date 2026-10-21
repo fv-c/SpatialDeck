@@ -1,6 +1,6 @@
 # SpatialDeck — specifica di progetto
 
-Stato: progetto tecnico, nessuna implementazione avviata. Baseline documentale: 21 ottobre 2026. Le parole DEVE, NON DEVE e PUÒ indicano rispettivamente requisito, divieto e opzione. Questo documento è il contratto comune dei sei prompt; una deviazione motivata richiede aggiornamento coerente della specifica, della roadmap e delle migrazioni, non una modifica silenziosa.
+Stato attuale: implementazione 0.1 presente e WebKit locale verificato con runner dedicato; CI Linux configurata, esecuzione remota non verificata; dettagli in sezione 15. Baseline documentale originaria: 21 ottobre 2026. Le parole DEVE, NON DEVE e PUÒ indicano rispettivamente requisito, divieto e opzione. Questo documento è il contratto comune dei sei prompt; una deviazione motivata richiede aggiornamento coerente della specifica, della roadmap e delle migrazioni, non una modifica silenziosa.
 
 ## 1. Stato iniziale e ambito
 
@@ -81,7 +81,8 @@ Versioni realmente presenti nel registry npm e nei metadati Node verificati il 2
 | `@vitejs/plugin-react` | 6.1.2 | Peer Vite `^8.0.0`; solo da fase 2 |
 | Vitest | 5.0.5 | Peer Vite include 8; Node include 24 |
 | `@vitest/coverage-v8` | 5.0.5 | Versione allineata a Vitest, opzionale fino al primo report |
-| `@playwright/test` | 1.64.1 | Node >=20; browser del medesimo lockfile |
+| `@playwright/test` | 1.64.1 | Node >=20; runner principale e CI Linux per Chromium/Firefox/WebKit |
+| `@playwright/test` compatibilità macOS 14 | 1.61.1 | Eccezione autorizzata dopo verifica: workspace privato `tools/webkit-macos14`, solo WebKit su Darwin 23; non sostituisce il pin principale |
 | ESLint / `@eslint/js` | 10.13.0 / 10.0.1 | Flat config, peer compatibili |
 | `typescript-eslint` | 8.72.0 | Peer TS `>=4.8.4 <6.1.0`, ESLint include 10 |
 | `eslint-plugin-react-hooks` | 7.1.1 | Peer ESLint include 10; fase 2 |
@@ -481,3 +482,13 @@ Debito ammesso e dichiarato: mappa 2D con Z via inspector; video statico senza a
 Questa sezione registra il contratto da verificare anche con audit incrociato finale: sei prompt numerati, dipendenze senza React nel motore, schema/API incrementali con migrazioni, demo eseguibile a ogni fase, test e stop condition in ogni prompt, profili e dipendenze di import/export espliciti, sicurezza/accessibilità trasversali, nessuna equivalenza totale con impress.js. Questa redazione crea soltanto Markdown; nessuna fase implementativa è stata avviata e nessun test applicativo è dichiarato eseguito.
 
 Audit finale effettivo: 32 controlli documentali superati, inclusi schema/esempio JSON, cinque negativi strutturali e integrità del perimetro dei file; dettagli in ROADMAP, sezione 7. Nessuna build o installazione applicativa è stata eseguita.
+
+## 15. Stato effettivo dopo l'implementazione 0.1
+
+Il 21 ottobre 2026 sono stati materializzati `packages/core`, `packages/player`, `apps/playground`, lo schema normativo 1.0.0, la fixture a tre scene, CI e controlli. Il contratto geometrico, lo schema e i pin della baseline sono invariati. [Guida/API](DEVELOPMENT.md) e [rapporto di verifica](verification/phase-0.1.md) descrivono i file reali e gli esiti; le indicazioni «proposto/non implementato» nelle sezioni storiche precedenti documentano lo stato iniziale.
+
+I path della fase 1 corrispondono alla proposta. Aggiunte motivate: `packages/player/src/browser.ts` raccoglie CSS per Vite mantenendo le dichiarazioni pubbliche prive di import CSS irrisolti; `scripts/generate.mjs` deriva tipi e validatore dallo schema unico; `docs/verification` conserva misure e screenshot. Nessun pacchetto delle fasi successive è stato creato. Le opzioni media/plugin e gli eventi documentchange/mediaerror sono rimandati alle API che li introducono, senza stub operativi.
+
+La vista testuale forza transizioni immediate ed è il fallback se CSS 3D manca; non modifica il documento. Le scorciatoie considerano il focus locale e non sottraggono il focus a un campo durante una transizione. La suite E2E serve la build production. La verifica locale esegue Chromium e Firefox con Playwright 1.64.1 e WebKit con il runner dedicato 1.61.1 su macOS 14: 30 E2E passati, zero skip. L'eccezione approvata evita `Unknown setting: PushAPIEnabled` senza cambiare il pin principale né il prodotto. `tools/webkit-macos14` è un workspace di tooling concreto; la suite resta unica e i report sono separati per runner. La CI Linux installa ed esegue tutti e tre i browser con 1.64.1; la sua esecuzione remota e Safari reale non sono stati verificati in questa sessione.
+
+La licenza originale è invariata. Manifest privati, identificatore SPDX non dedotto dal solo testo GPL; packaging pubblico non effettuato. Nessuna installazione globale, commit, push, tag, deploy o pubblicazione.

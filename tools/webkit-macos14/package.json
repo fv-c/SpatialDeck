@@ -1,0 +1,10 @@
+{
+  "name": "@spatialdeck/webkit-macos14",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dedicated WebKit test runner for macOS 14; never used by the Linux CI runner",
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
+}
