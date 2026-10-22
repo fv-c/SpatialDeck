@@ -1,10 +1,10 @@
 import { expect, test } from "./runner.js";
-import type { Player } from "../../packages/player/src/index.js";
+import type { Player, PlayerOptions } from "../../packages/player/src/index.js";
 import type { ProjectDocument } from "../../packages/core/src/index.js";
 declare global {
   interface Window {
     demoPlayers: Player[];
-    createDemoPlayer: () => Player;
+    createDemoPlayer: (options?: PlayerOptions) => Player;
     demoDocument: ProjectDocument;
   }
 }
@@ -67,7 +67,7 @@ test("three scenes project independent corner landmarks and fit in the viewport"
     }
     if (info.project.name === "chromium")
       await page.locator("#player-1 .sd-player").screenshot({
-        path: `docs/verification/structure-regressions/scene-${sceneId}.png`,
+        path: `docs/verification/content-regressions/scene-${sceneId}.png`,
       });
   }
 });
@@ -129,7 +129,7 @@ test("outline reads all text in path order and navigates with reduced motion", a
   ).toBe(true);
   if (info.project.name === "chromium")
     await page.locator("#player-1 .sd-player").screenshot({
-      path: "docs/verification/structure-regressions/outline.png",
+      path: "docs/verification/content-regressions/outline.png",
     });
 });
 test("latest-wins, invalid commands, AbortSignal, event order and changing motion", async ({
@@ -348,6 +348,8 @@ test("text is rendered inertly and player does not steal focus on mount", async 
     const host = document.createElement("div");
     document.body.append(host);
     const doc = structuredClone(window.demoDocument);
+    if (doc.scenes[0]!.blocks[0]!.type !== "text")
+      throw new Error("Expected text fixture");
     doc.scenes[0]!.blocks[0]!.data.text =
       '<img src=x onerror="window.hacked=true">';
     const p = window.createDemoPlayer();

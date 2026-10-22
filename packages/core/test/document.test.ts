@@ -31,12 +31,12 @@ describe("schema/document", () => {
     (s) => expect(validateDocument(s).ok).toBe(false),
   );
   it("refuses a future version without mutation", () => {
-    const d = { ...project(), schemaVersion: "1.2.0" };
+    const d = { ...project(), schemaVersion: "1.3.0" };
     expect(migrateDocument(d)).toMatchObject({
       ok: false,
       diagnostics: [{ code: "UNSUPPORTED_VERSION" }],
     });
-    expect(d.schemaVersion).toBe("1.2.0");
+    expect(d.schemaVersion).toBe("1.3.0");
   });
   it.each([
     ["scene ID", (d: ProjectDocument) => d.scenes.push(d.scenes[0]!)],

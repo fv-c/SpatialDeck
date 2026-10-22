@@ -25,7 +25,7 @@ for (const name of await readdir(".tools/bundle")) {
   if (name.endsWith(".js")) {
     js += size;
     if (
-      /react-dom|react\/jsx|new Function|eval\(|@spatialdeck\/editor/.test(
+      /react-dom|react\/jsx|new Function|eval\(|@spatialdeck\/editor|DOMPurify|marked|KaTeX|fflate/.test(
         data.toString(),
       )
     )
@@ -40,7 +40,7 @@ const result = {
   artifacts,
 };
 await writeFile(
-  "docs/verification/structure-bundle.json",
+  "docs/verification/content-bundle.json",
   JSON.stringify(result, null, 2) + "\n",
 );
 console.log(JSON.stringify(result));

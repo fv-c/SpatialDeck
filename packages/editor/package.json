@@ -1,6 +1,6 @@
 {
   "name": "@spatialdeck/editor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "files": [
@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@spatialdeck/core": "workspace:*",
-    "@spatialdeck/player": "workspace:*"
+    "@spatialdeck/player": "workspace:*",
+    "@spatialdeck/plugins": "workspace:*"
   },
   "peerDependencies": {
     "react": "19.3.1",

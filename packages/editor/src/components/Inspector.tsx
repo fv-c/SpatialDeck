@@ -1,5 +1,6 @@
 import { useEffect, useState, useId } from "react";
 import type { Scene, Result } from "@spatialdeck/core";
+import { ContentPanel } from "./ContentPanel.js";
 import { editScene } from "../commands/index.js";
 import { parseFinite } from "../store/index.js";
 import type { EditorStore } from "../store/index.js";
@@ -194,43 +195,7 @@ export function Inspector({
           ))}
         </div>
       </fieldset>
-      <fieldset>
-        <legend>
-          Contenuti <span>testo semplice</span>
-        </legend>
-        {scene.blocks.map((block, i) => (
-          <TextField
-            key={`${scene.id}-${block.id}`}
-            label={`Testo ${i + 1}`}
-            value={block.data.text}
-            multiline
-            apply={(text) =>
-              edit({
-                blocks: scene.blocks.map((b) =>
-                  b.id === block.id ? { ...b, data: { text } } : b,
-                ),
-              })
-            }
-          />
-        ))}
-        <button
-          tabIndex={0}
-          onClick={() =>
-            edit({
-              blocks: [
-                ...scene.blocks,
-                {
-                  id: crypto.randomUUID(),
-                  type: "text",
-                  data: { text: "Nuovo testo" },
-                },
-              ],
-            })
-          }
-        >
-          Aggiungi testo
-        </button>
-      </fieldset>
+      <ContentPanel store={store} scene={scene} />
       <TextField
         key={`${scene.id}-notes`}
         label="Note relatore"

@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
-import { createPlayer } from "@spatialdeck/player";
+import { createPlayer, createAssetResolver } from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
+import type { AssetBlobs } from "@spatialdeck/player";
+import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
 import {
   sampleTransition,
   resolveSceneCamera,
@@ -17,6 +19,7 @@ export function PlayerSurface({
   onPlayer,
   navigation = null,
   capture = null,
+  blobs,
 }: {
   document: ProjectDocument;
   selection: string | null;
@@ -24,16 +27,25 @@ export function PlayerSurface({
   navigation?: NavigationSelection | null;
   capture?: Capture | null;
   onPlayer?: (player: Player | null, present: boolean) => void;
+  blobs?: AssetBlobs;
 }) {
   const host = useRef<HTMLDivElement>(null),
     player = useRef<Player | null>(null);
   const initial = useRef(document),
     callback = useRef(onPlayer);
   callback.current = onPlayer;
+  const assets = useRef(
+    createAssetResolver(document.assets, blobs ?? new Map()),
+  );
+  assets.current = createAssetResolver(document.assets, blobs ?? new Map());
   useEffect(() => {
+    const builtins = createBuiltinRegistry();
     const instance = createPlayer({
       input: present,
       motion: present ? "system" : "reduced",
+      registry: builtins.registry,
+      assets: { resolve: (id, signal) => assets.current.resolve(id, signal) },
+      muted: !present,
     });
     player.current = instance;
     void instance.mount(host.current!, initial.current).then((result) => {
@@ -46,6 +58,7 @@ export function PlayerSurface({
     return () => {
       callback.current?.(null, present);
       instance.destroy();
+      builtins.plugins.destroy();
       player.current = null;
     };
   }, [present]);
@@ -78,7 +91,7 @@ export function PlayerSurface({
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [document, selection, present, navigation]);
+  }, [document, selection, present, navigation, blobs]);
   useEffect(() => {
     if (!present) {
       if (capture)

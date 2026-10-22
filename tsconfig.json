@@ -7,7 +7,9 @@
     "paths": {
       "@spatialdeck/core": ["./packages/core/src/index.ts"],
       "@spatialdeck/player": ["./packages/player/src/index.ts"],
-      "@spatialdeck/editor": ["./packages/editor/src/index.ts"]
+      "@spatialdeck/editor": ["./packages/editor/src/index.ts"],
+      "@spatialdeck/plugins": ["./packages/plugins/src/sdk/index.ts"],
+      "@spatialdeck/plugins/*": ["./packages/plugins/src/*"]
     },
     "jsx": "react-jsx"
   },

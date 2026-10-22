@@ -1,5 +1,6 @@
 import type { Diagnostic, ProjectDocument, ScenePath } from "./index.js";
 import { diagnostic } from "./index.js";
+import { usesBlocks } from "./contents.js";
 import {
   getWorldMatrix,
   cameraPose,
@@ -78,6 +79,7 @@ export function updateCapabilities(doc: ProjectDocument): void {
   doc.requiredCapabilities = [
     "linear",
     ...(usesStructure(doc) ? ["structure" as const] : []),
+    ...(usesBlocks(doc) ? ["blocks" as const] : []),
   ];
 }
 export function validateStructure(doc: ProjectDocument): Diagnostic[] {

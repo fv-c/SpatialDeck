@@ -17,6 +17,7 @@ export default defineConfig({
         "react/jsx-runtime",
         "@spatialdeck/core",
         "@spatialdeck/player",
+        /^@spatialdeck\/plugins(?:\/.*)?$/,
       ],
     },
   },

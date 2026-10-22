@@ -5,7 +5,7 @@ import standalone from "ajv/dist/standalone/index.js";
 const schema = JSON.parse(
   await readFile(
     new URL(
-      "../packages/core/schema/project-1.1.0.schema.json",
+      "../packages/core/schema/project-1.2.0.schema.json",
       import.meta.url,
     ),
     "utf8",
@@ -27,10 +27,23 @@ const legacy = JSON.parse(
   ),
 );
 ajv.addSchema(legacy, "legacy");
+ajv.addSchema(
+  JSON.parse(
+    await readFile(
+      new URL(
+        "../packages/core/schema/project-1.1.0.schema.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+  "structure",
+);
 ajv.addSchema(schema, "current");
 // A standalone module, never the Ajv compiler, enters the browser graph.
 let source = standalone(ajv, {
   validateLegacy: "legacy",
+  validateStructureSchema: "structure",
   validateCurrent: "current",
 });
 source = source.replace(
@@ -48,7 +61,7 @@ const names = {
   vec3: "Vec3",
   transition: "Transition",
   extensions: "Extensions",
-  block: "TextBlock",
+  block: "Block",
   scene: "Scene",
   asset: "Asset",
   node: "PathNode",
@@ -59,12 +72,28 @@ const names = {
   cameraTrack: "CameraTrack",
   condition: "EdgeCondition",
   cue: "Cue",
+  ...Object.fromEntries(
+    [
+      "text",
+      "markdown",
+      "html",
+      "svg",
+      "latex",
+      "image",
+      "audio",
+      "video",
+      "link",
+      "embed",
+      "plugin",
+    ].map((n) => [n + "Block", n[0].toUpperCase() + n.slice(1) + "Block"]),
+  ),
 };
 const type = (s) => {
   if (s.$ref) return names[s.$ref.split("/").at(-1)];
   if ("const" in s) return JSON.stringify(s.const);
   if (s.enum) return s.enum.map((v) => JSON.stringify(v)).join(" | ");
   if (s.anyOf) return s.anyOf.map(type).join(" | ");
+  if (s.oneOf) return s.oneOf.map(type).join(" | ");
   if (s.type === "array")
     return s.prefixItems
       ? "[" + s.prefixItems.map(type).join(", ") + "]"

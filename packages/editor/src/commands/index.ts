@@ -16,7 +16,7 @@ export type DocumentEdit = (
 const id = () => globalThis.crypto.randomUUID();
 export function emptyProject(): ProjectDocument {
   return {
-    schemaVersion: "1.1.0",
+    schemaVersion: "1.2.0",
     id: id(),
     metadata: { title: "Senza titolo", language: "it" },
     settings: {

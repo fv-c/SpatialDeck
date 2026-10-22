@@ -7,6 +7,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: "@spatialdeck/plugins",
+        replacement: source("../../packages/plugins/src"),
+      },
+      {
         find: /^@spatialdeck\/editor$/,
         replacement: source("../../packages/editor/src/browser.ts"),
       },
@@ -24,6 +28,9 @@ export default defineConfig({
       },
     ],
   },
-  build: { target: ["chrome120", "firefox120", "safari17"] },
+  build: {
+    target: ["chrome120", "firefox120", "safari17"],
+    assetsInlineLimit: 0,
+  },
   server: { host: "127.0.0.1", port: 5174 },
 });

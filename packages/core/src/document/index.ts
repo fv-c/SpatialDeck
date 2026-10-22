@@ -1,5 +1,11 @@
-import { validateCurrent, validateLegacy } from "./validator.js";
+import {
+  validateCurrent,
+  validateLegacy,
+  validateStructureSchema,
+} from "./validator.js";
 import { validateStructure } from "./structure.js";
+import { validateContents } from "./contents.js";
+export { usesBlocks } from "./contents.js";
 export { updateCapabilities, usesStructure } from "./structure.js";
 import type { ProjectDocument } from "./types.js";
 export * from "./types.js";
@@ -85,7 +91,7 @@ function inspect(
   }
   ancestors.delete(value);
 }
-function normalizedPath(path: string): string | null {
+export function normalizedPath(path: string): string | null {
   let decoded = path;
   try {
     for (let i = 0; i < 8; i++) {
@@ -126,11 +132,12 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     typeof data === "object" &&
     "schemaVersion" in data &&
     data.schemaVersion !== "1.0.0" &&
-    data.schemaVersion !== "1.1.0"
+    data.schemaVersion !== "1.1.0" &&
+    data.schemaVersion !== "1.2.0"
   )
     return failure(
       "UNSUPPORTED_VERSION",
-      "Supported schemas: 1.0.0 and 1.1.0",
+      "Supported schemas: 1.0.0, 1.1.0 and 1.2.0",
       "/schemaVersion",
     );
   const legacy =
@@ -138,7 +145,16 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     typeof data === "object" &&
     "schemaVersion" in data &&
     data.schemaVersion === "1.0.0";
-  const validate = legacy ? validateLegacy : validateCurrent;
+  const previous =
+    !!data &&
+    typeof data === "object" &&
+    "schemaVersion" in data &&
+    data.schemaVersion === "1.1.0";
+  const validate = legacy
+    ? validateLegacy
+    : previous
+      ? validateStructureSchema
+      : validateCurrent;
   if (!validate(data))
     return {
       ok: false,
@@ -152,7 +168,6 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     };
   if (legacy) {
     const old = data as ProjectDocument;
-    old.schemaVersion = "1.1.0";
     old.scenes.forEach((s) => {
       s.parentId = null;
     });
@@ -161,6 +176,15 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
   }
   const doc = data as ProjectDocument,
     diagnostics: Diagnostic[] = [];
+  if (legacy || previous) {
+    doc.schemaVersion = "1.2.0";
+    doc.pluginSettings = {};
+    if (!validateCurrent(doc))
+      return failure(
+        "MIGRATION_INVALID",
+        "Migration failed current schema validation",
+      );
+  }
   const add = (code: string, message: string, pointer: string) =>
     diagnostics.push(diagnostic(code, message, pointer));
   const unique = (items: { id: string }[], pointer: string) => {
@@ -258,6 +282,7 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
       );
   });
   diagnostics.push(...validateStructure(doc));
+  diagnostics.push(...validateContents(doc));
   return diagnostics.length
     ? { ok: false, diagnostics }
     : success(structuredClone(doc));

@@ -1,0 +1,485 @@
+{
+  "schemaVersion": "1.2.0",
+  "id": "content-gallery",
+  "metadata": {
+    "title": "SpatialDeck · Contenuti locali",
+    "language": "it",
+    "author": "SpatialDeck contributors"
+  },
+  "settings": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "perspective": 1000
+    },
+    "presentation": {
+      "fit": "contain",
+      "motion": "system",
+      "defaultTransition": {
+        "durationMs": 600,
+        "easing": "ease-in-out"
+      }
+    }
+  },
+  "requiredCapabilities": ["linear", "blocks"],
+  "scenes": [
+    {
+      "id": "text",
+      "title": "TEXT",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "text-block",
+          "type": "text",
+          "data": {
+            "text": "Testo letterale: <script> resta visibile come testo."
+          }
+        }
+      ],
+      "notes": "Note text: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "markdown",
+      "title": "MARKDOWN",
+      "position": [1400, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "markdown-block",
+          "type": "markdown",
+          "data": {
+            "source": "## Markdown locale\n\n**Testo forte**, *corsivo* e una lista:\n\n- nessuna CDN\n- dati conservati\n\n[Documentazione](https://example.org/)"
+          }
+        }
+      ],
+      "notes": "Note markdown: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "html",
+      "title": "HTML",
+      "position": [2800, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "html-block",
+          "type": "html",
+          "data": {
+            "source": "<p><strong>HTML semantico</strong> e una tabella.</p><table><caption>Dati locali</caption><tr><th scope=\"col\">Formato</th><th scope=\"col\">Stato</th></tr><tr><td>JSON</td><td>Canonico</td></tr></table>"
+          }
+        }
+      ],
+      "notes": "Note html: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "svg",
+      "title": "SVG",
+      "position": [4200, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "svg-block",
+          "type": "svg",
+          "data": {
+            "source": "<svg viewBox=\"0 0 640 180\"><defs><linearGradient id=\"blue\"><stop offset=\"0\" stop-color=\"#215baf\"/><stop offset=\"1\" stop-color=\"#be5261\"/></linearGradient></defs><rect x=\"10\" y=\"20\" width=\"600\" height=\"140\" fill=\"url(#blue)\"/></svg>",
+            "alt": "Rettangolo con sfumatura blu e rosa"
+          }
+        }
+      ],
+      "notes": "Note svg: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "latex",
+      "title": "LATEX",
+      "position": [5600, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "latex-block",
+          "type": "latex",
+          "data": {
+            "source": "\\int_0^1 x^2\\,dx = \\frac{1}{3}",
+            "display": true,
+            "alt": "Integrale da zero a uno di x al quadrato uguale a un terzo"
+          }
+        }
+      ],
+      "notes": "Note latex: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "image",
+      "title": "IMAGE",
+      "position": [7000, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "image-block",
+          "type": "image",
+          "data": {
+            "assetId": "diagram",
+            "alt": "Un cerchio blu collegato a un quadrato rosa",
+            "fit": "contain"
+          }
+        }
+      ],
+      "notes": "Note image: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "audio",
+      "title": "AUDIO",
+      "position": [8400, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "audio-block",
+          "type": "audio",
+          "data": {
+            "assetId": "tone",
+            "label": "Tono sinusoidale di due secondi",
+            "autoplay": true,
+            "loop": false,
+            "onExit": "stop"
+          }
+        }
+      ],
+      "notes": "Note audio: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "video",
+      "title": "VIDEO",
+      "position": [9800, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "video-block",
+          "type": "video",
+          "data": {
+            "assetId": "motion",
+            "label": "Forme in movimento",
+            "alt": "Pattern locale di prova di due secondi",
+            "autoplay": false,
+            "loop": false,
+            "onExit": "pause",
+            "posterAssetId": "diagram",
+            "captionsAssetId": "captions"
+          }
+        }
+      ],
+      "notes": "Note video: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "link",
+      "title": "LINK",
+      "position": [11200, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "link-block",
+          "type": "link",
+          "data": {
+            "label": "Torna al Markdown",
+            "target": {
+              "pathId": "gallery",
+              "nodeId": "markdown"
+            }
+          }
+        }
+      ],
+      "notes": "Note link: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "embed",
+      "title": "EMBED",
+      "position": [12600, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "embed-block",
+          "type": "embed",
+          "data": {
+            "url": "https://example.org/",
+            "title": "Esempio web esterno disattivato"
+          }
+        }
+      ],
+      "notes": "Note embed: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    },
+    {
+      "id": "plugin",
+      "title": "PLUGIN",
+      "position": [14000, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [960, 620],
+      "visible": true,
+      "blocks": [
+        {
+          "id": "plugin-block",
+          "type": "plugin",
+          "data": {
+            "pluginId": "org.spatialdeck.badge",
+            "apiVersion": "1.0.0",
+            "dataVersion": "1.0.0",
+            "payload": {
+              "label": "Plugin locale · API 1.0.0"
+            }
+          }
+        }
+      ],
+      "notes": "Note plugin: sorgente e asset locali.",
+      "extensions": {},
+      "parentId": null
+    }
+  ],
+  "assets": [
+    {
+      "id": "diagram",
+      "path": "assets/diagram/diagram.svg",
+      "mime": "image/svg+xml",
+      "byteLength": 283,
+      "sha256": "b47bbc4a5aaf3df906ab5a929c3c3c7c07643d612d97b877e1e69ca802406ee1"
+    },
+    {
+      "id": "tone",
+      "path": "assets/tone/tone.wav",
+      "mime": "audio/wav",
+      "byteLength": 96044,
+      "sha256": "5240d82f17d5004828dcfdd9954f50e62f012fabd58f7c4b11a09ada67a9072a"
+    },
+    {
+      "id": "motion",
+      "path": "assets/motion/motion.mp4",
+      "mime": "video/mp4",
+      "byteLength": 57817,
+      "sha256": "1eeb4e6e854a9153bcbc33541689da80568da0695638e5acca357100586a856c"
+    },
+    {
+      "id": "captions",
+      "path": "assets/captions/captions.vtt",
+      "mime": "text/vtt",
+      "byteLength": 61,
+      "sha256": "d49bb2bcbb9bd6b0e7c40675efe4046ae0053d336dcfa3ba24294cb7718948a8"
+    }
+  ],
+  "paths": [
+    {
+      "id": "gallery",
+      "name": "Gallery contenuti",
+      "startNodeId": "text",
+      "nodes": [
+        {
+          "id": "text",
+          "sceneId": "text",
+          "holdMs": 0
+        },
+        {
+          "id": "markdown",
+          "sceneId": "markdown",
+          "holdMs": 0
+        },
+        {
+          "id": "html",
+          "sceneId": "html",
+          "holdMs": 0
+        },
+        {
+          "id": "svg",
+          "sceneId": "svg",
+          "holdMs": 0
+        },
+        {
+          "id": "latex",
+          "sceneId": "latex",
+          "holdMs": 0
+        },
+        {
+          "id": "image",
+          "sceneId": "image",
+          "holdMs": 0
+        },
+        {
+          "id": "audio",
+          "sceneId": "audio",
+          "holdMs": 0
+        },
+        {
+          "id": "video",
+          "sceneId": "video",
+          "holdMs": 0
+        },
+        {
+          "id": "link",
+          "sceneId": "link",
+          "holdMs": 0
+        },
+        {
+          "id": "embed",
+          "sceneId": "embed",
+          "holdMs": 0
+        },
+        {
+          "id": "plugin",
+          "sceneId": "plugin",
+          "holdMs": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "edge-0",
+          "from": "text",
+          "to": "markdown",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-1",
+          "from": "markdown",
+          "to": "html",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-2",
+          "from": "html",
+          "to": "svg",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-3",
+          "from": "svg",
+          "to": "latex",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-4",
+          "from": "latex",
+          "to": "image",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-5",
+          "from": "image",
+          "to": "audio",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-6",
+          "from": "audio",
+          "to": "video",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-7",
+          "from": "video",
+          "to": "link",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-8",
+          "from": "link",
+          "to": "embed",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        },
+        {
+          "id": "edge-9",
+          "from": "embed",
+          "to": "plugin",
+          "label": "Avanti",
+          "transition": {
+            "durationMs": 0,
+            "easing": "linear"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultPathId": "gallery",
+  "extensions": {},
+  "cameraTracks": [],
+  "cues": [],
+  "pluginSettings": {}
+}

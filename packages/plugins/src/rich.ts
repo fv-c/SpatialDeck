@@ -1,0 +1,73 @@
+import { marked } from "marked";
+import katex from "katex";
+import "katex/dist/katex.min.css";
+import { sanitizeContent } from "./security.js";
+import type {
+  ContentContext,
+  ContentRenderer,
+  RendererRegistry,
+} from "@spatialdeck/player";
+export { sanitizeContent } from "./security.js";
+function rich(): ContentRenderer {
+  let host: HTMLElement,
+    last = "";
+  function update(context: ContentContext) {
+    const b = context.block,
+      key = JSON.stringify(b);
+    if (key === last) return;
+    last = key;
+    host.replaceChildren();
+    if (b.type === "markdown" || b.type === "html" || b.type === "svg") {
+      const source =
+        b.type === "markdown"
+          ? marked.parse(b.data.source, { async: false })
+          : b.data.source;
+      host.append(
+        sanitizeContent(
+          host,
+          source,
+          b.type === "svg" ? "svg" : "html",
+          context.instanceId,
+        ),
+      );
+      if (b.type === "svg") {
+        host.setAttribute("role", "img");
+        host.setAttribute("aria-label", b.data.alt);
+      }
+    } else if (b.type === "latex") {
+      try {
+        // Only KaTeX-generated markup enters this sink. User HTML never uses it.
+        host.innerHTML = katex.renderToString(b.data.source, {
+          trust: false,
+          throwOnError: true,
+          maxExpand: 500,
+          maxSize: 20,
+          macros: Object.create(null),
+          output: "htmlAndMathml",
+          displayMode: b.data.display,
+          strict: "error",
+        });
+        if (b.data.alt) host.setAttribute("aria-label", b.data.alt);
+      } catch {
+        host.textContent = `Formula non valida: ${b.data.alt || b.data.source}`;
+        host.setAttribute("role", "status");
+      }
+    }
+  }
+  return {
+    mount(element, context) {
+      host = element;
+      update(context);
+    },
+    update,
+    destroy() {
+      host.replaceChildren();
+    },
+  };
+}
+export function registerRich(registry: RendererRegistry): () => void {
+  const off = (["markdown", "html", "svg", "latex"] as const).map((type) =>
+    registry.register(type, rich),
+  );
+  return () => off.forEach((dispose) => dispose());
+}

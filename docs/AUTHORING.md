@@ -1,4 +1,4 @@
-# Creare una presentazione con Studio 0.3
+# Creare una presentazione con Studio 0.4
 
 Avvia `pnpm dev:studio` dalla root dopo l'installazione descritta nel README. Apri l'indirizzo locale stampato da Vite, normalmente `http://127.0.0.1:5174`. Tutto il lavoro avviene nel browser, senza account o backend.
 
@@ -51,3 +51,17 @@ Per un ciclo usa prima **Abilita loop manuale (3 visite)**: aggiunge la policy e
 I **Cue dichiarativi** hanno nome namespaced (per esempio `presentation.mark`), tempo in millisecondi entro la durata e payload JSON. Sono dati ed eventi per un host; Studio non esegue codice dal progetto. Panoramica, pan e zoom nel menu Camera sono ispezione temporanea. Salvataggio e recupero includono tutti i dati nuovi, senza selezione, scrub o history UI.
 
 Per provare il documento completo apri `examples/structure-branching/project.json` in Studio, oppure `/structure` nel playground. Da A scegli B o C, poi D; Indietro torna al ramo realmente percorso. B è figlia di A e il ramo B usa una track con endpoint indipendente. D permette un ritorno limitato e il percorso alternativo mostra la stessa scena in un itinerario distinto.
+
+## Contenuti e risorse 0.4
+
+Il documento corrente è schema 1.2.0. L’apertura di 1.0.0/1.1.0 migra una copia mantenendo scene, percorsi, note, testo ed estensioni; salvare una nuova copia conserva il predecessore.
+
+Nell’inspector, **Contenuti** mantiene l’ordine di lettura. **Aggiungi testo** conserva il testo letterale storico; **Tipo contenuto** e **Aggiungi contenuto** aggiungono Markdown, HTML, SVG, LaTeX, immagine, audio, video, link interno, embed o plugin. Le sorgenti sono textarea con anteprima nel player condiviso. **Dati tipo** espone tutti i campi JSON tipizzati (alt, label, display, assetId, posterAssetId, captionsAssetId, target del link, autoplay/loop/onExit). Un valore invalido mostra l’errore e lascia il documento precedente. Sposta su/giù ed Elimina sono comandi annullabili. Il badge locale ha anche un inspector separato per label; le impostazioni plugin documento sono modificabili nel loro campo JSON.
+
+In **Risorse locali**, aggiungi prima un file e poi il blocco immagine/audio/video: il blocco usa il primo asset del tipo corrispondente, modificabile nei Dati. Il pannello mostra nome, ID, MIME e dimensione; il JSON espone il registro completo. **Associa file mancante** verifica dimensione/firma e digest originali. **Sostituisci** aggiorna i metadati mantenendo l’ID; undo recupera i byte precedenti conservati in memoria. I file non sono inseriti come blob URL nel documento.
+
+**Salva JSON** conserva i riferimenti e richiede file affiancati o associazione manuale dopo l’apertura. **Salva archivio** produce `.spatialdeck` portabile con tutti gli asset verificati; se un file manca, segnala quale associare. **Apri JSON** e **Apri archivio** usano il medesimo selettore; un archivio invalido lascia intatto il lavoro corrente. Autosave/recovery includono le risorse delle revisioni conservate e rimangono distinti da un backup esportato.
+
+Audio/video hanno controlli nativi e il pulsante **Riproduci label**; **Abilita media** autorizza i blocchi con autoplay nel player corrente. Nessun autoplay sonoro è garantito. All’uscita `pause` mantiene il tempo, `stop` lo azzera; destroy interrompe e libera tutto. La preview Studio è muta; la presentazione può produrre audio. Imposta una label, alt e un asset VTT nelle captions del video. Codec/file non disponibili hanno messaggi e azione di ripristino nel pannello Risorse. Cue e media non garantiscono sincronizzazione al campione.
+
+Per provare ogni contenuto, apri `/content` nel playground e scarica l’archivio gallery, oppure apri `examples/content-gallery/content-gallery.spatialdeck` in Studio. I contenuti locali funzionano senza Internet dopo il caricamento dell’app; l’embed è off e i plugin mancanti conservano i dati mostrando un placeholder. [Policy e SDK](PLUGINS.md).

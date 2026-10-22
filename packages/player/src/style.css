@@ -63,6 +63,43 @@
   box-shadow: 0 6px 24px #17203526;
   overflow-wrap: anywhere;
   font-size: 28px;
+  overflow: auto;
+}
+.sd-block {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.sd-block img,
+.sd-block svg,
+.sd-block video {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+}
+.sd-block audio {
+  max-width: 100%;
+}
+.sd-block pre {
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.sd-block table {
+  border-collapse: collapse;
+}
+.sd-block th,
+.sd-block td {
+  border: 1px solid #53637b;
+  padding: 6px;
+}
+.sd-block iframe {
+  width: 100%;
+  min-height: 240px;
+  border: 1px solid #53637b;
+}
+.sd-plugin-badge {
+  padding: 16px;
+  border: 2px solid #215baf;
+  border-radius: 8px;
 }
 .sd-content h2 {
   margin: 0 0 32px;

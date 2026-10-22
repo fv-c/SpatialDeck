@@ -6,6 +6,14 @@ export default defineConfig({
         "./packages/core/src/index.ts",
         import.meta.url,
       ).pathname,
+      "@spatialdeck/player": new URL(
+        "./packages/player/src/index.ts",
+        import.meta.url,
+      ).pathname,
+      "@spatialdeck/plugins/archive": new URL(
+        "./packages/plugins/src/archive.ts",
+        import.meta.url,
+      ).pathname,
     },
   },
   test: {

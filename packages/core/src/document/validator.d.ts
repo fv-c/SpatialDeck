@@ -8,3 +8,4 @@ interface Validator {
 }
 export const validateLegacy: Validator;
 export const validateCurrent: Validator;
+export const validateStructureSchema: Validator;

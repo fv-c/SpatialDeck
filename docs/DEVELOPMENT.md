@@ -1,23 +1,23 @@
-# Sviluppo e API 0.3
+# Sviluppo e API 0.4
 
 ## Struttura verificata
 
-| Percorso                                  | Responsabilità                                                                                |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `packages/core/schema`                    | Schema corrente 1.1.0 e storico 1.0.0; export `@spatialdeck/core/schema` e subpath versionati |
-| `packages/core/src/document`              | Tipi derivati, validatore standalone, parser/semantica, diagnostica, serializer               |
-| `packages/core/src/math`                  | Matrici, quaternioni, auto-fit e vista camera                                                 |
-| `packages/core/src/navigation`            | Macchina lineare, visite, interruzione e clock attivo                                         |
-| `packages/core/src/timing`                | Sampler puro e easing                                                                         |
-| `packages/core/src/events`                | Payload degli eventi tipizzati                                                                |
-| `packages/player/src/index.ts`            | Factory, DOM, input, accessibilità e risorse per istanza                                      |
-| `packages/player/src/browser.ts`          | Entrypoint di build che raccoglie anche il CSS                                                |
-| `packages/editor`                         | Store immutabile, comandi atomici, React UI, file e IndexedDB                                 |
-| `apps/studio`                             | App React/Vite locale su porta 5174                                                           |
-| `apps/playground`                         | Demo Vite vanilla con due player su `/core`                                                   |
-| `examples/core-three-scenes/project.json` | Esempio normativo di tre scene, conservato in 1.0.0                                           |
-| `scripts`                                 | Generazione, verifica confini e budget bundle                                                 |
-| `tests/e2e`                               | Geometria e lifecycle su browser reali                                                        |
+| Percorso                                  | Responsabilità                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `packages/core/schema`                    | Schema corrente 1.2.0 e storici 1.0.0/1.1.0; export `@spatialdeck/core/schema` e subpath versionati |
+| `packages/core/src/document`              | Tipi derivati, validatore standalone, parser/semantica, diagnostica, serializer                     |
+| `packages/core/src/math`                  | Matrici, quaternioni, auto-fit e vista camera                                                       |
+| `packages/core/src/navigation`            | Macchina lineare, visite, interruzione e clock attivo                                               |
+| `packages/core/src/timing`                | Sampler puro e easing                                                                               |
+| `packages/core/src/events`                | Payload degli eventi tipizzati                                                                      |
+| `packages/player/src/index.ts`            | Factory, DOM, input, accessibilità e risorse per istanza                                            |
+| `packages/player/src/browser.ts`          | Entrypoint di build che raccoglie anche il CSS                                                      |
+| `packages/editor`                         | Store immutabile, comandi atomici, React UI, file e IndexedDB                                       |
+| `apps/studio`                             | App React/Vite locale su porta 5174                                                                 |
+| `apps/playground`                         | Demo Vite vanilla con due player su `/core`                                                         |
+| `examples/core-three-scenes/project.json` | Esempio normativo di tre scene, conservato in 1.0.0                                                 |
+| `scripts`                                 | Generazione, verifica confini e budget bundle                                                       |
+| `tests/e2e`                               | Geometria e lifecycle su browser reali                                                              |
 
 Core non dipende da DOM, player, filesystem o React. Il typecheck delle dichiarazioni core usa la sola libreria ES2022 e i tipi delle API standard Node, senza lib DOM. Il player dipende dal core. Il bundle standalone comprende soltanto i piccoli helper Ajv necessari e gl-matrix; il compilatore Ajv è usato esclusivamente dal generatore Node.
 
@@ -60,7 +60,7 @@ Il runtime WebKit per macOS 14 è congelato. La 1.61.1 evita il comando di proto
 
 ## Generazione e build
 
-`pnpm generate` legge lo schema JSON, produce il validatore Ajv standalone ESM e deriva i tipi TypeScript dallo stesso schema. Non modificare a mano `document/types.ts` o `document/validator.js`. Il generatore produce entrambi i validatori standalone e deriva i tipi dallo schema 1.1.0. `validateDocument` e `migrateDocument` accettano 1.0.0/1.1.0 e restituiscono una copia corrente 1.1.0; il dispatcher verifica schema e vincoli lineari storici prima della migrazione, poi semantica corrente. Una versione futura è rifiutata. Le fixture storiche non sono riscritte.
+`pnpm generate` legge lo schema JSON, produce il validatore Ajv standalone ESM e deriva i tipi TypeScript dallo stesso schema. Non modificare a mano `document/types.ts` o `document/validator.js`. Il generatore produce tre validatori standalone e deriva i tipi dallo schema 1.2.0. `validateDocument` e `migrateDocument` accettano 1.0.0/1.1.0/1.2.0 e restituiscono una copia corrente 1.2.0; il dispatcher verifica schema e vincoli lineari storici prima della migrazione, poi semantica corrente. Una versione futura è rifiutata. Le fixture storiche non sono riscritte.
 
 Vite library mode genera JS ESM e CSS separato; tsc genera `.d.ts`. Il consumer deve importare il CSS pubblico. `pnpm check:bundle`, dopo la build, crea un consumer minimo dal JS e dal CSS distribuiti, comprime con gzip livello 9 e misura entrambi. `pnpm check:boundaries` controlla dipendenze, sorgenti e output. Nessun pacchetto futuro vuoto.
 
@@ -95,7 +95,7 @@ Il container deve avere dimensioni CSS positive; il player ne adatta il viewport
 ### Core
 
 - `validateDocument(unknown)` accetta oggetti JSON o testo JSON. Restituisce `Result<ProjectDocument>` con copia indipendente oppure diagnostica con code, severity e JSON Pointer. Non muta l'input.
-- `migrateDocument(unknown)` valida e migra 1.0.0→1.1.0 in copia, aggiungendo parent null, track/cue vuoti senza cambiare ID, percorsi o estensioni. Su 1.1.0 è idempotente.
+- `migrateDocument(unknown)` valida e migra 1.0.0→1.1.0→1.2.0 in copia, aggiungendo parent null, track/cue e pluginSettings vuoti senza cambiare ID, percorsi, testo o estensioni. Su 1.2.0 è idempotente.
 - `serializeDocument(document)` restituisce `Result<string>`, con chiavi ordinate, array preservati e newline finale. Rifiuta input invalido.
 - `getWorldMatrix(document, sceneId)` restituisce `Result<number[]>`, matrice column-major.
 - `resolveSceneCamera(document, sceneId)` restituisce `Result<CameraPose>`; rotazione interna quaternion `[x,y,z,w]`.
@@ -105,7 +105,7 @@ La validazione applica schema strict, finitezza, ID/riferimenti, visibilità dei
 
 ### Player
 
-`PlayerOptions`: `input?: boolean`, `keymap?: Record<string,'next'|'prev'>`, `motion?: 'system'|'reduced'`, `clock?: PlayerClock`, `onError?: (diagnostic)=>void`. Una keymap fornita sostituisce la mappa predefinita. Non sono anticipati resolver media o registry plugin della fase contenuti.
+`PlayerOptions`: `input?: boolean`, `keymap?: Record<string,'next'|'prev'>`, `motion?: 'system'|'reduced'`, `clock?: PlayerClock`, `onError?: (diagnostic)=>void`. Una keymap fornita sostituisce la mappa predefinita. Da 0.4 aggiunge registry, assets, muted e onContentEvent, descritti sotto.
 
 `PlayerClock` espone `now()`, `request(callback)` e `cancel(id)`. `NavigationOptions` accetta `durationMs` intera tra 0 e 60000 e `signal` compatibile con AbortSignal. Il clock normale usa performance.now e RAF; nessun timer governa l'interpolazione.
 
@@ -120,7 +120,7 @@ La validazione applica schema strict, finitezza, ID/riferimenti, visibilità dei
 | `updateDocument(document)`         | Valida prima; annulla la transizione senza visite fantasma, conserva nodo/path se presenti altrimenti start, azzera history, aggiorna DOM e camera senza focus |
 | `destroy()`                        | Idempotente; cancella pending, emette destroy e rimuove tutte le risorse possedute                                                                             |
 
-`NavigationResult.status`: completed, noop, cancelled, choice-required oppure error. Da 0.3 choice-required espone scelte etichettate e ragioni di disabilitazione. I codici includono UNKNOWN_NODE, UNKNOWN_PATH, UNKNOWN_EDGE, INVALID_DURATION, PLAYER_UNMOUNTED e PLAYER_DESTROYED. Eventi attivi: ready, navigationstart, navigationcancel, scenechange, navigationend, diagnostic, documentchange, destroy; choice e cue sono operativi in 0.3. documentchange segue un aggiornamento riuscito; mediaerror resta nella fase contenuti.
+`NavigationResult.status`: completed, noop, cancelled, choice-required oppure error. Da 0.3 choice-required espone scelte etichettate e ragioni di disabilitazione. I codici includono UNKNOWN_NODE, UNKNOWN_PATH, UNKNOWN_EDGE, INVALID_DURATION, PLAYER_UNMOUNTED e PLAYER_DESTROYED. Eventi attivi: ready, navigationstart, navigationcancel, scenechange, navigationend, diagnostic, documentchange, destroy; choice e cue sono operativi in 0.3. documentchange segue un aggiornamento riuscito; mediaerror è operativo in 0.4: `{instanceId,sceneId,blockId,assetId?,diagnostic}` per missing/decode/play failure, con diagnostica warning.
 
 Ordine: eventuale cancel precedente, start nuovo, scenechange e end al commit, poi Promise completed. Nessuna visita annullata entra nella history. Noop e comandi invalidi non interrompono il piano valido; 10 next ravvicinati mirano sempre al successore dell'ultima visita completata. La posizione corrente è campionata prima della sostituzione. AbortSignal conserva la posa visuale. Il tempo attivo si congela quando il documento è hidden. Il cambio reduced motion completa subito con un solo commit.
 
@@ -130,11 +130,11 @@ Unità CSS, X destra/Y basso/Z verso osservatore; `M=T*Rz*Ry*Rx*S`, pivot centra
 
 Frecce, PageUp/PageDown e spazio agiscono soltanto sul container focalizzato e sui suoi contenuti; input, textarea, select, contenteditable, audio/video e controlli interattivi non sono intercettati. Tastiera e outline spostano il focus sul target al completamento; mount non ruba focus. Una chiamata API programmata non sposta il focus se l'utente è in un campo di testo. Scene non attive sono inert/aria-hidden. La vista testuale espone tutto il percorso una sola volta e naviga senza movimento; è anche il fallback se CSS 3D non è disponibile. Le preferenze reduced motion del sistema prevalgono sulle impostazioni autoriali.
 
-Sicurezza: textContent per contenuti, nessun eval/innerHTML, nessuna rete obbligatoria. La CSP dimostrata omette unsafe-eval; ammette gli stili inline necessari alle matrici CSS. Non è una certificazione WCAG o un test screen reader.
+Sicurezza: textContent per text, pipeline unica DOMPurify per markup utente e sink riservato al markup fidato KaTeX; nessun eval o rete obbligatoria. La CSP dimostrata omette unsafe-eval; ammette gli stili inline necessari alle matrici CSS. Non è una certificazione WCAG o un test screen reader.
 
 ## Limiti e prossima fase
 
-WebKit locale verificato con il runner macOS 14 dedicato e CI Linux con Playwright 1.64.1 superata sui tre browser; la prova Safari reale rimane non eseguita: [evidenza](verification/phase-0.1.md). Non sono misurati heap dopo GC, benchmark 100 scene o timing p95: sono gate successivi di stabilizzazione, non prestazioni dichiarate. Studio 0.2 è implementato con schema 1.0.0 invariato: [guida autore](AUTHORING.md), [verifica](verification/phase-0.2.md). Parent, grafi e timeline sono ora implementati in 0.3, descritti sotto. Blocchi oltre text, CLI/export, deploy e pubblicazione restano fuori fase.
+WebKit locale verificato con il runner macOS 14 dedicato e CI Linux con Playwright 1.64.1 superata sui tre browser; la prova Safari reale rimane non eseguita: [evidenza](verification/phase-0.1.md). Non sono misurati heap dopo GC, benchmark 100 scene o timing p95: sono gate successivi di stabilizzazione, non prestazioni dichiarate. Studio 0.2 è implementato con schema 1.0.0 invariato: [guida autore](AUTHORING.md), [verifica](verification/phase-0.2.md). Parent, grafi e timeline sono ora implementati in 0.3, descritti sotto. I blocchi della 0.4 sono descritti sotto; CLI/export, deploy e pubblicazione restano fuori fase.
 
 ## Editor e integrazione Studio — base 0.2
 
@@ -150,7 +150,7 @@ IndexedDB `spatialdeck-studio` v1 contiene `documents` (head per projectId) e `r
 
 ## Struttura 0.3
 
-`ProjectDocument` descrive lo schema corrente **1.1.0**; `@spatialdeck/core/schema/1.0.0` conserva il contratto storico. Nuovi campi: `Scene.parentId`, `cameraTracks`, `cues`, `PathNode.camera?`, `PathEdge.cameraTrackId?/condition?`, `ScenePath.loopPolicy?`. Condizioni sono esclusivamente `manual` oppure `visit-limit`. La capacità `structure` è obbligatoria quando usata; i comandi aggiornano l’elenco in base ai dati, mentre l’apertura di dati sotto-dichiarati fallisce. Schema strict, ordinamento keyframe, limiti cumulativi JSON e riferimenti rimangono obbligatori. Un cue con edgeId ambiguo tra path è rifiutato; gli ID storici non vengono rinominati durante la migrazione.
+La fase 0.3 ha introdotto lo schema **1.1.0**, ora migrato a 1.2.0; `@spatialdeck/core/schema/1.0.0` conserva il contratto storico. Nuovi campi: `Scene.parentId`, `cameraTracks`, `cues`, `PathNode.camera?`, `PathEdge.cameraTrackId?/condition?`, `ScenePath.loopPolicy?`. Condizioni sono esclusivamente `manual` oppure `visit-limit`. La capacità `structure` è obbligatoria quando usata; i comandi aggiornano l’elenco in base ai dati, mentre l’apertura di dati sotto-dichiarati fallisce. Schema strict, ordinamento keyframe, limiti cumulativi JSON e riferimenti rimangono obbligatori. Un cue con edgeId ambiguo tra path è rifiutato; gli ID storici non vengono rinominati durante la migrazione.
 
 Geometria core: `getWorldMatrix` compone fino a 32 livelli. `reparentScene(document,sceneId,parentId,preserveWorld=true)` restituisce un documento indipendente, validato, oppure errore senza mutazioni. `worldPositionToLocal` serve al drag XY nel mondo; nessuna matrice è implementata in React. Output gl-matrix in number[] a doppia precisione, senza modificare configurazioni globali. Scene effettivamente nascoste da un parent non possono essere target; pose automatiche dei target oltre i range camera sono rifiutate. `inspectCamera` segnala punti sul/dietro il piano prospettico, senza eliminare l’alternativa testuale.
 
@@ -166,4 +166,16 @@ Studio aggiunge `HierarchyTree`, `PathPanel`, `CameraTimeline`; path/nodi/edge/s
 
 La creazione scene conserva la sincronizzazione automatica solo per un principale canonico lineare senza condizioni, track o cue; con grafi/ordine diverso crea una scena indipendente, da aggiungere esplicitamente ai percorsi. Le eliminazioni mostrano conteggi concreti di scene, percorsi, visite, connessioni, cue e figli ricollocati; eliminare un nodo/edge elimina anche le visite diventate irraggiungibili. Eliminare una scena ricolloca i figli conservando world; la catena canonica ricuce i vicini. Conferma UI e singolo comando undo ripristinano tutti gli ID e i riferimenti. `deleteScene(id)` conserva il rifiuto per altri path referenzianti; `deleteScene(id,true)` è la variante usata dopo la preview d’impatto.
 
-`pnpm test:coverage` usa provider V8 **5.0.5**, allineato a Vitest, con gate core 85% statements / 80% branches. Risultati e artefatti della fase sono nel [rapporto 0.3](verification/phase-0.3.md). `check:bundle` registra la misura corrente in `verification/structure-bundle.json`; gli artefatti storici e i report 0.1/0.2 restano conservati. Le regressioni browser scrivono in `verification/structure-regressions/`.
+`pnpm test:coverage` usa provider V8 **5.0.5**, allineato a Vitest, con gate core 85% statements / 80% branches. Risultati e artefatti della fase sono nel [rapporto 0.3](verification/phase-0.3.md). In 0.3 `check:bundle` registrava la misura in `verification/structure-bundle.json`; gli artefatti storici e i report 0.1/0.2 restano conservati. Le regressioni browser 0.3 scrivevano in `verification/structure-regressions/`.
+
+## Contenuti 0.4
+
+Il documento scritto è 1.2.0; `@spatialdeck/core/schema/1.0.0`, `/1.1.0` e `/1.2.0` esportano i tre schemi. Il generatore deriva i tipi dall’union corrente e tre validatori standalone. Le verifiche storiche e le migrazioni rimangono cumulative; un futuro 1.3.0 non viene accettato implicitamente.
+
+`PlayerOptions` aggiunge `registry`, `assets`, `muted` e `onContentEvent`. `RendererRegistry.register(type,factory)` restituisce unregister; una factory restituisce `ContentRenderer` con mount/update/destroy. Il player possiede abort e teardown di ogni blocco. `createAssetResolver(assets,blobs)` verifica i byte e restituisce lease URL con release idempotente. Questi contratti non obbligano il player a dipendere dai renderer concreti.
+
+`packages/plugins` contiene SDK 1.0.0, rich/media/navigation/sample, pipeline unica e archivio, con entrypoint separati. `packages/editor` usa gli stessi renderer, ContentPanel/AssetPanel, store invariato nei confini undo/redo e IndexedDB v2 per revisioni e risorse atomiche. [Guida completa e trust model](PLUGINS.md).
+
+La gallery vanilla è `/content`, con undici blocchi e asset originali in `examples/content-gallery`. `content-gallery.spatialdeck` si apre anche in Studio. Preview muta e presentazione sono istanze indipendenti. Le app risolvono i sorgenti plugin anche in dev; i font KaTeX sono emessi come file locali. Il bundle minimo core/player continua a essere misurato separatamente e non contiene le dipendenze opzionali.
+
+Per 0.4, i report regressivi precedenti sono rediretti a `docs/verification/content-regressions/`; i rapporti e le fixture storiche restano conservati. Report, ambiente, comandi e limiti correnti: [phase-0.4](verification/phase-0.4.md). CLI/export/presenter rimangono il successivo perimetro 0.5.

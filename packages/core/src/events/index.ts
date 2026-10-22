@@ -1,6 +1,13 @@
 import type { Cue, Diagnostic } from "../document/index.js";
 import type { Visit } from "../navigation/index.js";
 export interface PlayerEvents {
+  mediaerror: {
+    instanceId: string;
+    sceneId: string;
+    blockId: string;
+    assetId?: string;
+    diagnostic: Diagnostic;
+  };
   cue: { instanceId: string; transitionId: string; cue: Cue };
   documentchange: { instanceId: string };
   ready: { instanceId: string };

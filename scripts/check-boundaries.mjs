@@ -48,11 +48,32 @@ const editor = JSON.parse(
   await readFile("packages/editor/package.json", "utf8"),
 );
 for (const dependency of Object.keys(editor.dependencies ?? {}))
-  if (!["@spatialdeck/core", "@spatialdeck/player"].includes(dependency))
+  if (
+    ![
+      "@spatialdeck/core",
+      "@spatialdeck/player",
+      "@spatialdeck/plugins",
+    ].includes(dependency)
+  )
     throw new Error(`Unexpected editor dependency: ${dependency}`);
 for (const peer of ["react", "react-dom"])
   if (!editor.peerDependencies?.[peer])
     throw new Error(`Missing editor peer: ${peer}`);
 console.log(
-  "Boundaries: core/player isolated; editor depends on core/player and React peers",
+  "Boundaries: core/player isolated; editor registers optional plugins and React peers",
 );
+const plugins = JSON.parse(
+  await readFile("packages/plugins/package.json", "utf8"),
+);
+for (const dep of Object.keys(plugins.dependencies ?? {}))
+  if (
+    ![
+      "@spatialdeck/core",
+      "@spatialdeck/player",
+      "dompurify",
+      "marked",
+      "katex",
+      "fflate",
+    ].includes(dep)
+  )
+    throw new Error(`Unexpected plugin dependency: ${dep}`);

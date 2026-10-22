@@ -6,8 +6,9 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { Player } from "@spatialdeck/player";
+import type { AssetBlobs } from "@spatialdeck/player";
 import { serializeDocument, validateDocument } from "@spatialdeck/core";
-import type { Result } from "@spatialdeck/core";
+import type { Result, ProjectDocument } from "@spatialdeck/core";
 import {
   createScene,
   editImpact,
@@ -15,7 +16,14 @@ import {
   emptyProject,
 } from "../commands/index.js";
 import { EditorStore } from "../store/index.js";
-import { Autosave, RecoveryRepository } from "../storage/index.js";
+import {
+  Autosave,
+  RecoveryRepository,
+  readArchive,
+  writeArchive,
+  projectBlobs,
+  mergeBlobs,
+} from "../storage/index.js";
 import type { Revision } from "../storage/index.js";
 import { Dialog } from "./Dialog.js";
 import { Inspector } from "./Inspector.js";
@@ -25,6 +33,7 @@ import { PathPanel } from "./PathPanel.js";
 import type { NavigationSelection } from "./PathPanel.js";
 import type { Capture } from "./CameraTimeline.js";
 import { PlayerSurface } from "./PlayerSurface.js";
+import { AssetPanel } from "./AssetPanel.js";
 export interface StudioProps {
   store?: EditorStore;
   repository?: RecoveryRepository;
@@ -44,6 +53,18 @@ export function Studio({
     [providedRepository],
   );
   const session = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const [library, setLibrary] = useState(new Map<string, Blob>());
+  const libraryRef = useRef(library);
+  libraryRef.current = library;
+  const blobs = useMemo(
+    () => projectBlobs(session.document, library),
+    [session.document, library],
+  );
+  function loadBlobs(doc: ProjectDocument, incoming: AssetBlobs) {
+    const next = mergeBlobs(libraryRef.current, doc, incoming);
+    libraryRef.current = next;
+    setLibrary(next);
+  }
   const [warning, setWarning] = useState(""),
     [error, setError] = useState(""),
     [present, setPresent] = useState(false),
@@ -67,7 +88,10 @@ export function Studio({
     presentButton = useRef<HTMLButtonElement>(null),
     presentation = useRef<HTMLDivElement>(null);
   const autosave = useMemo(
-    () => new Autosave(repository, new Map(), setWarning),
+    () =>
+      new Autosave(repository, new Map(), setWarning, (doc) =>
+        projectBlobs(doc, libraryRef.current),
+      ),
     [repository],
   );
   const selected = session.document.scenes.find(
@@ -98,7 +122,7 @@ export function Studio({
   }, [repository, autosave, providedRepository]);
   useEffect(() => {
     if (session.dirty && !session.dragging) autosave.schedule(session.document);
-  }, [session.document, session.dirty, session.dragging, autosave]);
+  }, [session.document, session.dirty, session.dragging, autosave, library]);
   useEffect(() => {
     const flush = () => {
       const current = store.getSnapshot();
@@ -132,12 +156,16 @@ export function Studio({
     else action();
   }
   async function openFile(input: File) {
-    if (input.size > 10 * 1024 * 1024) {
+    const archive = input.name.endsWith(".spatialdeck");
+    if (input.size > (archive ? 220 : 10) * 1024 * 1024) {
       setError("Il file supera 10 MiB.");
       return;
     }
     try {
-      const valid = validateDocument(await input.text());
+      const imported = archive ? await readArchive(input) : null;
+      const valid = imported
+        ? { ok: true as const, value: imported.document, diagnostics: [] }
+        : validateDocument(await input.text());
       if (!valid.ok) {
         report(valid);
         return;
@@ -145,6 +173,7 @@ export function Studio({
       confirmReplace(() => {
         autosave.cancelPending();
         report(store.replace(valid.value));
+        if (imported) loadBlobs(valid.value, imported.blobs);
         void repository
           .heads()
           .then((heads) => {
@@ -195,6 +224,31 @@ export function Studio({
     active?.focus({ preventScroll: true });
     void autosave.flush(document);
   }
+  async function savePortable() {
+    const active = window.document.activeElement as HTMLElement | null;
+    if (active?.matches("input,textarea,select")) active.blur();
+    store.endDrag();
+    const doc = store.getSnapshot().document;
+    try {
+      const blob = await writeArchive(
+        doc,
+        projectBlobs(doc, libraryRef.current),
+      );
+      const url = URL.createObjectURL(blob),
+        link = window.document.createElement("a");
+      link.href = url;
+      link.download = `${doc.metadata.title.replace(/[^\p{L}\p{N}_-]/gu, "_") || "spatialdeck"}.spatialdeck`;
+      window.document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      store.markSaved(doc);
+      void autosave.flush(doc);
+      setError("");
+    } catch (e) {
+      setError(`Salvataggio archivio non riuscito: ${String(e)}`);
+    }
+  }
   function remove() {
     if (!selected) return;
     const edit = deleteScene(selected.id, true);
@@ -226,13 +280,21 @@ export function Studio({
       setWarning(String(e));
     }
   }
-  function recover() {
+  async function recover() {
     const revision = revisions[recoveryIndex];
     if (!revision) return;
+    let recovered: Map<string, Blob>;
+    try {
+      recovered = await repository.blobs(revision);
+    } catch (e) {
+      setError(String(e));
+      return;
+    }
     setRevisions([]);
     confirmReplace(() => {
       autosave.cancelPending();
       const result = store.replace(revision.document, false);
+      if (result.ok) loadBlobs(revision.document, recovered);
       report(result);
       if (result.ok)
         autosave.setRevision(
@@ -287,7 +349,7 @@ export function Studio({
         <div className="brand">
           <span className="brand-mark">S↗</span>
           <span>
-            SpatialDeck <small>STUDIO / 0.3</small>
+            SpatialDeck <small>STUDIO / 0.4</small>
           </span>
         </div>
         <nav aria-label="Strumenti documento">
@@ -310,8 +372,14 @@ export function Studio({
           >
             Apri JSON
           </button>
+          <button tabIndex={0} onClick={() => file.current?.click()}>
+            Apri archivio
+          </button>
           <button tabIndex={0} onClick={save}>
             Salva JSON
+          </button>
+          <button tabIndex={0} onClick={() => void savePortable()}>
+            Salva archivio
           </button>
           <span className="toolbar-divider" />
           <button
@@ -364,7 +432,7 @@ export function Studio({
         <input
           ref={file}
           type="file"
-          accept=".json,application/json"
+          accept=".json,.spatialdeck,application/json,application/zip"
           aria-label="File progetto JSON"
           className="file-input"
           onChange={(e) => {
@@ -475,6 +543,12 @@ export function Studio({
             </button>
           </div>
           <HierarchyTree store={store} session={session} />
+          <AssetPanel
+            store={store}
+            document={session.document}
+            blobs={blobs}
+            onBlobs={loadBlobs}
+          />
           <p className="local-note">
             Locale, sul tuo dispositivo.
             <br />
@@ -496,6 +570,7 @@ export function Studio({
                 selection={session.selection}
                 navigation={navigation}
                 capture={capture}
+                blobs={blobs}
                 {...(onPlayer ? { onPlayer } : {})}
               />
             </section>
@@ -544,6 +619,7 @@ export function Studio({
             document={session.document}
             selection={null}
             present
+            blobs={blobs}
             {...(onPlayer ? { onPlayer } : {})}
           />
         </div>

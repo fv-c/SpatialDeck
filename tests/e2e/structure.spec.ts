@@ -172,10 +172,10 @@ test("nested world landmarks and independent track endpoint render within 1 CSS 
   close(landmarks, projected(doc(), "B", camera));
   if (info.project.name === "chromium") {
     await page.locator("#player-1").screenshot({
-      path: "docs/verification/structure-nested.png",
+      path: "docs/verification/content-regressions/structure-nested.png",
     });
     await writeFile(
-      "docs/verification/structure-landmarks.json",
+      "docs/verification/content-regressions/structure-landmarks.json",
       JSON.stringify(
         { camera, landmarks, expected: projected(doc(), "B", camera) },
         null,
@@ -265,7 +265,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     await readFile(pathToFile, "utf8"),
   ) as ProjectDocument;
   expect(saved).toEqual(expected);
-  expect(saved.schemaVersion).toBe("1.1.0");
+  expect(saved.schemaVersion).toBe("1.2.0");
   const context = await browser.newContext(),
     fresh = await context.newPage();
   await fresh.goto("http://127.0.0.1:4174");
@@ -277,12 +277,12 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     .toEqual(expected);
   if (info.project.name === "chromium") {
     await writeFile(
-      "docs/verification/structure-roundtrip.json",
+      "docs/verification/content-regressions/structure-roundtrip.json",
       JSON.stringify(saved, null, 2) + "\n",
     );
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({
-      path: "docs/verification/structure-studio.png",
+      path: "docs/verification/content-regressions/structure-studio.png",
     });
   }
   await context.close();
@@ -346,10 +346,10 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   ).toEqual(before);
   if (info.project.name === "chromium") {
     await page.locator(".preview-player").screenshot({
-      path: "docs/verification/structure-track.png",
+      path: "docs/verification/content-regressions/structure-track.png",
     });
     await page.locator(".timeline-panel").screenshot({
-      path: "docs/verification/structure-timeline.png",
+      path: "docs/verification/content-regressions/structure-timeline.png",
     });
   }
   await page
@@ -370,7 +370,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
         () => window.studio.store.getSnapshot().document.schemaVersion,
       ),
     )
-    .toBe("1.1.0");
+    .toBe("1.2.0");
   expect(
     await page.evaluate(() =>
       window.studio.store
@@ -378,7 +378,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
         .document.scenes.every((s) => s.parentId === null),
     ),
   ).toBe(true);
-  await upload(page, { ...fixture, schemaVersion: "1.2.0" });
+  await upload(page, { ...fixture, schemaVersion: "1.3.0" });
   await expect(page.getByRole("alert")).toContainText("Supported schemas");
   expect(
     await page.evaluate(

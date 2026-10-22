@@ -135,10 +135,10 @@ test("editor → real JSON download → new browser session → player preserves
     await readFile(downloadPath, "utf8"),
   ) as ProjectDocument;
   expect(saved).toEqual(document);
-  expect(saved.schemaVersion).toBe("1.1.0");
+  expect(saved.schemaVersion).toBe("1.2.0");
   if (info.project.name === "chromium")
     await page.screenshot({
-      path: "docs/verification/structure-regressions/editor-desktop.png",
+      path: "docs/verification/content-regressions/editor-desktop.png",
       fullPage: true,
     });
   await page.close();
@@ -181,11 +181,11 @@ test("editor → real JSON download → new browser session → player preserves
       );
   if (info.project.name === "chromium") {
     await writeFile(
-      "docs/verification/structure-regressions/editor-roundtrip-saved.json",
+      "docs/verification/content-regressions/editor-roundtrip-saved.json",
       JSON.stringify(saved, null, 2) + "\n",
     );
     await writeFile(
-      "docs/verification/structure-regressions/editor-roundtrip-evidence.json",
+      "docs/verification/content-regressions/editor-roundtrip-evidence.json",
       JSON.stringify(
         {
           camera,
@@ -233,7 +233,7 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
   await expect(page.getByRole("dialog")).toBeVisible();
   if (info.project.name === "chromium")
     await page.screenshot({
-      path: "docs/verification/structure-regressions/editor-recovery.png",
+      path: "docs/verification/content-regressions/editor-recovery.png",
       fullPage: true,
     });
   expect(
@@ -270,7 +270,7 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
   expect(result.conflict).toBe(true);
   if (info.project.name === "chromium")
     await writeFile(
-      "docs/verification/structure-regressions/editor-storage-evidence.json",
+      "docs/verification/content-regressions/editor-storage-evidence.json",
       JSON.stringify(result, null, 2) + "\n",
     );
 });
@@ -531,7 +531,7 @@ test("tablet and mobile remain usable, collapsible panels and reduced motion pre
     ).toBeVisible();
     if (width === 390 && info.project.name === "chromium")
       await page.screenshot({
-        path: "docs/verification/structure-regressions/editor-mobile.png",
+        path: "docs/verification/content-regressions/editor-mobile.png",
         fullPage: true,
       });
   }

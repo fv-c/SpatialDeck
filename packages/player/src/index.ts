@@ -17,6 +17,11 @@ import type {
   ProjectDocument,
   Result,
 } from "@spatialdeck/core";
+import { ContentMount, blockText } from "./content/index.js";
+import type { RendererRegistry } from "./content/index.js";
+import type { AssetResolver } from "./assets/index.js";
+export * from "./content/index.js";
+export * from "./assets/index.js";
 export interface PlayerClock {
   now(): number;
   request(callback: () => void): number;
@@ -28,6 +33,13 @@ export interface PlayerOptions {
   motion?: "system" | "reduced";
   clock?: PlayerClock;
   onError?: (diagnostic: Diagnostic) => void;
+  registry?: RendererRegistry;
+  assets?: AssetResolver;
+  muted?: boolean;
+  onContentEvent?: (
+    name: string,
+    payload: import("@spatialdeck/core").JsonValue,
+  ) => void;
 }
 export interface Player {
   mount(container: HTMLElement, document: unknown): Promise<Result<void>>;
@@ -61,6 +73,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     live: HTMLElement | undefined,
     emptyMessage: HTMLElement | undefined,
     outlineButton: HTMLButtonElement | undefined,
+    mediaButton: HTMLButtonElement | undefined,
     stageElement: HTMLElement | undefined,
     choicesElement: HTMLElement | undefined,
     focusOrigin: Element | null = null;
@@ -75,6 +88,10 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     focusAllowed = false,
     pathRendered: string | null | undefined,
     choicesRendered = "";
+  let mediaEnabled = false;
+  const contentMounts: Array<{ sceneId: string; mount: ContentMount }> = [];
+  const clearContents = () =>
+    contentMounts.splice(0).forEach((c) => c.mount.destroy());
   let media: MediaQueryList | undefined,
     manualReduced = options.motion === "reduced",
     oldTabindex: string | null = null;
@@ -140,6 +157,11 @@ export function createPlayer(options: PlayerOptions = {}): Player {
   let resizeView = () => {};
   const buildScenes = () => {
     if (!doc || !world || !viewport) return;
+    clearContents();
+    if (mediaButton)
+      mediaButton.hidden = !doc.scenes.some((s) =>
+        s.blocks.some((b) => b.type === "audio" || b.type === "video"),
+      );
     scenes.clear();
     world.replaceChildren();
     viewport.style.width = `${doc.settings.viewport.width}px`;
@@ -160,9 +182,55 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       title.tabIndex = -1;
       content.append(title);
       for (const block of scene.blocks) {
-        const text = element("p");
-        text.textContent = block.data.text;
-        content.append(text);
+        const blockHost = element(
+          block.type === "text" ? "p" : "div",
+          "sd-block",
+        );
+        blockHost.dataset.blockId = block.id;
+        blockHost.dataset.blockType = block.type;
+        content.append(blockHost);
+        contentMounts.push({
+          sceneId: scene.id,
+          mount: new ContentMount(
+            blockHost,
+            {
+              block,
+              document: doc,
+              instanceId: `${instanceId}-${scene.id}-${block.id}`,
+              active: false,
+              mediaEnabled,
+              mediaMuted: options.muted === true,
+              services: {
+                ...(options.assets ? { assets: options.assets } : {}),
+                navigate: (target) => player.goTo(target),
+                on: player.on,
+                emit: (name, payload) =>
+                  options.onContentEvent?.(name, payload),
+                report: (d) => {
+                  report(d);
+                  emit("diagnostic", { instanceId, diagnostic: d });
+                },
+                mediaError: (message) => {
+                  const d = {
+                    ...diagnostic("MEDIA_ERROR", message),
+                    severity: "warning" as const,
+                  };
+                  report(d);
+                  emit("mediaerror", {
+                    instanceId,
+                    sceneId: scene.id,
+                    blockId: block.id,
+                    ...("assetId" in block.data
+                      ? { assetId: block.data.assetId }
+                      : {}),
+                    diagnostic: d,
+                  });
+                },
+              },
+            },
+            options.registry,
+          ),
+        });
       }
       wrapper.append(content);
       world.append(wrapper);
@@ -193,6 +261,11 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       scene.content.setAttribute("aria-hidden", String(!active || outlineOpen));
       scene.wrapper.dataset.active = String(active);
     }
+    for (const c of contentMounts)
+      c.mount.update(
+        c.sceneId === s.sceneId && !outlineOpen && s.view === "scene",
+        mediaEnabled,
+      );
     if (outline && pathRendered !== s.pathId) {
       pathRendered = s.pathId;
       outline.replaceChildren();
@@ -223,7 +296,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         li.append(button);
         for (const block of scene.blocks) {
           const p = element("p");
-          p.textContent = block.data.text;
+          p.textContent = blockText(block);
           li.append(p);
         }
         outline.append(li);
@@ -380,6 +453,20 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         });
       inspection.append(tools);
       controls.append(outlineToggle, motionToggle, overview, inspection);
+      {
+        const enable = element("button");
+        enable.type = "button";
+        enable.textContent = "Abilita media";
+        mediaButton = enable;
+        const activate = () => {
+          mediaEnabled = true;
+          enable.setAttribute("aria-pressed", "true");
+          render();
+        };
+        enable.addEventListener("click", activate);
+        cleanup.push(() => enable.removeEventListener("click", activate));
+        controls.append(enable);
+      }
       const stage = element("div", "sd-stage");
       stageElement = stage;
       emptyMessage = element("p", "sd-empty");
@@ -595,6 +682,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         frame = undefined;
       }
       cleanup.splice(0).forEach((dispose) => dispose());
+      clearContents();
       root?.remove();
       if (host) {
         if (oldTabindex === null) host.removeAttribute("tabindex");
@@ -612,6 +700,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       emptyMessage = undefined;
       outlineButton = undefined;
       stageElement = undefined;
+      mediaButton = undefined;
       choicesElement = undefined;
       focusOrigin = null;
       doc = undefined;

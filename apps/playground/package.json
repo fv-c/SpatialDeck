@@ -1,6 +1,6 @@
 {
   "name": "@spatialdeck/playground",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@spatialdeck/core": "workspace:*",
-    "@spatialdeck/player": "workspace:*"
+    "@spatialdeck/player": "workspace:*",
+    "@spatialdeck/plugins": "workspace:*"
   }
 }
