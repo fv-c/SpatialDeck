@@ -32,20 +32,33 @@ interface Command {
   selectionAfter: string | null;
   bytes: number;
 }
+/** Deep-freezes new values only: frozen subtrees were frozen whole by this function. */
 function freeze<T>(value: T): T {
-  if (value && typeof value === "object") {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
     for (const v of Object.values(value)) freeze(v);
   }
   return value;
 }
+const serialized = new WeakMap<ProjectDocument, string>();
+/** Documents in the store are frozen, so their JSON can be memoized by identity. */
+export function documentJSON(document: ProjectDocument): string {
+  let json = serialized.get(document);
+  if (json === undefined) {
+    json = JSON.stringify(document);
+    if (Object.isFrozen(document)) serialized.set(document, json);
+  }
+  return json;
+}
+const utf8Length = (text: string) => new TextEncoder().encode(text).byteLength;
 export class EditorStore {
   private document: ProjectDocument;
   private selection: string | null;
-  private saved: string;
+  private saved: ProjectDocument | null;
   private undoStack: Command[] = [];
   private redoStack: Command[] = [];
   private drag: { document: ProjectDocument; selection: string } | undefined;
+  private session: { key: string; command: Command } | undefined;
   private listeners = new Set<() => void>();
   private map: MapCamera = { x: 0, y: 0, zoom: 0.25 };
   private snapshot!: EditorSession;
@@ -57,7 +70,7 @@ export class EditorStore {
     if (!result.ok) throw new Error(result.diagnostics[0]?.message);
     this.document = freeze(result.value);
     this.selection = this.document.scenes[0]?.id ?? null;
-    this.saved = JSON.stringify(this.document);
+    this.saved = this.document;
     this.publish();
   }
   getSnapshot = () => this.snapshot;
@@ -67,11 +80,12 @@ export class EditorStore {
       this.listeners.delete(listener);
     };
   };
+  /** Shallow: the document is already frozen and dirty is an identity check, so selection and pan stay O(1). */
   private publish() {
-    this.snapshot = freeze({
+    this.snapshot = Object.freeze({
       document: this.document,
       selection: this.selection,
-      dirty: JSON.stringify(this.document) !== this.saved,
+      dirty: this.document !== this.saved,
       canUndo: this.undoStack.length > 0,
       canRedo: this.redoStack.length > 0,
       dragging: !!this.drag,
@@ -96,46 +110,107 @@ export class EditorStore {
       map.zoom >= 0.02 &&
       map.zoom <= 2
     ) {
-      this.map = { ...map };
+      this.map = Object.freeze({ ...map });
       this.publish();
     }
   }
   private record(before: ProjectDocument, selectionBefore: string | null) {
-    if (JSON.stringify(before) === JSON.stringify(this.document)) {
+    this.session = undefined;
+    const beforeJSON = documentJSON(before);
+    if (beforeJSON === documentJSON(this.document)) {
+      this.document = before;
       this.publish();
       return;
     }
-    const bytes = new TextEncoder().encode(
-      JSON.stringify([before, this.document]),
-    ).byteLength;
-    this.redoStack = [];
-    this.undoStack.push({
+    const command: Command = {
       before,
       after: this.document,
       selectionBefore,
       selectionAfter: this.selection,
-      bytes,
-    });
+      bytes: utf8Length(beforeJSON) + utf8Length(documentJSON(this.document)),
+    };
+    this.redoStack = [];
+    this.undoStack.push(command);
+    this.trim();
+    this.publish();
+  }
+  private trim() {
+    let bytes = this.undoStack.reduce((n, c) => n + c.bytes, 0);
     while (
       this.undoStack.length > this.limits.commands ||
-      this.undoStack.reduce((n, c) => n + c.bytes, 0) > this.limits.bytes
+      bytes > this.limits.bytes
     )
-      this.undoStack.shift();
+      bytes -= this.undoStack.shift()!.bytes;
+  }
+  /** Validated candidate, frozen; undefined when the edit is a no-op. */
+  private apply(edit: DocumentEdit): Result<ProjectDocument | undefined> {
+    const edited = edit(structuredClone(this.document));
+    if (!edited.ok) return edited;
+    updateCapabilities(edited.value);
+    const valid = validateDocument(edited.value);
+    if (!valid.ok) return valid;
+    const json = JSON.stringify(valid.value);
+    if (json === documentJSON(this.document)) return success(undefined);
+    const frozen = freeze(valid.value);
+    serialized.set(frozen, json);
+    return success(frozen);
+  }
+  /**
+   * Continuous text edits with the same key (one editing session of a field)
+   * merge into a single undo command until endCoalesce() or any other command.
+   */
+  coalesce(key: string, edit: DocumentEdit): Result<void> {
+    if (this.drag)
+      return failure("DRAG_ACTIVE", "Termina o annulla il trascinamento.");
+    const session = this.session;
+    if (
+      !session ||
+      session.key !== key ||
+      this.undoStack.at(-1) !== session.command ||
+      this.redoStack.length
+    ) {
+      this.session = undefined;
+      const top = this.undoStack.at(-1);
+      const result = this.execute(edit);
+      const command = this.undoStack.at(-1);
+      if (result.ok && command && command !== top)
+        this.session = { key, command };
+      return result;
+    }
+    const next = this.apply(edit);
+    if (!next.ok) return next;
+    if (!next.value) return success(undefined);
+    const command = session.command;
+    if (documentJSON(next.value) === documentJSON(command.before)) {
+      // The session returned to its start: no command remains.
+      this.undoStack.pop();
+      this.session = undefined;
+      this.document = command.before;
+    } else {
+      this.document = next.value;
+      command.after = next.value;
+      command.selectionAfter = this.selection;
+      command.bytes =
+        utf8Length(documentJSON(command.before)) +
+        utf8Length(documentJSON(next.value));
+      this.trim();
+      if (this.undoStack.at(-1) !== command) this.session = undefined;
+    }
     this.publish();
+    return success(undefined);
+  }
+  endCoalesce() {
+    this.session = undefined;
   }
   execute(edit: DocumentEdit, selectNew = false): Result<void> {
     if (this.drag)
       return failure("DRAG_ACTIVE", "Termina o annulla il trascinamento.");
     const before = this.document,
       selection = this.selection;
-    const edited = edit(structuredClone(before));
-    if (!edited.ok) return edited;
-    updateCapabilities(edited.value);
-    const valid = validateDocument(edited.value);
-    if (!valid.ok) return valid;
-    if (JSON.stringify(valid.value) === JSON.stringify(before))
-      return success(undefined);
-    this.document = freeze(valid.value);
+    const next = this.apply(edit);
+    if (!next.ok) return next;
+    if (!next.value) return success(undefined);
+    this.document = next.value;
     if (selectNew)
       this.selection =
         this.document.scenes.find(
@@ -152,6 +227,7 @@ export class EditorStore {
     return success(undefined);
   }
   undo() {
+    this.session = undefined;
     if (this.drag) this.cancelDrag();
     const command = this.undoStack.pop();
     if (!command) return;
@@ -161,6 +237,7 @@ export class EditorStore {
     this.publish();
   }
   redo() {
+    this.session = undefined;
     if (this.drag) this.cancelDrag();
     const command = this.redoStack.pop();
     if (!command) return;
@@ -171,6 +248,7 @@ export class EditorStore {
   }
   beginDrag(id: string) {
     if (this.drag) return;
+    this.session = undefined;
     this.select(id);
     if (this.selection === id) {
       this.drag = { document: this.document, selection: id };
@@ -228,12 +306,13 @@ export class EditorStore {
     this.undoStack = [];
     this.redoStack = [];
     this.drag = undefined;
-    this.saved = saved ? JSON.stringify(this.document) : "";
+    this.session = undefined;
+    this.saved = saved ? this.document : null;
     this.publish();
     return success(undefined);
   }
   markSaved(document = this.document) {
-    this.saved = JSON.stringify(document);
+    this.saved = document;
     this.publish();
   }
   serialize() {

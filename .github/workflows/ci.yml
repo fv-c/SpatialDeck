@@ -1,14 +1,17 @@
 name: Core
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      # Actions pinned by commit SHA; the comment names the resolved release.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
         with:
           version: 12.14.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24.22.0
           cache: pnpm
@@ -17,15 +20,16 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm test
+      - run: pnpm test:coverage
       - run: pnpm build
       - run: pnpm check:boundaries
       - run: pnpm check:bundle
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
+      - name: Checks leave tracked files unchanged
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: verification
-          path: |
-            test-results
-            docs/verification
+          path: test-results

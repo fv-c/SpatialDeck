@@ -44,7 +44,10 @@ export function PlayerSurface({
       input: present,
       motion: present ? "system" : "reduced",
       registry: builtins.registry,
-      assets: { resolve: (id, signal) => assets.current.resolve(id, signal) },
+      assets: {
+        resolve: (id, signal) => assets.current.resolve(id, signal),
+        revision: (id) => assets.current.revision?.(id),
+      },
       muted: !present,
     });
     player.current = instance;

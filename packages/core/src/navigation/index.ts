@@ -109,6 +109,13 @@ export class NavigationMachine {
   getState(): PlayerState {
     return structuredClone({ ...this.state, choices: this.choices() });
   }
+  /** Live state without copies, for per-frame renderers that only read it; `choices` is empty, use getChoices(). */
+  peek(): Readonly<PlayerState> {
+    return this.state;
+  }
+  getChoices(): Choice[] {
+    return this.choices();
+  }
   private visit(pathId: string, nodeId: string): Visit {
     const node = this.document.paths
       .find((p) => p.id === pathId)!

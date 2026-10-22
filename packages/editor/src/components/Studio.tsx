@@ -19,6 +19,8 @@ import { EditorStore } from "../store/index.js";
 import {
   Autosave,
   RecoveryRepository,
+  openLimitError,
+  pendingRecovery,
   readArchive,
   writeArchive,
   projectBlobs,
@@ -66,6 +68,7 @@ export function Studio({
     setLibrary(next);
   }
   const [warning, setWarning] = useState(""),
+    [storageWarning, setStorageWarning] = useState<string | null>(null),
     [error, setError] = useState(""),
     [present, setPresent] = useState(false),
     [preview, setPreview] = useState(true);
@@ -102,13 +105,16 @@ export function Studio({
       result.ok ? "" : result.diagnostics.map((d) => d.message).join("; "),
     );
   }
+  useEffect(() => repository.onWarning(setStorageWarning), [repository]);
   useEffect(() => {
     autosave.resume();
     let active = true;
     void repository
       .heads()
       .then((heads) => {
-        if (active && heads.length) setRevisions(heads);
+        // Only revisions that differ from the last saved file are proposed.
+        const pending = pendingRecovery(heads);
+        if (active && pending.length) setRevisions(pending);
       })
       .catch((e) => {
         if (active)
@@ -157,8 +163,9 @@ export function Studio({
   }
   async function openFile(input: File) {
     const archive = input.name.endsWith(".spatialdeck");
-    if (input.size > (archive ? 220 : 10) * 1024 * 1024) {
-      setError("Il file supera 10 MiB.");
+    const limit = openLimitError(input);
+    if (limit) {
+      setError(limit);
       return;
     }
     try {
@@ -222,7 +229,7 @@ export function Studio({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     store.markSaved(document);
     active?.focus({ preventScroll: true });
-    void autosave.flush(document);
+    void autosave.flush(document, true);
   }
   async function savePortable() {
     const active = window.document.activeElement as HTMLElement | null;
@@ -243,7 +250,7 @@ export function Studio({
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       store.markSaved(doc);
-      void autosave.flush(doc);
+      void autosave.flush(doc, true);
       setError("");
     } catch (e) {
       setError(`Salvataggio archivio non riuscito: ${String(e)}`);
@@ -264,12 +271,13 @@ export function Studio({
       action: () => report(store.execute(edit)),
     });
   }
-  async function recoverList() {
+  async function recoverList(reportEmpty = true) {
     try {
       setRecoveryIndex(0);
       const heads = await repository.heads();
       if (!heads.length) {
-        setError("Nessun recupero disponibile.");
+        setRevisions([]);
+        if (reportEmpty) setError("Nessun recupero disponibile.");
         return;
       }
       const all = (
@@ -279,6 +287,36 @@ export function Studio({
     } catch (e) {
       setWarning(String(e));
     }
+  }
+  /** Local deletion always asks first; the open document and saved files are untouched. */
+  function confirmDelete(project: boolean) {
+    const target = revisions[recoveryIndex];
+    if (!target) return;
+    const title = target.document.metadata.title;
+    setDialog({
+      title: project
+        ? "Eliminare il progetto locale?"
+        : "Eliminare la revisione locale?",
+      body: project
+        ? `Tutte le revisioni locali di “${title}” e le risorse non più usate saranno rimosse da questo browser. Il documento aperto e i file salvati non cambiano.`
+        : `La revisione ${target.revision} di “${title}” sarà rimossa da questo browser. Il documento aperto e i file salvati non cambiano.`,
+      confirm: project ? "Elimina progetto" : "Elimina revisione",
+      action: () =>
+        void (async () => {
+          try {
+            const head = project
+              ? (await repository.deleteProject(target.projectId), null)
+              : await repository.deleteRevision(
+                  target.projectId,
+                  target.revision,
+                );
+            autosave.rebase(target.projectId, head?.revision ?? null);
+            await recoverList(false);
+          } catch (e) {
+            setError(`Eliminazione non riuscita: ${String(e)}`);
+          }
+        })(),
+    });
   }
   async function recover() {
     const revision = revisions[recoveryIndex];
@@ -349,7 +387,7 @@ export function Studio({
         <div className="brand">
           <span className="brand-mark">S↗</span>
           <span>
-            SpatialDeck <small>STUDIO / 0.4</small>
+            SpatialDeck <small>STUDIO / 0.4.1</small>
           </span>
         </div>
         <nav aria-label="Strumenti documento">
@@ -445,9 +483,9 @@ export function Studio({
           }}
         />
       </header>
-      {warning && (
+      {(storageWarning || warning) && (
         <div className="warning" role="status">
-          {warning}
+          {[storageWarning, warning].filter(Boolean).join(" ")}
         </div>
       )}
       {error && (
@@ -474,12 +512,13 @@ export function Studio({
               value={session.document.metadata.title}
               onChange={(e) =>
                 report(
-                  store.execute((document) => {
+                  store.coalesce("metadata.title", (document) => {
                     document.metadata.title = e.target.value;
                     return { ok: true, value: document, diagnostics: [] };
                   }),
                 )
               }
+              onBlur={() => store.endCoalesce()}
             />
           </label>
           <ol aria-label="Elenco scene">
@@ -672,6 +711,22 @@ export function Studio({
             {session.document.scenes.length} scene. Recupero:{" "}
             {revisions[recoveryIndex]?.document.scenes.length} scene.
           </p>
+          <div className="recovery-actions">
+            <button
+              type="button"
+              tabIndex={0}
+              onClick={() => confirmDelete(false)}
+            >
+              Elimina revisione
+            </button>
+            <button
+              type="button"
+              tabIndex={0}
+              onClick={() => confirmDelete(true)}
+            >
+              Elimina progetto locale
+            </button>
+          </div>
         </Dialog>
       )}
     </main>

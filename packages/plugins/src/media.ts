@@ -1,10 +1,25 @@
+import { AssetError, defaultMessages } from "@spatialdeck/player";
 import type {
   AssetLease,
   ContentContext,
   ContentRenderer,
+  PlayerMessages,
   RendererRegistry,
 } from "@spatialdeck/player";
 import { sanitizeContent } from "./security.js";
+/** Resolver failures become replaceable texts; unknown errors keep their detail. */
+function assetMessage(
+  messages: Readonly<PlayerMessages>,
+  assetId: string,
+  error: unknown,
+) {
+  const code = error instanceof AssetError ? error.code : undefined;
+  return code === "missing"
+    ? messages.assetMissing(assetId)
+    : code === "size" || code === "signature" || code === "digest"
+      ? messages.assetInvalid(assetId, code)
+      : messages.contentError(String(error));
+}
 async function imageLease(
   host: HTMLElement,
   lease: AssetLease,
@@ -13,7 +28,10 @@ async function imageLease(
   if (lease.mime !== "image/svg+xml") return lease;
   try {
     if (!lease.blob)
-      throw new Error("SVG richiede il Blob originale per sanitizzazione.");
+      throw new AssetError(
+        "signature",
+        "SVG richiede il Blob originale per sanitizzazione.",
+      );
     const fragment = sanitizeContent(
       host,
       await lease.blob.text(),
@@ -21,7 +39,7 @@ async function imageLease(
       prefix,
     );
     const svg = fragment.querySelector("svg");
-    if (!svg) throw new Error("SVG non valido.");
+    if (!svg) throw new AssetError("signature", "SVG non valido.");
     const url = URL.createObjectURL(
       new Blob([new XMLSerializer().serializeToString(svg)], {
         type: "image/svg+xml",
@@ -52,6 +70,7 @@ function mediaRenderer(): ContentRenderer {
     generation = 0,
     failedState = false;
   const leases: AssetLease[] = [];
+  const text = () => context.messages ?? defaultMessages;
   function clear() {
     generation++;
     failedState = false;
@@ -86,10 +105,7 @@ function mediaRenderer(): ContentRenderer {
         message("");
       }
     } catch {
-      if (!context.signal.aborted)
-        failed(
-          "Riproduzione rifiutata o codec non supportato. Usa Riproduci o associa un file compatibile.",
-        );
+      if (!context.signal.aborted) failed(text().mediaRejected);
     }
   }
   function active() {
@@ -125,11 +141,10 @@ function mediaRenderer(): ContentRenderer {
       return;
     const assets = context.services.assets;
     if (!assets) {
-      failed(
-        `Risorsa mancante: ${block.data.assetId}. Associa il file nel pannello Risorse.`,
-      );
+      failed(text().assetMissing(block.data.assetId));
       return;
     }
+    let resolving = block.data.assetId;
     try {
       let lease = await assets.resolve(block.data.assetId, context.signal);
       if (block.type === "image")
@@ -145,26 +160,24 @@ function mediaRenderer(): ContentRenderer {
         img.style.objectFit = block.data.fit;
         img.src = lease.url;
         img.onerror = () => {
-          if (!context.signal.aborted)
-            failed("Immagine non decodificabile. Associa un file compatibile.");
+          if (!context.signal.aborted) failed(text().imageDecodeError);
         };
         host.prepend(img);
       } else {
         const media = host.ownerDocument.createElement(block.type);
         element = media;
         media.controls = true;
+        if (block.type === "video") media.setAttribute("playsinline", "");
         media.preload = "metadata";
         media.loop = block.data.loop;
         media.muted = context.mediaMuted;
         media.setAttribute("aria-label", block.data.label);
         media.src = lease.url;
-        media.onerror = () =>
-          failed(
-            "Media non decodificabile o codec non supportato. Associa un file compatibile.",
-          );
+        media.onerror = () => failed(text().mediaDecodeError);
         const button = host.ownerDocument.createElement("button");
         button.type = "button";
-        button.textContent = `Riproduci ${block.data.label}`;
+        button.lang = text().lang;
+        button.textContent = text().mediaPlay(block.data.label);
         button.onclick = () => void play();
         playButton = button;
         host.prepend(media);
@@ -172,6 +185,7 @@ function mediaRenderer(): ContentRenderer {
         if (block.type === "video") {
           media.setAttribute("aria-description", block.data.alt);
           if (block.data.posterAssetId) {
+            resolving = block.data.posterAssetId;
             let poster = await assets.resolve(
               block.data.posterAssetId,
               context.signal,
@@ -189,6 +203,7 @@ function mediaRenderer(): ContentRenderer {
             (media as HTMLVideoElement).poster = poster.url;
           }
           if (block.data.captionsAssetId) {
+            resolving = block.data.captionsAssetId;
             const captions = await assets.resolve(
               block.data.captionsAssetId,
               context.signal,
@@ -212,7 +227,7 @@ function mediaRenderer(): ContentRenderer {
       if (!failedState) message("");
     } catch (error) {
       if (!context.signal.aborted && token === generation)
-        failed(String(error));
+        failed(assetMessage(text(), resolving, error));
     }
   }
   function update(next: ContentContext) {
@@ -225,8 +240,9 @@ function mediaRenderer(): ContentRenderer {
       last = JSON.stringify(next.block);
       status = host.ownerDocument.createElement("p");
       status.setAttribute("role", "status");
+      status.lang = text().lang;
       host.append(status);
-      message("Caricamento risorsa locale…");
+      message(text().mediaLoading);
       void build(generation);
     } else if (wasActive !== next.active || wasEnabled !== next.mediaEnabled)
       active();

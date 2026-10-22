@@ -1,5 +1,6 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { expect, test } from "./runner.js";
+import { evidencePath, studioURL, writeEvidence } from "./evidence.js";
 import type { Page } from "@playwright/test";
 import type { RendererRegistry } from "../../packages/player/src/index.js";
 import type { PluginHost } from "../../packages/plugins/src/sdk/index.js";
@@ -99,7 +100,7 @@ test("gallery renders real rich content, isolated SVG IDs, MathML and accessible
   expect(remote).toEqual([]);
   await scene(page, "latex");
   await page.locator("#player-1").screenshot({
-    path: `docs/verification/content-gallery-${info.project.name}.png`,
+    path: evidencePath(`content-gallery-${info.project.name}.png`),
   });
 });
 test("hostile HTML Markdown SVG formulas remain inert at mount and update with no network", async ({
@@ -317,8 +318,8 @@ test("real local audio/video advance, denied play has recovery action, exit stop
   await expect(
     page.locator('#player-1 [data-block-type="video"]'),
   ).toContainText("Riproduzione rifiutata");
-  await writeFile(
-    `docs/verification/content-media-${info.project.name}.json`,
+  await writeEvidence(
+    `content-media-${info.project.name}.json`,
     JSON.stringify(
       {
         audioAdvanced: true,
@@ -484,7 +485,7 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
   await page.getByRole("button", { name: "Scarica archivio gallery" }).click();
   const source = (await (await download).path())!,
     bytes = await readFile(source);
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await page.getByLabel("File progetto JSON").setInputFiles({
     name: "gallery.spatialdeck",
     mimeType: "application/zip",
@@ -513,7 +514,7 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
       .nth(i)
       .click();
     const before = await page.evaluate(() =>
-      JSON.stringify(window.studio.store.getSnapshot().document),
+      JSON.stringify(window.studio!.store.getSnapshot().document),
     );
     if (kind === "text") {
       await page
@@ -533,24 +534,24 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
       await field.press("Tab");
     }
     const after = await page.evaluate(() =>
-      JSON.stringify(window.studio.store.getSnapshot().document),
+      JSON.stringify(window.studio!.store.getSnapshot().document),
     );
     expect(after).not.toBe(before);
     await page.getByRole("button", { name: "Annulla", exact: true }).click();
     expect(
       await page.evaluate(() =>
-        JSON.stringify(window.studio.store.getSnapshot().document),
+        JSON.stringify(window.studio!.store.getSnapshot().document),
       ),
     ).toBe(before);
     await page.getByRole("button", { name: "Ripristina", exact: true }).click();
     expect(
       await page.evaluate(() =>
-        JSON.stringify(window.studio.store.getSnapshot().document),
+        JSON.stringify(window.studio!.store.getSnapshot().document),
       ),
     ).toBe(after);
   }
   const canonical = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   await page.getByRole("button", { name: "Presenta ↗", exact: true }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
@@ -580,13 +581,13 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
     vanilla.getByRole("status").filter({ hasText: "Progetto aperto" }),
   ).toHaveCount(1);
   expect(await vanilla.evaluate(() => window.demoDocument)).toEqual(canonical);
-  await writeFile(
-    `docs/verification/content-roundtrip-${info.project.name}.json`,
+  await writeEvidence(
+    `content-roundtrip-${info.project.name}.json`,
     JSON.stringify(canonical, null, 2) + "\n",
   );
   if (info.project.name === "chromium")
     await page.screenshot({
-      path: "docs/verification/content-studio.png",
+      path: evidencePath("content-studio.png"),
       fullPage: true,
     });
   await fresh.close();
@@ -596,7 +597,7 @@ test("missing assets recover manually, Blob revisions survive reload and malform
 }) => {
   await gallery(page);
   const doc = await page.evaluate(() => window.demoDocument);
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await page.getByLabel("File progetto JSON").setInputFiles({
     name: "missing.json",
     mimeType: "application/json",
@@ -604,7 +605,7 @@ test("missing assets recover manually, Blob revisions survive reload and malform
   });
   await expect(page.locator(".asset-panel")).toContainText("mancante");
   const before = await page.evaluate(() =>
-    JSON.stringify(window.studio.store.getSnapshot().document),
+    JSON.stringify(window.studio!.store.getSnapshot().document),
   );
   await page.getByLabel("File progetto JSON").setInputFiles({
     name: "bad.spatialdeck",
@@ -614,7 +615,7 @@ test("missing assets recover manually, Blob revisions survive reload and malform
   await expect(page.getByRole("alert")).toContainText("Apertura non riuscita");
   expect(
     await page.evaluate(() =>
-      JSON.stringify(window.studio.store.getSnapshot().document),
+      JSON.stringify(window.studio!.store.getSnapshot().document),
     ),
   ).toBe(before);
   await page
@@ -636,7 +637,7 @@ test("missing assets recover manually, Blob revisions survive reload and malform
   await expect
     .poll(() =>
       page.evaluate(async () => {
-        const heads = await window.studio.repository.heads();
+        const heads = await window.studio!.repository.heads();
         return heads.some((h) =>
           h.document.scenes.some((s) => s.title === "Image recovery"),
         );
@@ -794,7 +795,7 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Scarica archivio gallery" }).click();
   const bytes = await readFile((await (await download).path())!);
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await page.getByLabel("File progetto JSON").setInputFiles({
     name: "gallery.spatialdeck",
     mimeType: "application/zip",
@@ -809,14 +810,14 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
   await expect
     .poll(() =>
       page.evaluate(async () =>
-        (await window.studio.repository.heads()).some(
+        (await window.studio!.repository.heads()).some(
           (h) => h.document.metadata.title === "Recovery Blobs",
         ),
       ),
     )
     .toBe(true);
   const evidence = await page.evaluate(async () => {
-    const repo = window.studio.repository,
+    const repo = window.studio!.repository,
       head = (await repo.heads())[0]!,
       blobs = await repo.blobs(head),
       doc = structuredClone(head.document);
@@ -828,7 +829,8 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
     for (let i = 0; i < 10; i++)
       latest = await repo.save(doc, latest.revision, blobs);
     const count = await new Promise<number>((resolve, reject) => {
-      const open = indexedDB.open("spatialdeck-studio", 2);
+      // The current version: Studio 0.4.1 upgraded the database to v3.
+      const open = indexedDB.open("spatialdeck-studio");
       open.onsuccess = () => {
         const db = open.result,
           tx = db.transaction("assets", "readonly"),
@@ -848,9 +850,23 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
         throw new DOMException("quota", "QuotaExceededError");
       return put.apply(this, args);
     };
+    // Unchanged resources are not rewritten since 0.4.1: inject the quota
+    // failure on the bytes of a new resource in the same transaction.
+    const extra = new Blob(["WEBVTT\n\nquota\n"], { type: "text/vtt" });
+    const withExtra = structuredClone(doc);
+    withExtra.assets.push({
+      id: "quota-extra",
+      path: "assets/quota-extra/quota.vtt",
+      mime: "text/vtt",
+      byteLength: extra.size,
+    });
     let quota = false;
     try {
-      await repo.save(doc, latest.revision, blobs);
+      await repo.save(
+        withExtra,
+        latest.revision,
+        new Map([...blobs, ["quota-extra", extra]]),
+      );
     } catch {
       quota = true;
     } finally {
@@ -873,8 +889,8 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
     quota: true,
     rollback: true,
   });
-  await writeFile(
-    `docs/verification/content-storage-${info.project.name}.json`,
+  await writeEvidence(
+    `content-storage-${info.project.name}.json`,
     JSON.stringify(evidence, null, 2) + "\n",
   );
 });

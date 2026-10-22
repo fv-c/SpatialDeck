@@ -15,6 +15,7 @@ import type {
   Result,
   TransitionPlan,
 } from "@spatialdeck/core";
+import { randomId } from "../commands/index.js";
 import type { DocumentEdit } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { Numeric, TextField } from "./Inspector.js";
@@ -110,7 +111,7 @@ export function CameraTimeline({
           rotation: [...from.rotation],
           zoom: Math.sqrt(from.zoom * to.zoom),
         };
-      const id = crypto.randomUUID();
+      const id = randomId();
       doc.cameraTracks.push({
         id,
         keyframes: [
@@ -454,7 +455,7 @@ export function CameraTimeline({
               onClick={() =>
                 run((doc) => {
                   doc.cues.push({
-                    id: crypto.randomUUID(),
+                    id: randomId(),
                     edgeId: edge.id,
                     atMs: 0,
                     event: "presentation.mark",

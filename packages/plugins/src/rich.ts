@@ -2,6 +2,7 @@ import { marked } from "marked";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { sanitizeContent } from "./security.js";
+import { defaultMessages } from "@spatialdeck/player";
 import type {
   ContentContext,
   ContentRenderer,
@@ -17,6 +18,8 @@ function rich(): ContentRenderer {
     if (key === last) return;
     last = key;
     host.replaceChildren();
+    for (const name of ["role", "aria-label", "lang"])
+      host.removeAttribute(name);
     if (b.type === "markdown" || b.type === "html" || b.type === "svg") {
       const source =
         b.type === "markdown"
@@ -49,7 +52,9 @@ function rich(): ContentRenderer {
         });
         if (b.data.alt) host.setAttribute("aria-label", b.data.alt);
       } catch {
-        host.textContent = `Formula non valida: ${b.data.alt || b.data.source}`;
+        const messages = context.messages ?? defaultMessages;
+        host.textContent = messages.formulaInvalid(b.data.alt || b.data.source);
+        host.lang = messages.lang;
         host.setAttribute("role", "status");
       }
     }

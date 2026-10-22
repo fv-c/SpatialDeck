@@ -1,4 +1,5 @@
 import type { JsonValue } from "@spatialdeck/core";
+import { defaultMessages } from "@spatialdeck/player";
 import type {
   ContentContext,
   ContentRenderer,
@@ -93,9 +94,17 @@ export class PluginHost {
         host.replaceChildren();
       }
     };
+    const placeholder = (context: ContentContext, text: string) => {
+      const messages = context.messages ?? defaultMessages;
+      const span = host.ownerDocument.createElement("span");
+      span.lang = messages.lang;
+      span.textContent = text;
+      host.append(span);
+    };
     const update = (context: ContentContext) => {
       const b = context.block;
       if (b.type !== "plugin") return;
+      const messages = context.messages ?? defaultMessages;
       const plugin = this.plugins.get(b.data.pluginId),
         schema = plugin?.descriptor.dataSchemas[b.data.dataVersion],
         settings = context.document.pluginSettings?.[b.data.pluginId];
@@ -114,7 +123,10 @@ export class PluginHost {
       ) {
         clear();
         identity = "";
-        host.textContent = `Plugin assente o incompatibile: ${b.data.pluginId} (${b.data.dataVersion}). Dati conservati.`;
+        placeholder(
+          context,
+          messages.pluginUnavailable(b.data.pluginId, b.data.dataVersion),
+        );
         host.setAttribute("role", "status");
         return;
       }
@@ -124,7 +136,7 @@ export class PluginHost {
       ) {
         clear();
         identity = "";
-        host.textContent = "Plugin non disponibile offline; dati conservati.";
+        placeholder(context, messages.pluginOffline);
         return;
       }
       const key = JSON.stringify([

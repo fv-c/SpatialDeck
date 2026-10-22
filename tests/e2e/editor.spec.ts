@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import {
   resolveSceneCamera,
   validateDocument,
@@ -6,8 +6,8 @@ import {
 import type { ProjectDocument } from "../../packages/core/src/index.js";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./runner.js";
+import { evidencePath, studioURL, writeEvidence } from "./evidence.js";
 import fixture from "../../examples/editor-roundtrip/project.json" with { type: "json" };
-const studioURL = "http://127.0.0.1:4174";
 async function open(page: Page) {
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
@@ -67,12 +67,12 @@ test("editor → real JSON download → new browser session → player preserves
   ).toHaveCount(3);
   await page.getByRole("button", { name: /Idea 2/ }).click();
   const selected = await page.evaluate(
-    () => window.studio.store.getSnapshot().selection,
+    () => window.studio!.store.getSnapshot().selection,
   );
   const rect = page.locator(`[data-map-scene="${selected}"] rect`),
     box = (await rect.boundingBox())!;
   const before = await page.evaluate(
-    () => window.studio.store.getSnapshot().historyLength,
+    () => window.studio!.store.getSnapshot().historyLength,
   );
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -83,7 +83,7 @@ test("editor → real JSON download → new browser session → player preserves
   );
   await page.mouse.up();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().historyLength),
+    await page.evaluate(() => window.studio!.store.getSnapshot().historyLength),
   ).toBe(before + 1);
   for (const [label, value] of [
     ["X", "333"],
@@ -115,16 +115,16 @@ test("editor → real JSON download → new browser session → player preserves
     .fill("Nota privata, conservata nel documento.");
   await page.getByLabel("Note relatore").press("Tab");
   const document = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().camera))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().camera))
     .toEqual(
       (resolveSceneCamera(document, selected!) as { ok: true; value: unknown })
         .value,
     );
   const camera = await page.evaluate(
-      () => window.studio.preview!.getState().camera,
+      () => window.studio!.preview!.getState().camera,
     ),
     points = await landmarks(page);
   const downloadPromise = page.waitForEvent("download");
@@ -138,7 +138,7 @@ test("editor → real JSON download → new browser session → player preserves
   expect(saved.schemaVersion).toBe("1.2.0");
   if (info.project.name === "chromium")
     await page.screenshot({
-      path: "docs/verification/content-regressions/editor-desktop.png",
+      path: evidencePath("regressions/editor-desktop.png"),
       fullPage: true,
     });
   await page.close();
@@ -150,13 +150,13 @@ test("editor → real JSON download → new browser session → player preserves
   await reopened.getByLabel("File progetto JSON").setInputFiles(downloadPath);
   await expect
     .poll(() =>
-      reopened.evaluate(() => window.studio.store.getSnapshot().document),
+      reopened.evaluate(() => window.studio!.store.getSnapshot().document),
     )
     .toEqual(saved);
   await reopened.getByRole("button", { name: /Idea 2/ }).click();
   await expect
     .poll(() =>
-      reopened.evaluate(() => window.studio.preview!.getState().camera),
+      reopened.evaluate(() => window.studio!.preview!.getState().camera),
     )
     .toEqual(camera);
   const reopenedPoints = await landmarks(reopened);
@@ -166,11 +166,11 @@ test("editor → real JSON download → new browser session → player preserves
   await reopened.getByRole("button", { name: "Presenta ↗" }).click();
   const nodeId = saved.paths[0]!.nodes.find((n) => n.sceneId === selected)!.id;
   await reopened.evaluate(async (nodeId) => {
-    await window.studio.presentation!.goTo({ nodeId }, { durationMs: 0 });
+    await window.studio!.presentation!.goTo({ nodeId }, { durationMs: 0 });
   }, nodeId);
   expect(
     await reopened.evaluate(
-      () => window.studio.presentation!.getState().camera,
+      () => window.studio!.presentation!.getState().camera,
     ),
   ).toEqual(camera);
   const presentedPoints = await landmarks(reopened, true);
@@ -180,12 +180,12 @@ test("editor → real JSON download → new browser session → player preserves
         1,
       );
   if (info.project.name === "chromium") {
-    await writeFile(
-      "docs/verification/content-regressions/editor-roundtrip-saved.json",
+    await writeEvidence(
+      "regressions/editor-roundtrip-saved.json",
       JSON.stringify(saved, null, 2) + "\n",
     );
-    await writeFile(
-      "docs/verification/content-regressions/editor-roundtrip-evidence.json",
+    await writeEvidence(
+      "regressions/editor-roundtrip-evidence.json",
       JSON.stringify(
         {
           camera,
@@ -207,7 +207,7 @@ test("editor → real JSON download → new browser session → player preserves
     reopened.getByRole("button", { name: "Presenta ↗" }),
   ).toBeFocused();
   expect(
-    await reopened.evaluate(() => window.studio.store.getSnapshot().document),
+    await reopened.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(saved);
   await context.close();
 });
@@ -221,32 +221,34 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
   await expect
     .poll(() =>
       page.evaluate(
-        async () => (await window.studio.repository.heads()).length,
+        async () => (await window.studio!.repository.heads()).length,
       ),
     )
     .toBe(1);
   const saved = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   page.on("dialog", (dialog) => dialog.accept());
   await page.reload();
   await expect(page.getByRole("dialog")).toBeVisible();
   if (info.project.name === "chromium")
     await page.screenshot({
-      path: "docs/verification/content-regressions/editor-recovery.png",
+      path: evidencePath("regressions/editor-recovery.png"),
       fullPage: true,
     });
   expect(
     await page.evaluate(
-      () => window.studio.store.getSnapshot().document.scenes.length,
+      () => window.studio!.store.getSnapshot().document.scenes.length,
     ),
   ).toBe(0);
   await page.getByRole("button", { name: "Recupera revisione" }).click();
   await expect
-    .poll(() => page.evaluate(() => window.studio.store.getSnapshot().document))
+    .poll(() =>
+      page.evaluate(() => window.studio!.store.getSnapshot().document),
+    )
     .toEqual(saved);
   const result = await page.evaluate(async () => {
-    const repo = window.studio.repository;
+    const repo = window.studio!.repository;
     const head = (await repo.heads())[0]!;
     let last = head;
     for (let i = 0; i < 12; i++)
@@ -269,8 +271,8 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
   expect(result.latest).toBe(result.last);
   expect(result.conflict).toBe(true);
   if (info.project.name === "chromium")
-    await writeFile(
-      "docs/verification/content-regressions/editor-storage-evidence.json",
+    await writeEvidence(
+      "regressions/editor-storage-evidence.json",
       JSON.stringify(result, null, 2) + "\n",
     );
 });
@@ -285,7 +287,7 @@ test("two tabs detect concurrent revisions and keep the losing document download
   await expect
     .poll(() =>
       page.evaluate(
-        async () => (await window.studio.repository.heads()).length,
+        async () => (await window.studio!.repository.heads()).length,
       ),
     )
     .toBe(1);
@@ -298,7 +300,7 @@ test("two tabs detect concurrent revisions and keep the losing document download
     .poll(() =>
       page.evaluate(
         async () =>
-          (await window.studio.repository.heads())[0]!.document.scenes[0]!
+          (await window.studio!.repository.heads())[0]!.document.scenes[0]!
             .notes,
       ),
     )
@@ -308,7 +310,7 @@ test("two tabs detect concurrent revisions and keep the losing document download
   await expect(second.locator(".warning")).toContainText("Un’altra scheda");
   expect(
     await second.evaluate(
-      () => window.studio.store.getSnapshot().document.scenes[0]!.notes,
+      () => window.studio!.store.getSnapshot().document.scenes[0]!.notes,
     ),
   ).toBe("loser kept in memory");
   const dl = second.waitForEvent("download");
@@ -343,8 +345,8 @@ test("quota injection rolls back documents and recovery in the same real transac
   await open(page);
   await upload(page);
   const result = await page.evaluate(async () => {
-    const repo = window.studio.repository,
-      doc = window.studio.store.getSnapshot().document;
+    const repo = window.studio!.repository,
+      doc = window.studio!.store.getSnapshot().document;
     const first = await repo.save(doc, 0);
     const original = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function (
@@ -384,7 +386,7 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
   await page.getByLabel("Note relatore").fill("active");
   await page.getByLabel("Note relatore").press("Tab");
   const before = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   await page.getByLabel("File progetto JSON").setInputFiles({
     name: "bad.json",
@@ -393,7 +395,7 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
   });
   await expect(page.getByRole("alert")).toBeVisible();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await upload(page);
   await expect(page.getByRole("dialog")).toBeVisible();
@@ -402,14 +404,14 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
     .last()
     .click();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await number(page, "Scala", "0");
   await expect(
     page.getByRole("textbox", { name: "Scala", exact: true }),
   ).toHaveAttribute("aria-invalid", "true");
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await page
     .getByRole("textbox", { name: "Scala", exact: true })
@@ -425,7 +427,7 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
   await page.keyboard.press("Escape");
   await page.mouse.up();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await page
     .getByRole("button", { name: "Duplica scena", exact: true })
@@ -446,7 +448,7 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
   ).toHaveCount(4);
   await page.getByRole("button", { name: "Annulla", exact: true }).click();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
 });
 test("essential authoring workflow is keyboard-only, including file open/save and present return", async ({
@@ -490,7 +492,7 @@ test("essential authoring workflow is keyboard-only, including file open/save an
   await reach("Ripristina");
   await page.keyboard.press("Enter");
   const model = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   const dl = page.waitForEvent("download");
   await page.keyboard.press("ControlOrMeta+s");
@@ -500,7 +502,9 @@ test("essential authoring workflow is keyboard-only, including file open/save an
   await page.keyboard.press("Enter");
   await (await chooser).setFiles(path);
   await expect
-    .poll(() => page.evaluate(() => window.studio.store.getSnapshot().document))
+    .poll(() =>
+      page.evaluate(() => window.studio!.store.getSnapshot().document),
+    )
     .toEqual(model);
   await reach("Presenta ↗");
   await page.keyboard.press("Enter");
@@ -510,7 +514,7 @@ test("essential authoring workflow is keyboard-only, including file open/save an
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Presenta ↗" })).toBeFocused();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(model);
 });
 test("tablet and mobile remain usable, collapsible panels and reduced motion presentation", async ({
@@ -531,7 +535,7 @@ test("tablet and mobile remain usable, collapsible panels and reduced motion pre
     ).toBeVisible();
     if (width === 390 && info.project.name === "chromium")
       await page.screenshot({
-        path: "docs/verification/content-regressions/editor-mobile.png",
+        path: evidencePath("regressions/editor-mobile.png"),
         fullPage: true,
       });
   }
@@ -539,11 +543,11 @@ test("tablet and mobile remain usable, collapsible panels and reduced motion pre
   await page.locator(".presentation-player").focus();
   await page.keyboard.press("ArrowRight");
   expect(
-    await page.evaluate(() => window.studio.presentation!.getState().status),
+    await page.evaluate(() => window.studio!.presentation!.getState().status),
   ).toBe("idle");
   await page.keyboard.press("Escape");
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(
     (validateDocument(fixture) as { ok: true; value: ProjectDocument }).value,
   );
@@ -554,10 +558,10 @@ test("player updateDocument validates atomically, cancels transitions and rebuil
   await open(page);
   await upload(page);
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().nodeId))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().nodeId))
     .toBe("n1");
   const result = await page.evaluate(async () => {
-    const player = window.studio.preview!,
+    const player = window.studio!.preview!,
       before = player.getState();
     const invalid = await player.updateDocument({ bad: true });
     const unchanged =
@@ -566,7 +570,7 @@ test("player updateDocument validates atomically, cancels transitions and rebuil
       cancels = 0;
     const off = player.on("documentchange", () => changes++),
       cancel = player.on("navigationcancel", () => cancels++);
-    const doc = window.studio.store.getSnapshot().document;
+    const doc = window.studio!.store.getSnapshot().document;
     for (let i = 0; i < 30; i++) await player.updateDocument(doc);
     off();
     await player.updateDocument(doc);
@@ -590,8 +594,8 @@ test("player updateDocument validates atomically, cancels transitions and rebuil
   });
   await page.getByRole("button", { name: "Presenta ↗" }).click();
   const state = await page.evaluate(async () => {
-    const player = window.studio.presentation!,
-      doc = structuredClone(window.studio.store.getSnapshot().document);
+    const player = window.studio!.presentation!,
+      doc = structuredClone(window.studio!.store.getSnapshot().document);
     let ghost = 0;
     player.on("scenechange", () => ghost++);
     const pending = player.next();
@@ -617,15 +621,15 @@ test("preview coalesces edits, preserves input focus and disposes players when c
   await open(page);
   await upload(page);
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().nodeId))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().nodeId))
     .toBe("n1");
   await page.getByLabel("Note relatore").focus();
   const result = await page.evaluate(async () => {
-    const player = window.studio.preview!;
+    const player = window.studio!.preview!;
     let changes = 0;
     const off = player.on("documentchange", () => changes++);
     for (let i = 0; i < 30; i++)
-      window.studio.store.execute((document) => {
+      window.studio!.store.execute((document) => {
         document.scenes[0]!.position[0] = i;
         return { ok: true, value: document, diagnostics: [] };
       });
@@ -646,7 +650,7 @@ test("preview coalesces edits, preserves input focus and disposes players when c
   expect(result.focused).toBe("Note relatore");
   expect(result.pose[0]).toBe(29);
   const disposed = await page.evaluate(() => {
-    const player = window.studio.preview!;
+    const player = window.studio!.preview!;
     (window as unknown as { previousPlayer: unknown }).previousPlayer = player;
     return player.getState().status;
   });
@@ -673,8 +677,8 @@ test("player invalid update during transition leaves it running, active deletion
   await upload(page);
   await page.getByRole("button", { name: "Presenta ↗" }).click();
   const result = await page.evaluate(async () => {
-    const player = window.studio.presentation!,
-      doc = structuredClone(window.studio.store.getSnapshot().document);
+    const player = window.studio!.presentation!,
+      doc = structuredClone(window.studio!.store.getSnapshot().document);
     const pending = player.next();
     const before = player.getState();
     const invalid = await player.updateDocument({ schemaVersion: "oops" });
@@ -721,6 +725,6 @@ test("save shortcut commits the focused text draft before downloading the valida
   ) as ProjectDocument;
   expect(saved.scenes[0]!.notes).toBe("Still focused when saving");
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(saved);
 });

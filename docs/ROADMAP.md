@@ -141,20 +141,20 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 | Codice di terze parti copiato nei `dist` senza note di licenza e insieme dichiarato come dipendenza (sanitizer non aggiornabile dai consumer) | P0 | 0.6 |
 | Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0 (scope); 0.6 |
 | Nessun posizionamento, dimensione o stile dei contenuti dentro la scena | P1 prodotto | 0.5 |
-| Firme asset: SVG con prologo/commento/DOCTYPE rifiutati; testo UTF-8 troncato al byte 4096 rifiutato | P1 | 0.4.1 |
-| Digest SHA-256 dipendente da `crypto.subtle`: asset non caricabili su HTTP non-localhost | P1 | 0.4.1 |
-| Preview Studio che ricostruisce tutti i renderer e ricalcola i digest a ogni modifica; autosave che ricalcola e riscrive tutti gli asset | P1 | 0.4.1 |
-| Testi del player cablati in italiano, `lang` del documento non applicato, outline con sorgente Markdown/HTML grezzo | P1 | 0.4.1 |
-| CSP di produzione Studio con `connect-src ws:` | P1 | 0.4.1 |
+| Firme asset: SVG con prologo/commento/DOCTYPE rifiutati; testo UTF-8 troncato al byte 4096 rifiutato | P1 | 0.4.1 — **chiusa** |
+| Digest SHA-256 dipendente da `crypto.subtle`: asset non caricabili su HTTP non-localhost | P1 | 0.4.1 — **chiusa** |
+| Preview Studio che ricostruisce tutti i renderer e ricalcola i digest a ogni modifica; autosave che ricalcola e riscrive tutti gli asset | P1 | 0.4.1 — **chiusa** |
+| Testi del player cablati in italiano, `lang` del documento non applicato, outline con sorgente Markdown/HTML grezzo | P1 | 0.4.1 — **chiusa** |
+| CSP di produzione Studio con `connect-src ws:` | P1 | 0.4.1 — **chiusa** |
 | Peso reale di un consumer con contenuti ricchi (142 KB gzip JS, 954 KB gzip CSS per font KaTeX `data:` triplicati), builtin caricati tutti subito, chunk Studio da 976 KB | P1 | 0.6 |
 | `dist` pubblicati mai esercitati dagli E2E (app e test usano i sorgenti tramite alias) | P1 | 0.6 |
 | Stili inline di KaTeX e CSP degli export | P1 | 0.6, decisione a inizio fase |
-| `window.studio` esposto in produzione | P2 | 0.4.1 |
-| Store: serializzazione e congelamento dell'intero documento a ogni pubblicazione; un undo per ogni tasto nel titolo; render del player che scorre tutti i blocchi a ogni frame | P2 | 0.4.1 |
-| IndexedDB: `versionchange`/`blocked` rendono l'autosave inutilizzabile fino al reload; progetti non eliminabili; recupero proposto a ogni avvio | P2 | 0.4.1 |
-| Messaggio «supera 10 MiB» anche per archivi; `playsinline` assente sui video | P2 | 0.4.1 |
-| `check:bundle` riscrive un file tracciato; Actions non fissate per SHA; axe assente; coverage limitata al core e non eseguita in CI | P2 | 0.4.1 |
-| Documentazione superata (stato CI, schema in AUTHORING, ambiente in DEVELOPMENT) | P2 | 0.4.1 (AUTHORING già corretta nella revisione) |
+| `window.studio` esposto in produzione | P2 | 0.4.1 — **chiusa** |
+| Store: serializzazione e congelamento dell'intero documento a ogni pubblicazione; un undo per ogni tasto nel titolo; render del player che scorre tutti i blocchi a ogni frame | P2 | 0.4.1 — **chiusa** |
+| IndexedDB: `versionchange`/`blocked` rendono l'autosave inutilizzabile fino al reload; progetti non eliminabili; recupero proposto a ogni avvio | P2 | 0.4.1 — **chiusa** |
+| Messaggio «supera 10 MiB» anche per archivi; `playsinline` assente sui video | P2 | 0.4.1 — **chiusa** |
+| `check:bundle` riscrive un file tracciato; Actions non fissate per SHA; axe assente; coverage limitata al core e non eseguita in CI | P2 | 0.4.1 — **chiusa** in locale; esecuzione CI da verificare al primo push |
+| Documentazione superata (stato CI, schema in AUTHORING, ambiente in DEVELOPMENT) | P2 | 0.4.1 — **chiusa** |
 | Note private raggiungibili dai renderer plugin tramite il documento | P2 | 0.6, separazione dati pubblici |
 | Plugin demo `org.spatialdeck.badge` nei builtin di produzione; API interne dell'editor tutte esportate | P2 | 0.6 |
 | `writeArchive` sincrono e ricompresso sul thread principale; `readArchive` con memoria circa tripla dell'archivio | P2 | 0.6 |
@@ -165,3 +165,9 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 | Link ai prompt validi solo in locale | Informativo | Scelta del maintainer, nessuna azione |
 
 Le prove non eseguite già note (Safari reale, dispositivi mobili, screen reader, heap e benchmark controllati) restano gate della 1.0 e non sono riassegnate.
+
+Le voci marcate **chiusa** sono state chiuse dalla 0.4.1 con un test che falliva sul codice 0.4 e passa dopo la correzione; dettagli, misure e limiti nel [rapporto 0.4.1](verification/phase-0.4.1.md).
+
+## 13. Avanzamento Consolidamento 0.4.1 — 22 ottobre 2026
+
+0.4.1 è implementata con schema 1.2.0, fixture e contratti invariati. Asset validi comuni accettati e digest calcolato anche fuori dai contesti sicuri; preview Studio incrementale con media pesanti (nessun digest né URL nuovo per modifica, p95 input→preview entro 100 ms sul runner locale dichiarato nei tre motori); testi del player sostituibili con `PlayerOptions.messages`, `lang` del documento e outline senza sorgente; Studio di produzione senza `ws:` né `window.studio`; IndexedDB v3 robusto a upgrade e blocchi, progetti e revisioni eliminabili, recupero proposto solo se diverso dal file salvato; axe e coverage estesa in CI, Actions fissate per SHA e nessun controllo che modifichi file tracciati. La CI aggiornata non è ancora stata eseguita: nessun push. Prerequisiti per 0.5: preview incrementale nel budget (verificata in locale) e conferma del punto 4 di G0 da parte del maintainer, ancora aperta.

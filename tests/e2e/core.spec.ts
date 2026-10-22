@@ -1,4 +1,5 @@
 import { expect, test } from "./runner.js";
+import { evidencePath } from "./evidence.js";
 import type { Player, PlayerOptions } from "../../packages/player/src/index.js";
 import type { ProjectDocument } from "../../packages/core/src/index.js";
 declare global {
@@ -67,7 +68,7 @@ test("three scenes project independent corner landmarks and fit in the viewport"
     }
     if (info.project.name === "chromium")
       await page.locator("#player-1 .sd-player").screenshot({
-        path: `docs/verification/content-regressions/scene-${sceneId}.png`,
+        path: evidencePath(`regressions/scene-${sceneId}.png`),
       });
   }
 });
@@ -129,7 +130,7 @@ test("outline reads all text in path order and navigates with reduced motion", a
   ).toBe(true);
   if (info.project.name === "chromium")
     await page.locator("#player-1 .sd-player").screenshot({
-      path: "docs/verification/content-regressions/outline.png",
+      path: evidencePath("regressions/outline.png"),
     });
 });
 test("latest-wins, invalid commands, AbortSignal, event order and changing motion", async ({
