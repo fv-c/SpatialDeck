@@ -13,6 +13,12 @@ Studio React permette di creare scene annidate, percorsi con scelte e loop limit
 - [Verifica storica 0.2, roundtrip e screenshot](docs/verification/phase-0.2.md)
 - [Verifica storica 0.1](docs/verification/phase-0.1.md)
 
+## Prossime fasi
+
+Dopo l’audit pre-distribuzione del 22 ottobre 2026 il piano è: **0.4.1 Consolidamento** (correzioni di asset, prestazioni dello Studio, testi e lingua del player; schema 1.2.0 invariato), **0.5 Impaginazione** (schema 1.3.0: contenuti posizionati, dimensionati e stilizzati nella scena), **0.6 Distribuzione** (CLI, pacchetti, HTML, PDF, video, presenter) e **1.0 Stabilizzazione**. Prima di 0.5 e di qualsiasi pubblicazione restano da decidere licenza SPDX, scope npm, lingua e modello di impaginazione. Dettagli nella [roadmap](docs/ROADMAP.md) e nella [specifica, sezione 19](docs/PROJECT_SPEC.md).
+
+Oggi, dentro una scena, i contenuti sono impilati nell’ordine di lettura: posizione, dimensione e stile dei singoli contenuti arrivano con la 0.5.
+
 ## Avvio
 
 Richiede **Node 24.22.0** e **pnpm 12.14.0**. Dipendenze e primo download dei browser richiedono rete; la demo in esecuzione non usa servizi remoti.
