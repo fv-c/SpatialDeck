@@ -18,7 +18,7 @@ La 0.4.1 non cambia lo schema: la preview dello Studio è incrementale anche con
 
 ## Prossime fasi
 
-Dopo l’audit pre-distribuzione del 22 ottobre 2026 il piano è: **0.4.1 Consolidamento** (implementata: correzioni di asset, prestazioni dello Studio, testi e lingua del player; schema 1.2.0 invariato), **0.5 Impaginazione** (schema 1.3.0: contenuti posizionati, dimensionati e stilizzati nella scena), **0.6 Distribuzione** (CLI, pacchetti, HTML, PDF, video, presenter) e **1.0 Stabilizzazione**. Prima di 0.5 e di qualsiasi pubblicazione restano da decidere licenza SPDX, scope npm, lingua e modello di impaginazione. Dettagli nella [roadmap](docs/ROADMAP.md) e nella [specifica, sezione 19](docs/PROJECT_SPEC.md).
+Dopo l’audit pre-distribuzione del 22 ottobre 2026 il piano è: **0.4.1 Consolidamento** (implementata: correzioni di asset, prestazioni dello Studio, testi e lingua del player; schema 1.2.0 invariato), **0.5 Impaginazione** (schema 1.3.0: contenuti posizionati, dimensionati e stilizzati nella scena), **0.6 Distribuzione** (CLI, pacchetti, HTML, PDF, video, presenter) e **1.0 Stabilizzazione**. Il gate decisionale G0 è chiuso: licenza `GPL-3.0-or-later`, scope npm `@spatialdeck`, inglese come lingua predefinita e modello di impaginazione confermato. Dettagli nella [roadmap](docs/ROADMAP.md) e nella [specifica, sezioni 19 e 21](docs/PROJECT_SPEC.md).
 
 Oggi, dentro una scena, i contenuti sono impilati nell’ordine di lettura: posizione, dimensione e stile dei singoli contenuti arrivano con la 0.5.
 
@@ -62,4 +62,4 @@ pnpm test:e2e:webkit:macos14
 
 La CI Linux è verde sul commit 0.4 ([run 39730492795](https://github.com/fv-c/SpatialDeck/actions/runs/39730492795): 233 unità e 120 E2E sui tre browser). La 0.4.1 è verificata in locale; la CI aggiornata (Actions fissate per SHA, coverage estesa, axe) non è ancora stata eseguita perché nulla è stato inviato al remoto. Il runner locale di compatibilità WebKit resta verificato su macOS 14; Safari reale non è stato provato.
 
-`LICENSE` originale GPL v3 conservata. I manifest restano privati e non fissano per deduzione GPL-3.0-only oppure GPL-3.0-or-later: la scelta SPDX va chiarita prima del packaging pubblico.
+`LICENSE` originale GPL v3 conservata. Identificatore SPDX deciso dal maintainer: `GPL-3.0-or-later` per tutti i pacchetti, player compreso. I manifest restano privati; il campo `license` arriva con il packaging pubblico in 0.6.
