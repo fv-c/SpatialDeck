@@ -2,7 +2,7 @@
 
 Baseline documentale: 21 ottobre 2026. Contratto normativo: [PROJECT_SPEC.md](PROJECT_SPEC.md). Stato iniziale verificato: solo `LICENSE` GPL v3, nessun codice applicativo; questa consegna aggiunge soltanto due documenti e sei prompt. Tutti i path applicativi/fixture/report seguenti sono proposti finché l'agente non ne verifica l'esistenza. Nessuna casella implementativa è già completata.
 
-**Revisione del 22 ottobre 2026.** Dopo l'audit pre-distribuzione la sequenza è `0.1 -> 0.2 -> 0.3 -> 0.4 -> 0.4.1 Consolidamento -> 0.5 Impaginazione -> 0.6 Distribuzione -> 1.0 Stabilizzazione`, con il gate decisionale G0 prima di 0.5. Motivazione e decisioni aperte nella [specifica, sezione 19](PROJECT_SPEC.md); mappa carenze→fasi nella sezione 12 di questo documento. I prompt sono locali ed esclusi dai commit: i link alla cartella `prompts/` funzionano solo nel checkout del maintainer.
+**Revisione del 22 ottobre 2026.** Dopo l'audit pre-distribuzione la sequenza è `0.1 -> 0.2 -> 0.3 -> 0.4 -> 0.4.1 Consolidamento -> 0.5 Impaginazione -> 0.6 Distribuzione -> 1.0 Stabilizzazione`, con il gate decisionale G0 prima di 0.5, chiuso il 22 ottobre 2026 (decisioni nella [specifica, sezione 21](PROJECT_SPEC.md)). Motivazione e decisioni aperte nella [specifica, sezione 19](PROJECT_SPEC.md); mappa carenze→fasi nella sezione 12 di questo documento. I prompt sono locali ed esclusi dai commit: i link alla cartella `prompts/` funzionano solo nel checkout del maintainer.
 
 ## 1. Matrice delle fasi
 
@@ -17,7 +17,7 @@ Baseline documentale: 21 ottobre 2026. Contratto normativo: [PROJECT_SPEC.md](PR
 | **0.6 Distribuzione** — [06-distribuzione](../prompts/06-distribuzione.md) | 0.5; G0 punti 1–2 per licenza e scope; Chromium disponibile; FFmpeg/ffprobe per video | CLI locale, packaging corretto, bundle embed, HTML autonomo, PDF, video minimo, presenter e shell Studio cacheabile | HTML file:// con rete disabilitata e zero richieste remote; PDF 1 pagina/visita; WebM frame/durata entro contratto; note assenti dal pubblico; popup denial gestito; CLI exit code negativi; export fedeli a canvas/tema/font; tarball installati e provati in consumer esterno; note di terze parti; consumer realistico misurato | file origin/CSP anche per KaTeX, codec e font; tempo capture; leakage note; shell offline; licenze |
 | **1.0 Stabilizzazione** — [07-stabilizzazione](../prompts/07-stabilizzazione.md) | Tutte le precedenti con prove; schema 1.3.0 congelato salvo decisione esplicita | Import essenziale impress.js, diagnostica/fixture; hardening, browser matrix, benchmark, documentazione (CHANGELOG, CONTRIBUTING, SECURITY) e candidato release | Mapping attributi ufficiali e sei ordini rotazione con confronto matrici; E2E/migrazioni/export non regrediti; target reali registrati; budget misurati; licenze; nessun blocker P0/P1; altrimenti lista blocker e nessuna dichiarazione stabile | CSS/plugin upstream non convertibili; hardware/browser assenti; prestazioni non misurate; licenza della libreria |
 
-Dipendenza strettamente sequenziale: `0.1 -> 0.2 -> 0.3 -> 0.4 -> 0.4.1 -> 0.5 -> 0.6 -> 1.0`; G0 va chiuso prima di 0.5 (modello di layout) e prima di qualsiasi publish (licenza, scope). Ogni agente parte dallo stato effettivo, legge indici/architettura prima dei sorgenti interessati e preserva cambi dell'utente. Se il predecessore manca o è rotto, documenta il requisito mancante, corregge solo regressioni pertinenti e non inventa deliverable né implementa automaticamente più fasi.
+Dipendenza strettamente sequenziale: `0.1 -> 0.2 -> 0.3 -> 0.4 -> 0.4.1 -> 0.5 -> 0.6 -> 1.0`; G0 andava chiuso prima di 0.5 (modello di layout) e prima di qualsiasi publish (licenza, scope): è chiuso dal 22 ottobre 2026 (sezione 14). Ogni agente parte dallo stato effettivo, legge indici/architettura prima dei sorgenti interessati e preserva cambi dell'utente. Se il predecessore manca o è rotto, documenta il requisito mancante, corregge solo regressioni pertinenti e non inventa deliverable né implementa automaticamente più fasi.
 
 ## 2. Minimo funzionante e dimostrazioni cumulative
 
@@ -57,7 +57,7 @@ Versione del prodotto, del documento e dell'API plugin sono indipendenti. Il sol
 2. **Prima del canvas editor:** la mappa XY è UI di authoring; preview e presentazione sono sempre `@spatialdeck/player`. Vietato un renderer React parallelo. Reparent arriva in 0.3, non va simulato nel 0.2.
 3. **Prima della struttura:** adottare latest-wins, commit history al completamento e `prev()` sulla visita reale. Decisioni sui loop e camera indipendente vanno fissate prima della timeline. Uniform scale evita shear; gizmo 3D completo fuori perimetro.
 4. **Prima dei contenuti:** sanitizzazione unica e registry plugin host-approved. Nessun codice caricato dal JSON. ZIP con asset è trasporto portabile; JSON resta canonico. Web MIDI facoltativo, bridge OSC fuori requisito.
-5. **G0, prima dell'impaginazione e di ogni publish:** il maintainer decide SPDX/licenza dei pacchetti incluso il player, proprietà dello scope npm, lingua predefinita di interfaccia e documentazione pubblica, e conferma il modello di layout della specifica (canvas con frame, flow predefinito, stile a token). Un agente non le deduce: in assenza registra un blocker.
+5. **G0, prima dell'impaginazione e di ogni publish:** il maintainer decide SPDX/licenza dei pacchetti incluso il player, proprietà dello scope npm, lingua predefinita di interfaccia e documentazione pubblica, e conferma il modello di layout della specifica (canvas con frame, flow predefinito, stile a token). Un agente non le deduce: in assenza registra un blocker. **Chiuso il 22 ottobre 2026:** `GPL-3.0-or-later` per tutti i pacchetti, player incluso; scope `@spatialdeck` del maintainer; inglese come lingua predefinita; modello di layout confermato senza modifiche ([specifica, sezione 21](PROJECT_SPEC.md)).
 6. **Prima dell'impaginazione:** preview e store incrementali (0.4.1), perché il drag nella scena deve restare nel budget. Ordine di lettura = ordine dell'array, `z` solo visivo. Nessuno stile come CSS libero; nessun renderer React dei blocchi, le maniglie stanno sopra la preview del player.
 7. **Prima degli export:** profili espliciti. Video minimo statico e senza audio è obbligatorio e verificabile; media dinamici nel player non implicano supporto video. HTML autonomo non incorpora il web esterno arbitrario. Gli export partono dal modello visivo 1.3.0; dipendenze di terze parti esterne nei pacchetti e note di licenza negli artefatti che incorporano codice.
 8. **Prima della stabilità:** pin baseline impress.js, browser reali e ambiente benchmark. Se CSS sorgente non è convertibile, warning concreto; se Safari o budget non sono verificati, il gate resta aperto. Nessun tag o publish in questa fase.
@@ -137,9 +137,9 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 
 | Carenza | Priorità | Fase |
 | --- | --- | --- |
-| SPDX e licenza dei pacchetti non decisi, campo `license` assente | P0 | G0 decide; 0.6 applica |
+| SPDX e licenza dei pacchetti non decisi, campo `license` assente | P0 | G0: `GPL-3.0-or-later`; 0.6 applica |
 | Codice di terze parti copiato nei `dist` senza note di licenza e insieme dichiarato come dipendenza (sanitizer non aggiornabile dai consumer) | P0 | 0.6 |
-| Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0 (scope); 0.6 |
+| Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0: scope del maintainer; 0.6 verifica la proprietà e completa i manifest |
 | Nessun posizionamento, dimensione o stile dei contenuti dentro la scena | P1 prodotto | 0.5 |
 | Firme asset: SVG con prologo/commento/DOCTYPE rifiutati; testo UTF-8 troncato al byte 4096 rifiutato | P1 | 0.4.1 — **chiusa** |
 | Digest SHA-256 dipendente da `crypto.subtle`: asset non caricabili su HTTP non-localhost | P1 | 0.4.1 — **chiusa** |
@@ -161,7 +161,8 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 | Presentazione Studio senza fullscreen | P2 | 0.6, con il presenter |
 | Fuzzing di parser ZIP e policy di sanitizzazione; `navigator.onLine` come segnale offline dei plugin; embed sandbox inutilizzabile per embed con script | P2 | 1.0 |
 | AVIF, FLAC, MOV non supportati; toolchain con Node/pnpm a versione esatta | P2 | 1.0, valutare |
-| Documentazione solo in italiano; CHANGELOG, CONTRIBUTING, SECURITY assenti | P2 | G0 decide la lingua; 1.0 |
+| Documentazione solo in italiano; CHANGELOG, CONTRIBUTING, SECURITY assenti | P2 | G0: inglese; 1.0 |
+| Testi predefiniti del player e interfaccia di Studio in italiano, lingua predefinita decisa in G0: inglese | P2 | 0.6 player (set italiano esportato come alternativa); 1.0 Studio |
 | Link ai prompt validi solo in locale | Informativo | Scelta del maintainer, nessuna azione |
 
 Le prove non eseguite già note (Safari reale, dispositivi mobili, screen reader, heap e benchmark controllati) restano gate della 1.0 e non sono riassegnate.
@@ -171,3 +172,7 @@ Le voci marcate **chiusa** sono state chiuse dalla 0.4.1 con un test che falliva
 ## 13. Avanzamento Consolidamento 0.4.1 — 22 ottobre 2026
 
 0.4.1 è implementata con schema 1.2.0, fixture e contratti invariati. Asset validi comuni accettati e digest calcolato anche fuori dai contesti sicuri; preview Studio incrementale con media pesanti (nessun digest né URL nuovo per modifica, p95 input→preview entro 100 ms sul runner locale dichiarato nei tre motori); testi del player sostituibili con `PlayerOptions.messages`, `lang` del documento e outline senza sorgente; Studio di produzione senza `ws:` né `window.studio`; IndexedDB v3 robusto a upgrade e blocchi, progetti e revisioni eliminabili, recupero proposto solo se diverso dal file salvato; axe e coverage estesa in CI, Actions fissate per SHA e nessun controllo che modifichi file tracciati. La CI aggiornata non è ancora stata eseguita: nessun push. Prerequisiti per 0.5: preview incrementale nel budget (verificata in locale) e conferma del punto 4 di G0 da parte del maintainer, ancora aperta.
+
+## 14. Chiusura del gate G0 — 22 ottobre 2026
+
+Il maintainer ha preso le quattro decisioni G0: licenza `GPL-3.0-or-later` per tutti i pacchetti, player incorporabile incluso; scope npm `@spatialdeck` di sua proprietà, con organizzazione da creare prima del publish e proprietà verificata in 0.6; inglese come lingua predefinita dell'interfaccia e della documentazione pubblica (player in 0.6, Studio e guide entro 1.0); modello di impaginazione 1.3.0 confermato senza modifiche. Dettagli e conseguenze nella [specifica, sezione 21](PROJECT_SPEC.md). I prerequisiti di 0.5 sono soddisfatti; la fase non è ancora avviata.
