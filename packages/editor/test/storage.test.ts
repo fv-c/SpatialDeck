@@ -3,11 +3,15 @@ import {
   Autosave,
   RecoveryRepository,
   StorageConflict,
+  openLimitError,
 } from "../src/storage/index.js";
-import { emptyProject } from "../src/commands/index.js";
+import { emptyProject, randomId } from "../src/commands/index.js";
 import type { Revision } from "../src/storage/index.js";
 import type { ProjectDocument } from "@spatialdeck/core";
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 it("denied IndexedDB reports a failure instead of replacing the document", async () => {
   const repository = new RecoveryRepository(() => {
     throw new Error("denied");
@@ -65,3 +69,28 @@ it.each([new Error("QuotaExceededError"), new StorageConflict()])(
     autosave.dispose();
   },
 );
+it("open limits name the file kind that exceeded them", () => {
+  const MiB = 1024 * 1024;
+  expect(openLimitError({ name: "a.json", size: 10 * MiB })).toBeNull();
+  expect(openLimitError({ name: "a.json", size: 10 * MiB + 1 })).toBe(
+    "Il file JSON supera 10 MiB.",
+  );
+  expect(openLimitError({ name: "a.spatialdeck", size: 220 * MiB })).toBeNull();
+  expect(openLimitError({ name: "a.spatialdeck", size: 220 * MiB + 1 })).toBe(
+    "L’archivio .spatialdeck supera 220 MiB.",
+  );
+});
+it("generates v4 IDs without randomUUID, as in non-secure contexts", () => {
+  const original = globalThis.crypto;
+  vi.stubGlobal("crypto", {
+    getRandomValues: <T extends ArrayBufferView>(array: T) =>
+      original.getRandomValues(array as never) as T,
+  });
+  const ids = new Set(Array.from({ length: 50 }, randomId));
+  expect(ids.size).toBe(50);
+  for (const id of ids)
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  expect(emptyProject().id).toMatch(/^[0-9a-f-]{36}$/);
+});

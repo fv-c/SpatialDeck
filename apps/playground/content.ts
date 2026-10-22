@@ -42,7 +42,10 @@ export async function contentDemo() {
     controls.setAttribute("aria-label", `Controlli player ${i + 1}`);
     const player = createPlayer({
       registry: builtin.registry,
-      assets: { resolve: (id, signal) => resolver.resolve(id, signal) },
+      assets: {
+        resolve: (id, signal) => resolver.resolve(id, signal),
+        revision: (id) => resolver.revision?.(id),
+      },
     });
     players.push(player);
     for (const [label, action] of [
@@ -138,7 +141,7 @@ export async function contentDemo() {
   document.title = "SpatialDeck · Contenuti";
   const header = document.querySelector("main header");
   if (header) {
-    header.querySelector("p")!.textContent = "SpatialDeck 0.4 / vanilla";
+    header.querySelector("p")!.textContent = "SpatialDeck 0.4.1 / vanilla";
     header.querySelector("h1")!.textContent = "Contenuti locali";
   }
 }

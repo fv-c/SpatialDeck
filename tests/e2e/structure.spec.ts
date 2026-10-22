@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import type { Page } from "@playwright/test";
 import {
   getWorldMatrix,
@@ -12,6 +12,7 @@ import type { ProjectDocument } from "../../packages/core/src/index.js";
 import fixture from "../../examples/structure-branching/project.json" with { type: "json" };
 import legacy from "../../examples/core-three-scenes/project.json" with { type: "json" };
 import { test, expect } from "./runner.js";
+import { evidencePath, studioURL, writeEvidence } from "./evidence.js";
 declare global {
   interface Window {
     structureCueEvents: number;
@@ -34,7 +35,7 @@ async function number(page: Page, label: string, text: string) {
   await page.getByRole("textbox", { name: label, exact: true }).press("Tab");
 }
 async function studio(page: Page) {
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   await upload(page);
   await expect(page.getByLabel("Titolo progetto")).toHaveValue(
@@ -172,10 +173,10 @@ test("nested world landmarks and independent track endpoint render within 1 CSS 
   close(landmarks, projected(doc(), "B", camera));
   if (info.project.name === "chromium") {
     await page.locator("#player-1").screenshot({
-      path: "docs/verification/content-regressions/structure-nested.png",
+      path: evidencePath("regressions/structure-nested.png"),
     });
-    await writeFile(
-      "docs/verification/content-regressions/structure-landmarks.json",
+    await writeEvidence(
+      "regressions/structure-landmarks.json",
       JSON.stringify(
         { camera, landmarks, expected: projected(doc(), "B", camera) },
         null,
@@ -194,7 +195,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     .getByRole("button", { name: /B · Figlia/ })
     .click();
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().nodeId))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().nodeId))
     .toBe("B");
   const before = await points(page, ".preview-player", "B");
   await page.getByText("Gerarchia spaziale", { exact: true }).click();
@@ -205,22 +206,22 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     .poll(() =>
       page.evaluate(
         () =>
-          window.studio.store
-            .getSnapshot()
+          window
+            .studio!.store.getSnapshot()
             .document.scenes.find((s) => s.id === "B")!.parentId,
       ),
     )
     .toBe("C");
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().status))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().status))
     .toBe("idle");
   close(await points(page, ".preview-player", "B"), before);
   await page.getByRole("button", { name: "Annulla", exact: true }).click();
   expect(
     await page.evaluate(
       () =>
-        window.studio.store
-          .getSnapshot()
+        window
+          .studio!.store.getSnapshot()
           .document.scenes.find((s) => s.id === "B")!.parentId,
     ),
   ).toBe("A");
@@ -241,7 +242,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
       .click();
   }
   const path = await page.evaluate(() =>
-    window.studio.store.getSnapshot().document.paths.at(-1)!,
+    window.studio!.store.getSnapshot().document.paths.at(-1)!,
   );
   await page
     .getByLabel("Connessione da", { exact: true })
@@ -255,7 +256,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     .fill("Scelta diretta D");
   await page.getByLabel("Etichetta scelta", { exact: true }).press("Tab");
   const expected = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
@@ -268,21 +269,21 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
   expect(saved.schemaVersion).toBe("1.2.0");
   const context = await browser.newContext(),
     fresh = await context.newPage();
-  await fresh.goto("http://127.0.0.1:4174");
+  await fresh.goto(studioURL);
   await upload(fresh, saved);
   await expect
     .poll(() =>
-      fresh.evaluate(() => window.studio.store.getSnapshot().document),
+      fresh.evaluate(() => window.studio!.store.getSnapshot().document),
     )
     .toEqual(expected);
   if (info.project.name === "chromium") {
-    await writeFile(
-      "docs/verification/content-regressions/structure-roundtrip.json",
+    await writeEvidence(
+      "regressions/structure-roundtrip.json",
       JSON.stringify(saved, null, 2) + "\n",
     );
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({
-      path: "docs/verification/content-regressions/structure-studio.png",
+      path: evidencePath("regressions/structure-studio.png"),
     });
   }
   await context.close();
@@ -296,7 +297,7 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   const updated = page.evaluate(
     () =>
       new Promise<void>((resolve) => {
-        const off = window.studio.preview!.on("documentchange", () => {
+        const off = window.studio!.preview!.on("documentchange", () => {
           off();
           resolve();
         });
@@ -305,16 +306,16 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   await number(page, "Keyframe 2 posizione Y", "-500");
   await updated;
   const document = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   expect(document.cameraTracks[0]!.keyframes[1]!.pose.position[1]).toBe(-500);
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().status))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().status))
     .toBe("idle");
   const before = await page.evaluate(() => {
     window.structureCueEvents = 0;
-    window.studio.preview!.on("cue", () => window.structureCueEvents++);
-    return window.studio.preview!.getState().history;
+    window.studio!.preview!.on("cue", () => window.structureCueEvents++);
+    return window.studio!.preview!.getState().history;
   });
   const slider = page.getByRole("slider", { name: "Scrub camera" });
   await slider.focus();
@@ -327,10 +328,10 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   if (!result.ok) throw Error();
   const expected = sampleTransition(result.value, progress * 1200).camera;
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().camera))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().camera))
     .toEqual(expected);
   expect(
-    await page.evaluate(() => window.studio.preview!.getState().history),
+    await page.evaluate(() => window.studio!.preview!.getState().history),
   ).toEqual(before);
   close(
     await points(page, ".preview-player", "B"),
@@ -339,42 +340,42 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   expect(await page.evaluate(() => window.structureCueEvents)).toBe(0);
   await slider.press("End");
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().camera))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().camera))
     .toEqual(cameraPose(document.cameraTracks[0]!.keyframes.at(-1)!.pose));
   expect(
-    await page.evaluate(() => window.studio.preview!.getState().history),
+    await page.evaluate(() => window.studio!.preview!.getState().history),
   ).toEqual(before);
   if (info.project.name === "chromium") {
     await page.locator(".preview-player").screenshot({
-      path: "docs/verification/content-regressions/structure-track.png",
+      path: evidencePath("regressions/structure-track.png"),
     });
     await page.locator(".timeline-panel").screenshot({
-      path: "docs/verification/content-regressions/structure-timeline.png",
+      path: evidencePath("regressions/structure-timeline.png"),
     });
   }
   await page
     .getByRole("button", { name: "Termina ispezione camera", exact: true })
     .click();
   await expect
-    .poll(() => page.evaluate(() => window.studio.preview!.getState().camera))
+    .poll(() => page.evaluate(() => window.studio!.preview!.getState().camera))
     .toEqual(before.at(-1)!.camera);
 });
 test("historic JSON opens as migrated copy, future versions preserve active work and autosave recovers structure", async ({
   page,
 }) => {
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await upload(page, legacy);
   await expect
     .poll(() =>
       page.evaluate(
-        () => window.studio.store.getSnapshot().document.schemaVersion,
+        () => window.studio!.store.getSnapshot().document.schemaVersion,
       ),
     )
     .toBe("1.2.0");
   expect(
     await page.evaluate(() =>
-      window.studio.store
-        .getSnapshot()
+      window
+        .studio!.store.getSnapshot()
         .document.scenes.every((s) => s.parentId === null),
     ),
   ).toBe(true);
@@ -382,7 +383,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
   await expect(page.getByRole("alert")).toContainText("Supported schemas");
   expect(
     await page.evaluate(
-      () => window.studio.store.getSnapshot().document.scenes[0]!.id,
+      () => window.studio!.store.getSnapshot().document.scenes[0]!.id,
     ),
   ).toBe("intro");
   await upload(page, fixture);
@@ -392,7 +393,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
     () => new Promise((resolve) => setTimeout(resolve, 1000)),
   );
   const expected = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   page.on("dialog", (dialog) => dialog.accept());
   await page.reload();
@@ -401,7 +402,9 @@ test("historic JSON opens as migrated copy, future versions preserve active work
     .getByRole("button", { name: "Recupera revisione", exact: true })
     .click();
   await expect
-    .poll(() => page.evaluate(() => window.studio.store.getSnapshot().document))
+    .poll(() =>
+      page.evaluate(() => window.studio!.store.getSnapshot().document),
+    )
     .toEqual(expected);
 });
 test("overview, pan, zoom and direct goTo keep history and mobile controls usable", async ({
@@ -439,7 +442,7 @@ test("overview, pan, zoom and direct goTo keep history and mobile controls usabl
     ),
   ).toEqual(["alt-D"]);
   await page.setViewportSize({ width: 390, height: 900 });
-  await page.goto("http://127.0.0.1:4174");
+  await page.goto(studioURL);
   await upload(page);
   await page.getByText("Percorsi e connessioni", { exact: false }).click();
   expect(
@@ -479,7 +482,7 @@ test("Studio creates a real camera track, node pose and declarative cue through 
     .fill('{"note":"dichiarativo"}');
   await page.getByRole("textbox", { name: /Payload cue/ }).press("Tab");
   const result = await page.evaluate(
-      () => window.studio.store.getSnapshot().document,
+      () => window.studio!.store.getSnapshot().document,
     ),
     path = result.paths.find((p) => p.id === "alternate")!,
     track = result.cameraTracks.find(
@@ -511,15 +514,15 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   await page.getByLabel("Connessione a", { exact: true }).selectOption("alt-C");
   await page.getByRole("button", { name: "Collega nodi", exact: true }).click();
   const loop = await page.evaluate(() =>
-    window.studio.store
-      .getSnapshot()
+    window
+      .studio!.store.getSnapshot()
       .document.paths.find((p) => p.id === "alternate")!,
   );
   expect(loop.loopPolicy!.maxVisitsPerNode).toBe(3);
   expect(loop.edges.every((e) => e.condition?.kind === "manual")).toBe(true);
   await page.getByLabel("Percorso da modificare").selectOption("branch");
   const before = await page.evaluate(
-    () => window.studio.store.getSnapshot().document,
+    () => window.studio!.store.getSnapshot().document,
   );
   await page
     .getByRole("button", { name: "Elimina percorso", exact: true })
@@ -531,7 +534,7 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
     .last()
     .click();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await page
     .getByRole("button", { name: "Elimina percorso", exact: true })
@@ -541,11 +544,11 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
     .click();
   expect(
     await page.evaluate(
-      () => window.studio.store.getSnapshot().document.defaultPathId,
+      () => window.studio!.store.getSnapshot().document.defaultPathId,
     ),
   ).toBe("alternate");
   await page.getByRole("button", { name: "Annulla", exact: true }).click();
   expect(
-    await page.evaluate(() => window.studio.store.getSnapshot().document),
+    await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
 });

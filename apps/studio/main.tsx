@@ -8,7 +8,8 @@ import {
 import type { Player } from "@spatialdeck/player";
 const store = new EditorStore(emptyProject()),
   repository = new RecoveryRepository();
-// Explicit embedding/debug API, like the vanilla playground; no second document model.
+// Embedding/debug API, like the vanilla playground; no second document model.
+// Production exposes it only on explicit request: `?studio-debug` in the URL.
 const studio = {
   store,
   repository,
@@ -17,10 +18,14 @@ const studio = {
 };
 declare global {
   interface Window {
-    studio: typeof studio;
+    studio?: typeof studio;
   }
 }
-window.studio = studio;
+if (
+  import.meta.env.DEV ||
+  new URLSearchParams(location.search).has("studio-debug")
+)
+  window.studio = studio;
 createRoot(document.getElementById("root")!).render(
   <Studio
     store={store}

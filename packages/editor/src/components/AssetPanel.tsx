@@ -4,6 +4,7 @@ import { success } from "@spatialdeck/core";
 import { sha256, verifyAsset } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
 import type { EditorStore } from "../store/index.js";
+import { randomId } from "../commands/index.js";
 export function AssetPanel({
   store,
   document,
@@ -20,7 +21,7 @@ export function AssetPanel({
     try {
       if (file.size > 50 * 1024 * 1024)
         throw new Error("Il file supera 50 MiB.");
-      const id = existing?.id ?? crypto.randomUUID(),
+      const id = existing?.id ?? randomId(),
         name =
           file.name
             .normalize("NFC")

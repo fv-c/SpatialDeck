@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import fixture from "../../../examples/core-three-scenes/project.json";
 import { validateDocument } from "@spatialdeck/core";
 import {
@@ -215,5 +215,125 @@ describe("editor atomic commands", () => {
     }).toThrow();
     store.execute(editScene("intro", { notes: "new" }));
     expect(input).toEqual(project());
+  });
+});
+describe("0.4.1 store publication and text sessions", () => {
+  function large() {
+    const store = new EditorStore(project());
+    for (let i = 0; i < 60; i++) store.execute(createScene());
+    return store;
+  }
+  it("selection and map pan never serialize or deep-freeze the document", () => {
+    const store = large(),
+      ids = store.getSnapshot().document.scenes.map((s) => s.id);
+    store.markSaved();
+    const stringify = vi.spyOn(JSON, "stringify"),
+      freeze = vi.spyOn(Object, "freeze");
+    for (let i = 0; i < 20; i++) {
+      store.select(ids[i % ids.length]!);
+      store.setMap({ x: i, y: -i, zoom: 0.5 });
+    }
+    expect(stringify).not.toHaveBeenCalled();
+    expect(freeze.mock.calls.length).toBeLessThanOrEqual(80);
+    expect(store.getSnapshot().dirty).toBe(false);
+    expect(Object.isFrozen(store.getSnapshot().document.scenes[5]!)).toBe(true);
+    stringify.mockRestore();
+    freeze.mockRestore();
+  });
+  it("dirty follows the saved document identity through undo and redo", () => {
+    const store = new EditorStore(project());
+    expect(store.getSnapshot().dirty).toBe(false);
+    store.execute(editScene("intro", { title: "a" }));
+    expect(store.getSnapshot().dirty).toBe(true);
+    store.undo();
+    expect(store.getSnapshot().dirty).toBe(false);
+    store.beginDrag("intro");
+    store.moveDrag(400, 400);
+    store.moveDrag(
+      ...(project().scenes[0]!.position.slice(0, 2) as [number, number]),
+    );
+    store.endDrag();
+    expect(store.getSnapshot().dirty).toBe(false);
+    expect(store.getSnapshot().historyLength).toBe(0);
+  });
+  it("continuous text edits coalesce into one command per editing session", () => {
+    const store = new EditorStore(project()),
+      original = store.getSnapshot().document;
+    const title = (value: string) =>
+      store.coalesce("metadata.title", (doc) => {
+        doc.metadata.title = value;
+        return { ok: true, value: doc, diagnostics: [] };
+      });
+    for (const value of ["N", "Nu", "Nuo", "Nuovo"])
+      expect(title(value).ok).toBe(true);
+    expect(store.getSnapshot().historyLength).toBe(1);
+    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo");
+    store.endCoalesce();
+    title("Nuovo titolo");
+    expect(store.getSnapshot().historyLength).toBe(2);
+    store.undo();
+    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo");
+    store.undo();
+    expect(store.getSnapshot().document).toBe(original);
+    store.redo();
+    store.redo();
+    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo titolo");
+    title("Altro");
+    store.execute(editScene("intro", { notes: "interleaved" }));
+    title("Ancora");
+    expect(store.getSnapshot().historyLength).toBe(5);
+    expect(title("").ok).toBe(true);
+    const notes = (value: string) =>
+      store.coalesce("notes:intro", editScene("intro", { notes: value }));
+    notes("x");
+    notes("xy");
+    expect(store.getSnapshot().historyLength).toBe(6);
+    store.undo();
+    expect(store.getSnapshot().document.scenes[0]!.notes).toBe("interleaved");
+  });
+  it("a coalesced session that returns to its start leaves no command", () => {
+    const store = new EditorStore(project());
+    const set = (value: string) =>
+      store.coalesce("t", (doc) => {
+        doc.metadata.title = value;
+        return { ok: true, value: doc, diagnostics: [] };
+      });
+    const start = store.getSnapshot().document.metadata.title;
+    set(start + "!");
+    set(start);
+    store.endCoalesce();
+    expect(store.getSnapshot().canUndo).toBe(false);
+    expect(store.getSnapshot().dirty).toBe(false);
+  });
+});
+describe("0.4.1 store edge cases", () => {
+  it("coalescing refuses during drags and keeps invalid edits out of history", () => {
+    const store = new EditorStore(project());
+    store.beginDrag("intro");
+    expect(
+      store.coalesce("t", (doc) => ({ ok: true, value: doc, diagnostics: [] }))
+        .ok,
+    ).toBe(false);
+    store.cancelDrag();
+    expect(store.coalesce("t", editScene("intro", { scale: 0 })).ok).toBe(
+      false,
+    );
+    store.coalesce("t", editScene("intro", { notes: "a" }));
+    expect(store.coalesce("t", editScene("intro", { scale: -1 })).ok).toBe(
+      false,
+    );
+    expect(store.coalesce("t", editScene("intro", { notes: "a" })).ok).toBe(
+      true,
+    );
+    expect(store.getSnapshot().historyLength).toBe(1);
+  });
+  it("a coalesced command still respects the history byte budget", () => {
+    const store = new EditorStore(project(), { commands: 100, bytes: 1 });
+    store.coalesce("t", editScene("intro", { notes: "a" }));
+    store.coalesce("t", editScene("intro", { notes: "ab" }));
+    expect(store.getSnapshot().canUndo).toBe(false);
+    expect(store.getSnapshot().document.scenes[0]!.notes).toBe("ab");
+    store.coalesce("t", editScene("intro", { notes: "abc" }));
+    expect(store.getSnapshot().document.scenes[0]!.notes).toBe("abc");
   });
 });

@@ -1,3 +1,4 @@
+import { defaultMessages } from "@spatialdeck/player";
 import type {
   ContentContext,
   ContentRenderer,
@@ -11,10 +12,14 @@ export function registerNavigation(
   policy: EmbedPolicy = { allowedOrigins: [] },
 ): () => void {
   const link = registry.register("link", () => {
-    let host: HTMLElement, context: ContentContext;
+    let host: HTMLElement,
+      context: ContentContext,
+      last = "";
     function update(next: ContentContext) {
       context = next;
-      if (next.block.type !== "link") return;
+      if (next.block.type !== "link" || JSON.stringify(next.block) === last)
+        return;
+      last = JSON.stringify(next.block);
       host.replaceChildren();
       const button = host.ownerDocument.createElement("button");
       button.type = "button";
@@ -48,21 +53,24 @@ export function registerNavigation(
       last = JSON.stringify(b);
       frame?.remove();
       host.replaceChildren();
+      const messages = next.messages ?? defaultMessages;
       const status = host.ownerDocument.createElement("p");
       status.setAttribute("role", "status");
+      status.lang = messages.lang;
       const url = new URL(b.data.url),
         allowed = policy.allowedOrigins.includes(url.origin);
       status.textContent = allowed
-        ? "Contenuto web esterno disattivato. Richiede rete e consenso."
-        : "Embed disattivato: origine non autorizzata dall’host. Offline non disponibile.";
+        ? messages.embedDisabled
+        : messages.embedUnauthorized;
       host.append(status);
       if (allowed) {
         const button = host.ownerDocument.createElement("button");
         button.type = "button";
-        button.textContent = `Consenti embed: ${b.data.title}`;
+        button.lang = messages.lang;
+        button.textContent = messages.embedConsent(b.data.title);
         button.onclick = () => {
           if (!host.ownerDocument.defaultView!.navigator.onLine) {
-            status.textContent = "Embed non disponibile offline.";
+            status.textContent = messages.embedOffline;
             return;
           }
           if (context.signal.aborted) return;
@@ -78,17 +86,17 @@ export function registerNavigation(
           frame.src = url.href;
           host.append(frame);
           button.disabled = true;
-          status.textContent =
-            "Embed isolato, script disabilitati. Rimuovi consenso per chiuderlo.";
+          status.textContent = messages.embedActive;
           const revoke = host.ownerDocument.createElement("button");
           revoke.type = "button";
-          revoke.textContent = "Rimuovi consenso embed";
+          revoke.lang = messages.lang;
+          revoke.textContent = messages.embedRevoke;
           revoke.onclick = () => {
             frame?.remove();
             frame = undefined;
             button.disabled = false;
             revoke.remove();
-            status.textContent = "Embed disattivato.";
+            status.textContent = messages.embedRevoked;
           };
           host.append(revoke);
         };

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { failure, success } from "@spatialdeck/core";
 import type { Block, Scene, JsonValue } from "@spatialdeck/core";
-import { editScene } from "../commands/index.js";
+import { editScene, randomId } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { TextField } from "./Inspector.js";
 import { sampleInspector } from "@spatialdeck/plugins/sample";
@@ -16,12 +16,17 @@ export function ContentPanel({
     [error, setError] = useState("");
   const edit = (blocks: Block[]) =>
     store.execute(editScene(scene.id, { blocks }));
-  const change = (block: Block, data: unknown) =>
-    edit(
-      scene.blocks.map((b) =>
-        b.id === block.id ? ({ ...b, data } as Block) : b,
-      ),
+  /** Text edits of one block field coalesce into one undo command per session. */
+  const write = (block: Block, field: string, data: unknown) =>
+    store.coalesce(
+      `block:${scene.id}:${block.id}:${field}`,
+      editScene(scene.id, {
+        blocks: scene.blocks.map((b) =>
+          b.id === block.id ? ({ ...b, data } as Block) : b,
+        ),
+      }),
     );
+  const end = () => store.endCoalesce();
   function add(kind: Block["type"]) {
     const doc = store.getSnapshot().document;
     const asset = doc.assets.find((a) => a.mime.startsWith(kind + "/")),
@@ -78,7 +83,7 @@ export function ContentPanel({
     };
     const result = edit([
       ...scene.blocks,
-      { id: crypto.randomUUID(), type: kind, data: defaults[kind] } as Block,
+      { id: randomId(), type: kind, data: defaults[kind] } as Block,
     ]);
     setError(
       result.ok ? "" : result.diagnostics.map((d) => d.message).join("; "),
@@ -99,7 +104,8 @@ export function ContentPanel({
               label={`Testo ${i + 1}`}
               value={block.data.text}
               multiline
-              apply={(text) => change(block, { text })}
+              apply={(text) => write(block, "text", { text })}
+              onEnd={end}
             />
           ) : (
             <>
@@ -108,7 +114,10 @@ export function ContentPanel({
                   label={`Sorgente ${block.type} ${i + 1}`}
                   value={block.data.source}
                   multiline
-                  apply={(source) => change(block, { ...block.data, source })}
+                  apply={(source) =>
+                    write(block, "source", { ...block.data, source })
+                  }
+                  onEnd={end}
                 />
               )}
               {block.type === "plugin" &&
@@ -122,7 +131,7 @@ export function ContentPanel({
                     value={block.data.payload.label}
                     apply={(value) => {
                       try {
-                        return change(block, {
+                        return write(block, "plugin-label", {
                           ...block.data,
                           payload: sampleInspector.edit(
                             block.data.payload,
@@ -134,6 +143,7 @@ export function ContentPanel({
                         return failure("PLUGIN_DATA", String(e));
                       }
                     }}
+                    onEnd={end}
                   />
                 )}
               <details>
@@ -144,7 +154,11 @@ export function ContentPanel({
                   multiline
                   apply={(text) => {
                     try {
-                      return change(block, JSON.parse(text) as JsonValue);
+                      return write(
+                        block,
+                        "data",
+                        JSON.parse(text) as JsonValue,
+                      );
                     } catch {
                       return failure(
                         "CONTENT_JSON",
@@ -152,6 +166,7 @@ export function ContentPanel({
                       );
                     }
                   }}
+                  onEnd={end}
                 />
               </details>
             </>

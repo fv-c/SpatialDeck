@@ -8,6 +8,7 @@ import {
   isSceneVisible,
 } from "@spatialdeck/core";
 import type {
+  Block,
   CameraPose,
   Diagnostic,
   NavigationOptions,
@@ -16,12 +17,17 @@ import type {
   PlayerState,
   ProjectDocument,
   Result,
+  Scene,
 } from "@spatialdeck/core";
 import { ContentMount, blockText } from "./content/index.js";
 import type { RendererRegistry } from "./content/index.js";
 import type { AssetResolver } from "./assets/index.js";
+import { resolveMessages } from "./messages.js";
+import type { PlayerMessages } from "./messages.js";
 export * from "./content/index.js";
 export * from "./assets/index.js";
+export { defaultMessages } from "./messages.js";
+export type { PlayerMessages } from "./messages.js";
 export interface PlayerClock {
   now(): number;
   request(callback: () => void): number;
@@ -40,6 +46,8 @@ export interface PlayerOptions {
     name: string,
     payload: import("@spatialdeck/core").JsonValue,
   ) => void;
+  /** Replaces any subset of the player and builtin renderer texts; defaults are Italian. */
+  messages?: Partial<PlayerMessages>;
 }
 export interface Player {
   mount(container: HTMLElement, document: unknown): Promise<Result<void>>;
@@ -60,10 +68,26 @@ export interface Player {
     handler: (payload: PlayerEvents[K]) => void,
   ): () => void;
 }
+interface BlockView {
+  key: string;
+  host: HTMLElement;
+  mount: ContentMount;
+  /** An asset failed to resolve: the next document update tries the block again. */
+  unresolved(): boolean;
+}
+interface SceneView {
+  wrapper: HTMLElement;
+  content: HTMLElement;
+  title: HTMLElement;
+  transform: string;
+  blocks: Map<string, BlockView>;
+}
+const assetFields = ["assetId", "posterAssetId", "captionsAssetId"] as const;
 export function createPlayer(options: PlayerOptions = {}): Player {
   const instanceId = Array.from(
     globalThis.crypto.getRandomValues(new Uint32Array(4)),
   ).join("-");
+  const messages = resolveMessages(options.messages);
   let machine: NavigationMachine | undefined,
     host: HTMLElement | undefined,
     root: HTMLElement | undefined,
@@ -85,21 +109,29 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     outlineOpen = false,
     spatialSupported = true,
     focusRequested = false,
-    focusAllowed = false,
-    pathRendered: string | null | undefined,
-    choicesRendered = "";
+    focusAllowed = false;
+  // Render memo: per-frame work is the camera; everything else runs when its inputs change.
+  let revision = 0,
+    layout = 0,
+    renderedCamera: CameraPose | null = null,
+    chromeKey = "",
+    activationKey = "",
+    outlineSource = "",
+    outlineKey = "",
+    outlineNode: string | null | undefined,
+    choicesSource = "",
+    choicesRendered = "",
+    liveKey = "";
   let mediaEnabled = false;
-  const contentMounts: Array<{ sceneId: string; mount: ContentMount }> = [];
-  const clearContents = () =>
-    contentMounts.splice(0).forEach((c) => c.mount.destroy());
+  const scenes = new Map<string, SceneView>();
+  const clearContents = () => {
+    for (const view of scenes.values())
+      for (const block of view.blocks.values()) block.mount.destroy();
+  };
   let media: MediaQueryList | undefined,
     manualReduced = options.motion === "reduced",
     oldTabindex: string | null = null;
-  const cleanup: Array<() => void> = [],
-    scenes = new Map<
-      string,
-      { wrapper: HTMLElement; content: HTMLElement; title: HTMLElement }
-    >();
+  const cleanup: Array<() => void> = [];
   const handlers = new Map<
     keyof PlayerEvents,
     Set<(payload: unknown) => void>
@@ -155,91 +187,261 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     return el;
   };
   let resizeView = () => {};
-  const buildScenes = () => {
+  /** Everything a builtin rendering of the block depends on besides the block itself. */
+  const blockKey = (d: ProjectDocument, block: Block) => {
+    const data = block.data as Partial<
+      Record<(typeof assetFields)[number], string>
+    >;
+    return JSON.stringify([
+      block,
+      assetFields.flatMap((field) => {
+        const id = data[field];
+        return id
+          ? [
+              [
+                id,
+                d.assets.find((a) => a.id === id) ?? null,
+                options.assets?.revision?.(id) ?? null,
+              ],
+            ]
+          : [];
+      }),
+      block.type === "audio" || block.type === "video"
+        ? d.metadata.language
+        : null,
+      block.type === "plugin"
+        ? (d.pluginSettings?.[block.data.pluginId] ?? null)
+        : null,
+    ]);
+  };
+  const createBlock = (
+    d: ProjectDocument,
+    scene: Scene,
+    block: Block,
+    key: string,
+  ): BlockView => {
+    const blockHost = element(block.type === "text" ? "p" : "div", "sd-block");
+    blockHost.dataset.blockId = block.id;
+    blockHost.dataset.blockType = block.type;
+    let unresolved = false;
+    const resolver = options.assets;
+    const assets: AssetResolver | undefined = resolver && {
+      resolve: async (id, signal) => {
+        try {
+          return await resolver.resolve(id, signal);
+        } catch (error) {
+          if (!signal?.aborted) unresolved = true;
+          throw error;
+        }
+      },
+      ...(resolver.revision
+        ? { revision: (id: string) => resolver.revision!(id) }
+        : {}),
+    };
+    const mount = new ContentMount(
+      blockHost,
+      {
+        block,
+        document: d,
+        instanceId: `${instanceId}-${scene.id}-${block.id}`,
+        active: false,
+        mediaEnabled,
+        mediaMuted: options.muted === true,
+        messages,
+        services: {
+          ...(assets ? { assets } : {}),
+          navigate: (target) => player.goTo(target),
+          on: player.on,
+          emit: (name, payload) => options.onContentEvent?.(name, payload),
+          report: (diag) => {
+            report(diag);
+            emit("diagnostic", { instanceId, diagnostic: diag });
+          },
+          mediaError: (message) => {
+            const diag = {
+              ...diagnostic("MEDIA_ERROR", message),
+              severity: "warning" as const,
+            };
+            report(diag);
+            emit("mediaerror", {
+              instanceId,
+              sceneId: scene.id,
+              blockId: block.id,
+              ...("assetId" in block.data
+                ? { assetId: block.data.assetId }
+                : {}),
+              diagnostic: diag,
+            });
+          },
+        },
+      },
+      options.registry,
+    );
+    layout++;
+    return { key, host: blockHost, mount, unresolved: () => unresolved };
+  };
+  const removeBlock = (view: BlockView) => {
+    view.mount.destroy();
+    view.host.remove();
+    layout++;
+  };
+  /** Incremental equivalent of rebuilding the world: unchanged scenes and blocks keep their DOM, renderers and leases. */
+  const syncScenes = () => {
     if (!doc || !world || !viewport) return;
-    clearContents();
+    const d = doc;
     if (mediaButton)
-      mediaButton.hidden = !doc.scenes.some((s) =>
+      mediaButton.hidden = !d.scenes.some((s) =>
         s.blocks.some((b) => b.type === "audio" || b.type === "video"),
       );
-    scenes.clear();
-    world.replaceChildren();
-    viewport.style.width = `${doc.settings.viewport.width}px`;
-    viewport.style.height = `${doc.settings.viewport.height}px`;
-    viewport.style.perspective = `${doc.settings.viewport.perspective}px`;
-    for (const scene of doc.scenes) {
-      const wrapper = element("div", "sd-scene");
-      wrapper.dataset.sceneId = scene.id;
-      wrapper.hidden = !isSceneVisible(doc, scene.id);
-      const matrix = getWorldMatrix(doc, scene.id);
-      if (matrix.ok)
-        wrapper.style.transform = `matrix3d(${matrix.value.join(",")})`;
-      const content = element("article", "sd-content");
-      content.style.width = `${scene.size[0]}px`;
-      content.style.height = `${scene.size[1]}px`;
-      const title = element("h2");
-      title.textContent = scene.title;
-      title.tabIndex = -1;
-      content.append(title);
-      for (const block of scene.blocks) {
-        const blockHost = element(
-          block.type === "text" ? "p" : "div",
-          "sd-block",
-        );
-        blockHost.dataset.blockId = block.id;
-        blockHost.dataset.blockType = block.type;
-        content.append(blockHost);
-        contentMounts.push({
-          sceneId: scene.id,
-          mount: new ContentMount(
-            blockHost,
-            {
-              block,
-              document: doc,
-              instanceId: `${instanceId}-${scene.id}-${block.id}`,
-              active: false,
-              mediaEnabled,
-              mediaMuted: options.muted === true,
-              services: {
-                ...(options.assets ? { assets: options.assets } : {}),
-                navigate: (target) => player.goTo(target),
-                on: player.on,
-                emit: (name, payload) =>
-                  options.onContentEvent?.(name, payload),
-                report: (d) => {
-                  report(d);
-                  emit("diagnostic", { instanceId, diagnostic: d });
-                },
-                mediaError: (message) => {
-                  const d = {
-                    ...diagnostic("MEDIA_ERROR", message),
-                    severity: "warning" as const,
-                  };
-                  report(d);
-                  emit("mediaerror", {
-                    instanceId,
-                    sceneId: scene.id,
-                    blockId: block.id,
-                    ...("assetId" in block.data
-                      ? { assetId: block.data.assetId }
-                      : {}),
-                    diagnostic: d,
-                  });
-                },
-              },
-            },
-            options.registry,
-          ),
-        });
+    viewport.style.width = `${d.settings.viewport.width}px`;
+    viewport.style.height = `${d.settings.viewport.height}px`;
+    viewport.style.perspective = `${d.settings.viewport.perspective}px`;
+    const ids = new Set(d.scenes.map((s) => s.id));
+    for (const [id, view] of scenes)
+      if (!ids.has(id)) {
+        for (const block of view.blocks.values()) removeBlock(block);
+        view.wrapper.remove();
+        scenes.delete(id);
       }
-      wrapper.append(content);
-      world.append(wrapper);
-      scenes.set(scene.id, { wrapper, content, title });
+    let previous: ChildNode | null = null;
+    for (const scene of d.scenes) {
+      let view = scenes.get(scene.id);
+      if (!view) {
+        const wrapper = element("div", "sd-scene");
+        wrapper.dataset.sceneId = scene.id;
+        const content = element("article", "sd-content");
+        const title = element("h2");
+        title.tabIndex = -1;
+        content.append(title);
+        wrapper.append(content);
+        view = { wrapper, content, title, transform: "", blocks: new Map() };
+        scenes.set(scene.id, view);
+        layout++;
+      }
+      view.wrapper.hidden = !isSceneVisible(d, scene.id);
+      const matrix = getWorldMatrix(d, scene.id);
+      const transform = matrix.ok ? `matrix3d(${matrix.value.join(",")})` : "";
+      if (transform !== view.transform) {
+        view.wrapper.style.transform = transform;
+        view.transform = transform;
+      }
+      view.content.style.width = `${scene.size[0]}px`;
+      view.content.style.height = `${scene.size[1]}px`;
+      if (view.title.textContent !== scene.title)
+        view.title.textContent = scene.title;
+      const keep = new Set(scene.blocks.map((b) => b.id));
+      for (const [id, block] of view.blocks)
+        if (!keep.has(id)) {
+          removeBlock(block);
+          view.blocks.delete(id);
+        }
+      let before: ChildNode = view.title;
+      for (const block of scene.blocks) {
+        const key = blockKey(d, block);
+        let current = view.blocks.get(block.id);
+        if (
+          current &&
+          (current.key !== key || current.mount.failed || current.unresolved())
+        ) {
+          removeBlock(current);
+          current = undefined;
+        }
+        if (!current) {
+          current = createBlock(d, scene, block, key);
+          view.blocks.set(block.id, current);
+        } else current.mount.refresh(d);
+        if (before.nextSibling !== current.host)
+          view.content.insertBefore(current.host, before.nextSibling);
+        before = current.host;
+      }
+      const expected: ChildNode | null = previous
+        ? previous.nextSibling
+        : world.firstChild;
+      if (expected !== view.wrapper) world.insertBefore(view.wrapper, expected);
+      previous = view.wrapper;
     }
+  };
+  /** Rendered text for markup blocks, accessible text for the others; never the source. */
+  const outlineText = (sceneId: string, block: Block) => {
+    const view = scenes.get(sceneId)?.blocks.get(block.id);
+    if (
+      (block.type === "markdown" ||
+        block.type === "html" ||
+        block.type === "plugin") &&
+      view?.mount.rendered
+    )
+      return (view.host.textContent ?? "").replace(/\s+/g, " ").trim();
+    return blockText(block, messages);
+  };
+  const renderOutline = (s: Readonly<PlayerState>) => {
+    if (!outline || !doc) return;
+    const d = doc;
+    const path = d.paths.find((p) => p.id === s.pathId);
+    const visited = new Set<string>(),
+      ordered = [];
+    const stack = path?.startNodeId ? [path.startNodeId] : [];
+    while (stack.length && path) {
+      const id = stack.pop()!;
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const node = path.nodes.find((n) => n.id === id)!;
+      ordered.push(node);
+      stack.push(
+        ...path.edges
+          .filter((e) => e.from === id)
+          .map((e) => e.to)
+          .reverse(),
+      );
+    }
+    const entries = ordered.map((node) => {
+      const scene = d.scenes.find((sc) => sc.id === node.sceneId)!;
+      return {
+        nodeId: node.id,
+        title: scene.title,
+        texts: scene.blocks
+          .map((b) => outlineText(scene.id, b))
+          .filter((t) => t !== ""),
+      };
+    });
+    const key = JSON.stringify(entries);
+    if (key === outlineKey) return;
+    outlineKey = key;
+    outlineNode = undefined;
+    outline.replaceChildren();
+    for (const entry of entries) {
+      const li = element("li"),
+        button = element("button");
+      button.type = "button";
+      button.textContent = entry.title;
+      button.dataset.nodeId = entry.nodeId;
+      li.append(button);
+      for (const text of entry.texts) {
+        const p = element("p");
+        p.textContent = text;
+        li.append(p);
+      }
+      outline.append(li);
+    }
+  };
+  const disabledText = (
+    path: ProjectDocument["paths"][number] | undefined,
+    edgeId: string,
+    fallback: string,
+  ) => {
+    const edge = path?.edges.find((e) => e.id === edgeId);
+    const limit = Math.min(
+      path?.loopPolicy?.maxVisitsPerNode ?? Infinity,
+      edge?.condition?.kind === "visit-limit"
+        ? edge.condition.maxVisits
+        : Infinity,
+    );
+    return edge && Number.isFinite(limit)
+      ? messages.visitLimit(limit, edge.to)
+      : fallback;
   };
   const render = () => {
     if (!root || !machine || !doc || destroyed || updating) return;
-    const s = machine.getState();
+    const s = machine.peek();
     if (
       focusRequested &&
       focusOrigin &&
@@ -249,104 +451,98 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     )
       focusAllowed = false;
     const showEmpty = s.status === "empty" && s.view === "scene";
-    if (emptyMessage) emptyMessage.hidden = !showEmpty;
-    if (outlineButton)
-      outlineButton.disabled = !spatialSupported || s.status === "empty";
-    if (stageElement) stageElement.hidden = outlineOpen || showEmpty;
-    if (s.camera && world)
+    const chrome = `${showEmpty}|${s.status === "empty"}|${outlineOpen}|${spatialSupported}`;
+    if (chrome !== chromeKey) {
+      chromeKey = chrome;
+      if (emptyMessage) emptyMessage.hidden = !showEmpty;
+      if (outlineButton)
+        outlineButton.disabled = !spatialSupported || s.status === "empty";
+      if (stageElement) stageElement.hidden = outlineOpen || showEmpty;
+    }
+    if (s.camera && world && s.camera !== renderedCamera) {
+      renderedCamera = s.camera;
       world.style.transform = `matrix3d(${viewMatrix(s.camera).join(",")})`;
-    for (const [id, scene] of scenes) {
-      const active = id === s.sceneId;
-      scene.content.inert = !active || outlineOpen;
-      scene.content.setAttribute("aria-hidden", String(!active || outlineOpen));
-      scene.wrapper.dataset.active = String(active);
     }
-    for (const c of contentMounts)
-      c.mount.update(
-        c.sceneId === s.sceneId && !outlineOpen && s.view === "scene",
-        mediaEnabled,
-      );
-    if (outline && pathRendered !== s.pathId) {
-      pathRendered = s.pathId;
-      outline.replaceChildren();
-      const path = doc.paths.find((p) => p.id === s.pathId);
-      const visited = new Set<string>(),
-        ordered = [];
-      const stack = path?.startNodeId ? [path.startNodeId] : [];
-      while (stack.length && path) {
-        const id = stack.pop()!;
-        if (visited.has(id)) continue;
-        visited.add(id);
-        const node = path.nodes.find((n) => n.id === id)!;
-        ordered.push(node);
-        stack.push(
-          ...path.edges
-            .filter((e) => e.from === id)
-            .map((e) => e.to)
-            .reverse(),
+    const activation = `${layout}|${s.sceneId}|${outlineOpen}|${s.view}|${mediaEnabled}`;
+    if (activation !== activationKey) {
+      activationKey = activation;
+      for (const [id, scene] of scenes) {
+        const active = id === s.sceneId;
+        scene.content.inert = !active || outlineOpen;
+        scene.content.setAttribute(
+          "aria-hidden",
+          String(!active || outlineOpen),
         );
-      }
-      for (const node of ordered) {
-        const scene = doc.scenes.find((s) => s.id === node.sceneId)!;
-        const li = element("li"),
-          button = element("button");
-        button.type = "button";
-        button.textContent = scene.title;
-        button.dataset.nodeId = node.id;
-        li.append(button);
-        for (const block of scene.blocks) {
-          const p = element("p");
-          p.textContent = blockText(block);
-          li.append(p);
-        }
-        outline.append(li);
+        scene.wrapper.dataset.active = String(active);
+        const visible = active && !outlineOpen && s.view === "scene";
+        for (const block of scene.blocks.values())
+          block.mount.update(visible, mediaEnabled);
       }
     }
-    outline?.querySelectorAll("button").forEach((button) => {
-      button.setAttribute(
-        "aria-current",
-        String(button.dataset.nodeId === s.nodeId),
-      );
-    });
-    const path = doc.paths.find((p) => p.id === s.pathId);
-    const showChoices =
-      s.choices.length > 1 ||
-      s.choices.some(
-        (c) =>
-          c.disabledReason ||
-          path?.edges.find((e) => e.id === c.edgeId)?.condition?.kind ===
-            "manual",
-      );
-    const choiceKey = JSON.stringify([
-      s.pathId,
-      s.nodeId,
-      s.choices,
-      showChoices,
-    ]);
-    if (choicesElement && choiceKey !== choicesRendered) {
-      choicesRendered = choiceKey;
-      choicesElement.replaceChildren();
-      choicesElement.hidden = !showChoices;
-      if (showChoices) {
-        const label = element("p");
-        label.textContent = "Scegli il percorso";
-        choicesElement.append(label);
-        for (const choice of s.choices) {
-          const button = element("button");
-          button.type = "button";
-          button.dataset.edgeId = choice.edgeId;
-          button.textContent =
-            choice.label +
-            (choice.disabledReason ? ` — ${choice.disabledReason}` : "");
-          button.disabled = !!choice.disabledReason;
-          choicesElement.append(button);
+    const outlineInputs = `${revision}|${layout}|${s.pathId}`;
+    if (outlineInputs !== outlineSource) {
+      outlineSource = outlineInputs;
+      renderOutline(s);
+    }
+    if (outline && outlineNode !== s.nodeId) {
+      outlineNode = s.nodeId;
+      outline.querySelectorAll("button").forEach((button) => {
+        button.setAttribute(
+          "aria-current",
+          String(button.dataset.nodeId === s.nodeId),
+        );
+      });
+    }
+    const source = `${revision}|${s.pathId}|${s.nodeId}|${s.history.length}|${s.history.at(-1)?.visitId ?? ""}`;
+    if (choicesElement && source !== choicesSource) {
+      choicesSource = source;
+      const choices = machine.getChoices();
+      const path = doc.paths.find((p) => p.id === s.pathId);
+      const showChoices =
+        choices.length > 1 ||
+        choices.some(
+          (c) =>
+            c.disabledReason ||
+            path?.edges.find((e) => e.id === c.edgeId)?.condition?.kind ===
+              "manual",
+        );
+      const choiceKey = JSON.stringify([
+        s.pathId,
+        s.nodeId,
+        choices,
+        showChoices,
+      ]);
+      if (choiceKey !== choicesRendered) {
+        choicesRendered = choiceKey;
+        choicesElement.replaceChildren();
+        choicesElement.hidden = !showChoices;
+        if (showChoices) {
+          const label = element("p");
+          label.textContent = messages.choicePrompt;
+          label.lang = messages.lang;
+          choicesElement.append(label);
+          for (const choice of choices) {
+            const button = element("button");
+            button.type = "button";
+            button.dataset.edgeId = choice.edgeId;
+            button.textContent = choice.disabledReason
+              ? messages.choiceDisabled(
+                  choice.label,
+                  disabledText(path, choice.edgeId, choice.disabledReason),
+                )
+              : choice.label;
+            button.disabled = !!choice.disabledReason;
+            choicesElement.append(button);
+          }
         }
       }
     }
-    if (live) {
-      const title =
-        doc.scenes.find((scene) => scene.id === s.sceneId)?.title ??
-        "Presentazione vuota";
+    const announced = `${revision}|${s.sceneId}`;
+    if (live && announced !== liveKey) {
+      liveKey = announced;
+      const scene = doc.scenes.find((sc) => sc.id === s.sceneId);
+      const title = scene?.title ?? messages.emptyPresentation;
+      live.lang = scene ? doc.metadata.language : messages.lang;
       if (live.textContent !== title) live.textContent = title;
     }
     if (
@@ -399,24 +595,29 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       oldTabindex = host.getAttribute("tabindex");
       if (oldTabindex === null) host.tabIndex = 0;
       root = element("section", "sd-player");
-      root.setAttribute("aria-label", doc.metadata.title || "SpatialDeck");
+      root.setAttribute(
+        "aria-label",
+        doc.metadata.title || messages.presentation,
+      );
+      root.lang = doc.metadata.language;
       const controls = element("div", "sd-access");
+      controls.lang = messages.lang;
       const outlineToggle = element("button");
       outlineButton = outlineToggle;
       outlineToggle.type = "button";
-      outlineToggle.textContent = "Vista testuale";
+      outlineToggle.textContent = messages.outline;
       outlineToggle.setAttribute("aria-expanded", String(outlineOpen));
       outlineToggle.disabled = !spatialSupported;
       const motionToggle = element("button");
       motionToggle.type = "button";
-      motionToggle.textContent = "Riduci movimento";
+      motionToggle.textContent = messages.reduceMotion;
       motionToggle.setAttribute("aria-pressed", String(manualReduced));
       const overview = element("button");
       overview.type = "button";
-      overview.textContent = "Panoramica";
+      overview.textContent = messages.overview;
       const inspection = element("details", "sd-inspection");
       const summary = element("summary");
-      summary.textContent = "Camera";
+      summary.textContent = messages.camera;
       inspection.append(summary);
       const tools = element("div", "sd-camera-tools");
       const tool = (label: string, action: () => void) => {
@@ -427,16 +628,16 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         tools.append(button);
         cleanup.push(() => button.removeEventListener("click", action));
       };
-      tool("Vista scena", () => {
+      tool(messages.sceneView, () => {
         player.setView("scene");
       });
       for (const [label, x, y, factor] of [
-        ["Pan sinistra", -100, 0, 1],
-        ["Pan destra", 100, 0, 1],
-        ["Pan alto", 0, -100, 1],
-        ["Pan basso", 0, 100, 1],
-        ["Zoom +", 0, 0, 1.25],
-        ["Zoom −", 0, 0, 0.8],
+        [messages.panLeft, -100, 0, 1],
+        [messages.panRight, 100, 0, 1],
+        [messages.panUp, 0, -100, 1],
+        [messages.panDown, 0, 100, 1],
+        [messages.zoomIn, 0, 0, 1.25],
+        [messages.zoomOut, 0, 0, 0.8],
       ] as const)
         tool(label, () => {
           const camera = state().camera;
@@ -456,7 +657,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       {
         const enable = element("button");
         enable.type = "button";
-        enable.textContent = "Abilita media";
+        enable.textContent = messages.enableMedia;
         mediaButton = enable;
         const activate = () => {
           mediaEnabled = true;
@@ -470,13 +671,11 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       const stage = element("div", "sd-stage");
       stageElement = stage;
       emptyMessage = element("p", "sd-empty");
-      emptyMessage.textContent = "Nessuna scena nel percorso selezionato.";
+      emptyMessage.textContent = messages.emptyPath;
+      emptyMessage.lang = messages.lang;
       emptyMessage.hidden = true;
-      stage.setAttribute("aria-label", "Presentazione spaziale");
+      stage.setAttribute("aria-label", messages.stage);
       viewport = element("div", "sd-viewport");
-      viewport.style.width = `${doc.settings.viewport.width}px`;
-      viewport.style.height = `${doc.settings.viewport.height}px`;
-      viewport.style.perspective = `${doc.settings.viewport.perspective}px`;
       world = element("div", "sd-world");
       viewport.append(world);
       stage.append(viewport);
@@ -488,9 +687,9 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       live = element("p", "sd-live");
       live.setAttribute("aria-live", "polite");
       live.setAttribute("aria-atomic", "true");
-      buildScenes();
+      syncScenes();
       choicesElement = element("nav", "sd-choices");
-      choicesElement.setAttribute("aria-label", "Scelte del percorso");
+      choicesElement.setAttribute("aria-label", messages.choices);
       choicesElement.hidden = true;
       root.append(controls, stage, outline, live, emptyMessage, choicesElement);
       host.append(root);
@@ -658,9 +857,13 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         );
       }
       doc = validated.value;
-      pathRendered = undefined;
-      root?.setAttribute("aria-label", doc.metadata.title || "SpatialDeck");
-      buildScenes();
+      revision++;
+      root?.setAttribute(
+        "aria-label",
+        doc.metadata.title || messages.presentation,
+      );
+      if (root) root.lang = doc.metadata.language;
+      syncScenes();
       machine.setReduced(
         outlineOpen ||
           manualReduced ||

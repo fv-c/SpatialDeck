@@ -65,11 +65,14 @@ export function TextField({
   value,
   apply,
   multiline = false,
+  onEnd,
 }: {
   label: string;
   value: string;
   apply: (value: string) => Result<void>;
   multiline?: boolean;
+  /** Called when the editing session ends (blur), after the last commit. */
+  onEnd?: () => void;
 }) {
   const fieldId = useId();
   const [draft, setDraft] = useState(value),
@@ -89,7 +92,10 @@ export function TextField({
     value: draft,
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setDraft(e.target.value),
-    onBlur: commit,
+    onBlur: () => {
+      commit();
+      onEnd?.();
+    },
     onKeyDown: (
       event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
     ) => {
@@ -126,13 +132,21 @@ export function Inspector({
     );
   const edit = (patch: Partial<Scene>) =>
     store.execute(editScene(scene.id, patch));
+  // Text fields: one undo command per editing session of the field.
+  const text = (field: "title" | "notes") => (value: string) =>
+    store.coalesce(
+      `scene:${scene.id}:${field}`,
+      editScene(scene.id, { [field]: value }),
+    );
+  const end = () => store.endCoalesce();
   return (
     <div className="inspector-content">
       <TextField
         key={`title-${scene.id}`}
         label="Titolo scena"
         value={scene.title}
-        apply={(title) => edit({ title })}
+        apply={text("title")}
+        onEnd={end}
       />
       <fieldset>
         <legend>
@@ -201,7 +215,8 @@ export function Inspector({
         label="Note relatore"
         value={scene.notes}
         multiline
-        apply={(notes) => edit({ notes })}
+        apply={text("notes")}
+        onEnd={end}
       />
     </div>
   );

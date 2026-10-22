@@ -7,6 +7,8 @@ import type {
   Diagnostic,
 } from "@spatialdeck/core";
 import type { AssetResolver } from "../assets/index.js";
+import { defaultMessages } from "../messages.js";
+import type { PlayerMessages } from "../messages.js";
 export interface ContentServices {
   assets?: AssetResolver;
   navigate(target: {
@@ -30,6 +32,8 @@ export interface ContentContext {
   mediaMuted: boolean;
   signal: AbortSignal;
   services: ContentServices;
+  /** Replaceable texts for builtin renderers; absent only when a host builds contexts itself. */
+  messages?: Readonly<PlayerMessages>;
 }
 export interface ContentRenderer {
   mount(host: HTMLElement, context: ContentContext): void;
@@ -51,7 +55,11 @@ export class RendererRegistry {
     return this.factories.get(type);
   }
 }
-export function blockText(block: Block): string {
+/** Accessible plain text of a block: text, alt, label or title, never Markdown/HTML/SVG/LaTeX source. */
+export function blockText(
+  block: Block,
+  messages: Readonly<PlayerMessages> = defaultMessages,
+): string {
   const d = block.data;
   return "text" in d
     ? d.text
@@ -61,9 +69,9 @@ export function blockText(block: Block): string {
         ? d.label
         : "title" in d
           ? d.title
-          : "source" in d
-            ? d.source
-            : `Plugin: ${d.pluginId}`;
+          : "pluginId" in d
+            ? messages.pluginContent(d.pluginId)
+            : "";
 }
 /** The boundary owns abort, renderer and DOM, including failed mounts/updates. */
 export class ContentMount {
@@ -71,46 +79,76 @@ export class ContentMount {
   private controller = new AbortController();
   private last = "";
   private disposed = false;
+  private failure = false;
+  private active = false;
+  private mediaEnabled: boolean;
   constructor(
     private host: HTMLElement,
-    private initial: Omit<ContentContext, "signal">,
+    private context: Omit<ContentContext, "signal">,
     registry?: RendererRegistry,
   ) {
-    const factory = registry?.get(initial.block.type);
+    this.mediaEnabled = context.mediaEnabled;
+    const factory = registry?.get(context.block.type);
     if (!factory) {
-      host.textContent =
-        initial.block.type === "text"
-          ? initial.block.data.text
-          : `Contenuto non disponibile (${initial.block.type}): ${blockText(initial.block)}`;
+      if (context.block.type === "text")
+        host.textContent = context.block.data.text;
+      else {
+        host.textContent = this.messages.contentUnavailable(context.block.type);
+        host.lang = this.messages.lang;
+      }
       return;
     }
     try {
       this.renderer = factory();
-      this.renderer.mount(host, { ...initial, signal: this.controller.signal });
+      this.renderer.mount(host, { ...context, signal: this.controller.signal });
     } catch (error) {
-      this.failed(error);
+      this.fail(error);
     }
+  }
+  private get messages() {
+    return this.context.messages ?? defaultMessages;
+  }
+  /** True after a renderer threw: the next document update rebuilds the block. */
+  get failed(): boolean {
+    return this.failure;
+  }
+  /** True while a registered renderer owns the host content. */
+  get rendered(): boolean {
+    return !!this.renderer && !this.disposed;
   }
   update(active: boolean, mediaEnabled: boolean) {
     const key = `${active}:${mediaEnabled}`;
     if (this.disposed || key === this.last) return;
     this.last = key;
+    this.active = active;
+    this.mediaEnabled = mediaEnabled;
+    this.call();
+  }
+  /** New document snapshot whose data for this block is unchanged: no remount, renderers see it via update(). */
+  refresh(document: ProjectDocument) {
+    if (this.disposed || this.context.document === document) return;
+    this.context = { ...this.context, document };
+    this.call();
+  }
+  private call() {
     try {
       this.renderer?.update({
-        ...this.initial,
-        active,
-        mediaEnabled,
+        ...this.context,
+        active: this.active,
+        mediaEnabled: this.mediaEnabled,
         signal: this.controller.signal,
       });
     } catch (error) {
-      this.failed(error);
+      this.fail(error);
     }
   }
-  private failed(error: unknown) {
+  private fail(error: unknown) {
     this.destroy();
-    this.host.textContent = `Errore contenuto: ${String(error)}`;
+    this.failure = true;
+    this.host.textContent = this.messages.contentError(String(error));
+    this.host.lang = this.messages.lang;
     this.host.setAttribute("role", "status");
-    this.initial.services.report({
+    this.context.services.report({
       code: "RENDERER_ERROR",
       severity: "warning",
       pointer: "",

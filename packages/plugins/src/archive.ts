@@ -12,7 +12,9 @@ import {
   verifyAsset,
 } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
-const JSON_LIMIT = 10 * 1024 * 1024;
+export const JSON_LIMIT = 10 * 1024 * 1024;
+/** Largest .spatialdeck accepted before decompression: all resources plus project and manifest JSON. */
+export const ARCHIVE_LIMIT = TOTAL_LIMIT + JSON_LIMIT * 2;
 const ENTRY_LIMIT = 10000;
 export interface ArchiveProject {
   document: ProjectDocument;
@@ -39,8 +41,7 @@ function crc32(bytes: Uint8Array) {
 }
 /** Inspect central AND local headers before allocating decompressed output. ZIP64/multidisk/encrypted archives are deliberately unsupported. */
 function inventory(bytes: Uint8Array): Entry[] {
-  if (bytes.length > TOTAL_LIMIT + JSON_LIMIT * 2)
-    throw new Error("Archivio troppo grande.");
+  if (bytes.length > ARCHIVE_LIMIT) throw new Error("Archivio troppo grande.");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const u16 = (p: number) => view.getUint16(p, true),
     u32 = (p: number) => view.getUint32(p, true);
@@ -161,8 +162,7 @@ function inventory(bytes: Uint8Array): Entry[] {
   return entries;
 }
 export async function readArchive(blob: Blob): Promise<ArchiveProject> {
-  if (blob.size > TOTAL_LIMIT + JSON_LIMIT * 2)
-    throw new Error("Archivio troppo grande.");
+  if (blob.size > ARCHIVE_LIMIT) throw new Error("Archivio troppo grande.");
   const bytes = new Uint8Array(await blob.arrayBuffer()),
     entries = inventory(bytes),
     files = new Map<string, Uint8Array>();

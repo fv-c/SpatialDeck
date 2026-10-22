@@ -3,7 +3,16 @@ import react from "@vitejs/plugin-react";
 const source = (path: string) => new URL(path, import.meta.url).pathname;
 export default defineConfig({
   root: source("."),
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      // The dev server needs its HMR websocket; production keeps connect-src 'self'.
+      name: "spatialdeck-dev-csp",
+      apply: "serve",
+      transformIndexHtml: (html) =>
+        html.replace("connect-src 'self';", "connect-src 'self' ws:;"),
+    },
+  ],
   resolve: {
     alias: [
       {
