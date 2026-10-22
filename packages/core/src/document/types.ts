@@ -24,6 +24,7 @@ export type Scene = {
   blocks: Array<TextBlock>;
   notes: string;
   extensions: Extensions;
+  parentId: Id | null;
 };
 export type Asset = {
   id: Id;
@@ -32,13 +33,20 @@ export type Asset = {
   byteLength: number;
   sha256?: string;
 };
-export type PathNode = { id: Id; sceneId: Id; holdMs: number };
+export type PathNode = {
+  id: Id;
+  sceneId: Id;
+  holdMs: number;
+  camera?: AuthoredCameraPose;
+};
 export type PathEdge = {
   id: Id;
   from: Id;
   to: Id;
   label: string;
   transition: Transition;
+  cameraTrackId?: Id;
+  condition?: EdgeCondition;
 };
 export type ScenePath = {
   id: Id;
@@ -46,9 +54,31 @@ export type ScenePath = {
   startNodeId: Id | null;
   nodes: Array<PathNode>;
   edges: Array<PathEdge>;
+  loopPolicy?: { maxVisitsPerNode: number };
+};
+export type AuthoredCameraPose = {
+  position: Vec3;
+  rotation: Vec3;
+  zoom: number;
+};
+export type CameraKeyframe = { at: number; pose: AuthoredCameraPose };
+export type CameraTrack = {
+  id: Id;
+  keyframes: Array<CameraKeyframe>;
+  interpolation: "linear" | "cubic";
+  easing: "linear" | "ease-in-out";
+};
+export type EdgeCondition =
+  { kind: "manual" } | { kind: "visit-limit"; maxVisits: number };
+export type Cue = {
+  id: Id;
+  edgeId: Id;
+  atMs: number;
+  event: string;
+  payload: JsonValue;
 };
 export type ProjectDocument = {
-  schemaVersion: "1.0.0";
+  schemaVersion: "1.1.0";
   id: Id;
   metadata: {
     title: string;
@@ -64,10 +94,12 @@ export type ProjectDocument = {
       defaultTransition: Transition;
     };
   };
-  requiredCapabilities: Array<"linear">;
+  requiredCapabilities: Array<"linear" | "structure">;
   scenes: Array<Scene>;
   assets: Array<Asset>;
   paths: Array<ScenePath>;
   defaultPathId: Id | null;
   extensions: Extensions;
+  cameraTracks: Array<CameraTrack>;
+  cues: Array<Cue>;
 };

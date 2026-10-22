@@ -1,0 +1,315 @@
+{
+  "schemaVersion": "1.1.0",
+  "id": "structure-branching",
+  "metadata": {
+    "title": "Rami, gerarchia e camera",
+    "language": "it"
+  },
+  "settings": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "perspective": 1000
+    },
+    "presentation": {
+      "fit": "contain",
+      "motion": "system",
+      "defaultTransition": {
+        "durationMs": 600,
+        "easing": "ease-in-out"
+      }
+    }
+  },
+  "requiredCapabilities": ["linear", "structure"],
+  "scenes": [
+    {
+      "id": "A",
+      "title": "A · Inizio",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [700, 400],
+      "visible": true,
+      "parentId": null,
+      "blocks": [
+        {
+          "id": "text-A",
+          "type": "text",
+          "data": {
+            "text": "Scegli un approfondimento: B oppure C."
+          }
+        }
+      ],
+      "notes": "Nota A",
+      "extensions": {}
+    },
+    {
+      "id": "C",
+      "title": "C · Alternativa",
+      "position": [-1300, 200, -100],
+      "rotation": [5, -10, -12],
+      "scale": 1,
+      "size": [700, 400],
+      "visible": true,
+      "parentId": null,
+      "blocks": [
+        {
+          "id": "text-C",
+          "type": "text",
+          "data": {
+            "text": "Un secondo percorso raggiunge la stessa conclusione."
+          }
+        }
+      ],
+      "notes": "Nota C",
+      "extensions": {}
+    },
+    {
+      "id": "B",
+      "title": "B · Figlia",
+      "position": [1000, -80, -150],
+      "rotation": [12, 20, -18],
+      "scale": 0.7,
+      "size": [700, 400],
+      "visible": true,
+      "parentId": "A",
+      "blocks": [
+        {
+          "id": "text-B",
+          "type": "text",
+          "data": {
+            "text": "Il ramo B entra in una scena figlia ruotata."
+          }
+        }
+      ],
+      "notes": "Nota B",
+      "extensions": {}
+    },
+    {
+      "id": "D",
+      "title": "D · Conclusione",
+      "position": [1500, 850, -300],
+      "rotation": [-8, 10, 12],
+      "scale": 1,
+      "size": [700, 400],
+      "visible": true,
+      "parentId": null,
+      "blocks": [
+        {
+          "id": "text-D",
+          "type": "text",
+          "data": {
+            "text": "Torna alla visita effettiva o ripeti il loop limitato."
+          }
+        }
+      ],
+      "notes": "Nota D",
+      "extensions": {}
+    }
+  ],
+  "assets": [],
+  "paths": [
+    {
+      "id": "branch",
+      "name": "Biforcazione e loop",
+      "startNodeId": "A",
+      "nodes": [
+        {
+          "id": "A",
+          "sceneId": "A",
+          "holdMs": 0
+        },
+        {
+          "id": "B",
+          "sceneId": "B",
+          "holdMs": 0
+        },
+        {
+          "id": "C",
+          "sceneId": "C",
+          "holdMs": 0
+        },
+        {
+          "id": "D",
+          "sceneId": "D",
+          "holdMs": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "AB",
+          "from": "A",
+          "to": "B",
+          "label": "Esplora B",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          },
+          "cameraTrackId": "arc"
+        },
+        {
+          "id": "AC",
+          "from": "A",
+          "to": "C",
+          "label": "Esplora C",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          }
+        },
+        {
+          "id": "BD",
+          "from": "B",
+          "to": "D",
+          "label": "Conclusione da B",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          }
+        },
+        {
+          "id": "CD",
+          "from": "C",
+          "to": "D",
+          "label": "Conclusione da C",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          }
+        },
+        {
+          "id": "DA",
+          "from": "D",
+          "to": "A",
+          "label": "Ripeti (massimo 2 visite)",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          }
+        },
+        {
+          "id": "DD",
+          "from": "D",
+          "to": "D",
+          "label": "Sosta (massimo 2 visite)",
+          "transition": {
+            "durationMs": 1200,
+            "easing": "ease-in-out"
+          },
+          "condition": {
+            "kind": "manual"
+          }
+        }
+      ],
+      "loopPolicy": {
+        "maxVisitsPerNode": 2
+      }
+    },
+    {
+      "id": "alternate",
+      "name": "Percorso alternativo",
+      "startNodeId": "alt-C",
+      "nodes": [
+        {
+          "id": "alt-C",
+          "sceneId": "C",
+          "holdMs": 0
+        },
+        {
+          "id": "alt-D",
+          "sceneId": "D",
+          "holdMs": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "alt-CD",
+          "from": "alt-C",
+          "to": "alt-D",
+          "label": "Vai alla conclusione",
+          "transition": {
+            "durationMs": 600,
+            "easing": "linear"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultPathId": "branch",
+  "extensions": {},
+  "cameraTracks": [
+    {
+      "id": "arc",
+      "keyframes": [
+        {
+          "at": 0,
+          "pose": {
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "zoom": 1.3
+          }
+        },
+        {
+          "at": 0.5,
+          "pose": {
+            "position": [450, -350, 200],
+            "rotation": [10, 35, -25],
+            "zoom": 0.75
+          }
+        },
+        {
+          "at": 1,
+          "pose": {
+            "position": [1050, -50, -100],
+            "rotation": [5, 10, -5],
+            "zoom": 1.1
+          }
+        }
+      ],
+      "interpolation": "cubic",
+      "easing": "ease-in-out"
+    }
+  ],
+  "cues": [
+    {
+      "id": "entry",
+      "edgeId": "AB",
+      "atMs": 0,
+      "event": "presentation.entry",
+      "payload": {
+        "branch": "B"
+      }
+    },
+    {
+      "id": "midpoint",
+      "edgeId": "AB",
+      "atMs": 600,
+      "event": "presentation.mark",
+      "payload": {
+        "label": "metà percorso"
+      }
+    },
+    {
+      "id": "arrival",
+      "edgeId": "AB",
+      "atMs": 1200,
+      "event": "presentation.arrival",
+      "payload": null
+    }
+  ]
+}

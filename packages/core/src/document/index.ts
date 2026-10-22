@@ -1,4 +1,6 @@
-import validate from "./validator.js";
+import { validateCurrent, validateLegacy } from "./validator.js";
+import { validateStructure } from "./structure.js";
+export { updateCapabilities, usesStructure } from "./structure.js";
 import type { ProjectDocument } from "./types.js";
 export * from "./types.js";
 export interface Diagnostic {
@@ -123,13 +125,20 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     data &&
     typeof data === "object" &&
     "schemaVersion" in data &&
-    data.schemaVersion !== "1.0.0"
+    data.schemaVersion !== "1.0.0" &&
+    data.schemaVersion !== "1.1.0"
   )
     return failure(
       "UNSUPPORTED_VERSION",
-      "Only schema 1.0.0 is supported",
+      "Supported schemas: 1.0.0 and 1.1.0",
       "/schemaVersion",
     );
+  const legacy =
+    !!data &&
+    typeof data === "object" &&
+    "schemaVersion" in data &&
+    data.schemaVersion === "1.0.0";
+  const validate = legacy ? validateLegacy : validateCurrent;
   if (!validate(data))
     return {
       ok: false,
@@ -141,6 +150,15 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
         ),
       ),
     };
+  if (legacy) {
+    const old = data as ProjectDocument;
+    old.schemaVersion = "1.1.0";
+    old.scenes.forEach((s) => {
+      s.parentId = null;
+    });
+    old.cameraTracks = [];
+    old.cues = [];
+  }
   const doc = data as ProjectDocument,
     diagnostics: Diagnostic[] = [];
   const add = (code: string, message: string, pointer: string) =>
@@ -156,6 +174,8 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
   unique(doc.scenes, "/scenes");
   unique(doc.assets, "/assets");
   unique(doc.paths, "/paths");
+  unique(doc.cameraTracks, "/cameraTracks");
+  unique(doc.cues, "/cues");
   const scenes = new Map(doc.scenes.map((s) => [s.id, s]));
   doc.scenes.forEach((s, i) => unique(s.blocks, `/scenes/${i}/blocks`));
   let total = 0;
@@ -206,7 +226,7 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
           "Unknown edge endpoint",
           `${pointer}/edges/${j}`,
         );
-      if (next.has(e.from) || incoming.has(e.to))
+      if (legacy && (next.has(e.from) || incoming.has(e.to)))
         add(
           "NONLINEAR_PATH",
           "At most one incoming and outgoing edge is allowed",
@@ -222,13 +242,14 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
       node = next.get(node) ?? null;
     }
     if (
-      (p.nodes.length === 0 &&
+      legacy &&
+      ((p.nodes.length === 0 &&
         (p.startNodeId !== null || p.edges.length !== 0)) ||
-      (p.nodes.length > 0 &&
-        (p.startNodeId === null ||
-          incoming.has(p.startNodeId) ||
-          seen.size !== p.nodes.length ||
-          node !== null))
+        (p.nodes.length > 0 &&
+          (p.startNodeId === null ||
+            incoming.has(p.startNodeId) ||
+            seen.size !== p.nodes.length ||
+            node !== null)))
     )
       add(
         "NONLINEAR_PATH",
@@ -236,6 +257,7 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
         pointer,
       );
   });
+  diagnostics.push(...validateStructure(doc));
   return diagnostics.length
     ? { ok: false, diagnostics }
     : success(structuredClone(doc));

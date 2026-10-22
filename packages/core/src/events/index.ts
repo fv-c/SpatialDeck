@@ -1,6 +1,7 @@
-import type { Diagnostic } from "../document/index.js";
+import type { Cue, Diagnostic } from "../document/index.js";
 import type { Visit } from "../navigation/index.js";
 export interface PlayerEvents {
+  cue: { instanceId: string; transitionId: string; cue: Cue };
   documentchange: { instanceId: string };
   ready: { instanceId: string };
   navigationstart: { instanceId: string; transitionId: string; to: Visit };

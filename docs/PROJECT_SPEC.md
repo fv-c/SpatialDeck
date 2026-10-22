@@ -1,6 +1,6 @@
 # SpatialDeck — specifica di progetto
 
-Stato attuale: Studio 0.2 implementato e verificato localmente sui tre motori con schema 1.0.0; dettagli in sezione 16. La CI Linux registrata in sezione 15 riguarda la fase 0.1. Baseline documentale originaria: 21 ottobre 2026. Le parole DEVE, NON DEVE e PUÒ indicano rispettivamente requisito, divieto e opzione. Questo documento è il contratto comune dei sei prompt; una deviazione motivata richiede aggiornamento coerente della specifica, della roadmap e delle migrazioni, non una modifica silenziosa.
+Stato attuale: SpatialDeck 0.3 Struttura implementato e verificato localmente sui tre motori con schema 1.1.0 e migrazione 1.0.0; dettagli in sezione 17. La CI Linux registrata in sezione 15 riguarda la fase 0.1. Baseline documentale originaria: 21 ottobre 2026. Le parole DEVE, NON DEVE e PUÒ indicano rispettivamente requisito, divieto e opzione. Questo documento è il contratto comune dei sei prompt; una deviazione motivata richiede aggiornamento coerente della specifica, della roadmap e delle migrazioni, non una modifica silenziosa.
 
 ## 1. Stato iniziale e ambito
 
@@ -502,3 +502,16 @@ Comandi snapshot immutabili validati, limite 100 comandi o 20 MiB UTF-8 prima/do
 IndexedDB v1 usa effettivamente `documents` e `recovery`, con revisione attesa in una transazione readwrite comune; ultime dieci revisioni per progetto, debounce 750 ms e scritture seriali. Snapshot invariati non generano revisioni; recupero adotta la revisione senza nuova scrittura. Quota/permessi/conflitti mostrano warning e consentono download manuale. File aperti come copie e validati prima della sostituzione. Niente dati UI nel JSON, nessuna migrazione o backend.
 
 Verifica locale finale: 119 unità e 66 E2E, zero fail/skip; 22 prove per browser, Chromium/Firefox 1.64.1 e WebKit 1.61.1 su macOS 14. Roundtrip con chiusura della pagina, JSON realmente scaricato e riaperto in una nuova sessione, confronto modello/camera/landmark; IndexedDB reale/recovery, quota atomica e due tab; tastiera Tab/Shift+Tab, reduced motion e viewport 768/390/320 px. Le verifiche di Safari reale, screen reader, hardware mobile e prestazioni pre-1.0 restano distinte e non dichiarate. Nessun commit/push/deploy/publish o fase 0.3 eseguiti.
+
+
+## 17. Stato effettivo dopo l’implementazione 0.3
+
+Il 21–22 ottobre 2026 sono stati implementati schema 1.1.0, validatori standalone per entrambe le versioni, migrazione in copia, gerarchie world e reparent, grafi/scelte/loop, camera nodo e track, cue, overview/pan/zoom e pannelli Studio operativi. Le fixture/schema 1.0.0 e i report 0.1/0.2 sono conservati. La demo corrente è `examples/structure-branching/project.json`, riusata da `/structure` e apribile in Studio. I tipi documento sono derivati da 1.1.0; la posa camera JSON usa Euler (`AuthoredCameraPose`), la posa runtime conserva quaternion (`CameraPose`).
+
+Decisioni locali esplicite: validateDocument restituisce sempre una copia corrente, verificando prima tutti i vincoli storici; cue con edgeId ambiguo fra path rifiutati senza rinominare ID storici. Tutti i nodi del grafo devono essere raggiungibili dallo start. I target con posa world fuori dai range camera sono rifiutati. I controlli di range cubico verificano gli estremi analitici del polinomio, anche con ingresso runtime sostituito. Il limite hierarchy è 32 scene nella catena, inclusa la scena corrente. Matematica double precision senza configurazione globale gl-matrix.
+
+La preview di selezione inquadra camera nodo/fit o una scena indipendente; lo scrub ispeziona il piano edge puro. La presentazione segue invece track e history effettiva senza snap. Stato view temporaneo scene/overview/inspection; nessun dato UI nel JSON. L’outline visita ogni nodo raggiungibile una volta, in ordine DFS stabile, così espone anche alternative e non entra nei loop. Campo numerico confermato due volte senza variazioni non cambia snapshot/history.
+
+Per un grafo non canonico, creare scene non riscrive percorsi: le visite vengono aggiunte esplicitamente dal pannello. Le eliminazioni mostrano l’impatto concreto, rimuovono anche i nodi non più raggiungibili e ricollocano i figli conservando world; un solo undo ripristina tutto. Il bottone loop imposta max 3 e rende manuali tutte le connessioni in un comando. Durate API sostitutive scalano proporzionalmente le soglie cue; durata zero le esegue tutte in ordine dichiarato. Nessuna animazione o clock alternativo nell’editor.
+
+[Rapporto 0.3](verification/phase-0.3.md), [API correnti](DEVELOPMENT.md), [guida autore](AUTHORING.md). Verifica locale: 187 unità e 90 E2E (30 per motore), zero fail/skip; Chromium/Firefox 1.64.1 e WebKit macOS 14 1.61.1. Coverage core oltre 85% statements / 80% branches e bundle sotto 100/20 KiB gzip. Sono prove locali; CI Linux 0.3, Safari reale, screen reader, dispositivi fisici, heap e benchmark controllati non sono dichiarati. Nessuna fase 0.4, commit, push, tag, deploy o publish eseguiti.

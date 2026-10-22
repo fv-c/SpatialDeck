@@ -3,6 +3,9 @@ import {
   serializeDocument,
   success,
   validateDocument,
+  updateCapabilities,
+  getWorldMatrix,
+  worldPositionToLocal,
 } from "@spatialdeck/core";
 import type { ProjectDocument, Result } from "@spatialdeck/core";
 import type { DocumentEdit } from "../commands/index.js";
@@ -127,8 +130,11 @@ export class EditorStore {
       selection = this.selection;
     const edited = edit(structuredClone(before));
     if (!edited.ok) return edited;
+    updateCapabilities(edited.value);
     const valid = validateDocument(edited.value);
     if (!valid.ok) return valid;
+    if (JSON.stringify(valid.value) === JSON.stringify(before))
+      return success(undefined);
     this.document = freeze(valid.value);
     if (selectNew)
       this.selection =
@@ -176,6 +182,25 @@ export class EditorStore {
     const candidate = structuredClone(this.drag.document);
     const scene = candidate.scenes.find((s) => s.id === this.drag!.selection)!;
     scene.position = [x, y, scene.position[2]];
+    const valid = validateDocument(candidate);
+    if (!valid.ok) return valid;
+    this.document = freeze(valid.value);
+    this.publish();
+    return success(undefined);
+  }
+  moveWorldDrag(x: number, y: number): Result<void> {
+    if (!this.drag) return failure("DRAG_INACTIVE", "Nessun trascinamento.");
+    const candidate = structuredClone(this.drag.document),
+      scene = candidate.scenes.find((s) => s.id === this.drag!.selection)!;
+    const world = getWorldMatrix(candidate, scene.id);
+    if (!world.ok) return world;
+    const local = worldPositionToLocal(candidate, scene.id, [
+      x,
+      y,
+      world.value[14]!,
+    ]);
+    if (!local.ok) return local;
+    scene.position = local.value;
     const valid = validateDocument(candidate);
     if (!valid.ok) return valid;
     this.document = freeze(valid.value);

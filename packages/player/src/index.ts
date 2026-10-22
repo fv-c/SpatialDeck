@@ -5,8 +5,10 @@ import {
   getWorldMatrix,
   validateDocument,
   viewMatrix,
+  isSceneVisible,
 } from "@spatialdeck/core";
 import type {
+  CameraPose,
   Diagnostic,
   NavigationOptions,
   NavigationResult,
@@ -38,6 +40,8 @@ export interface Player {
   next(options?: { edgeId?: string }): Promise<NavigationResult>;
   prev(): Promise<NavigationResult>;
   setPath(pathId: string): Promise<NavigationResult>;
+  setView(view: "scene" | "overview"): Result<void>;
+  setCamera(pose: CameraPose): Result<void>;
   getState(): Readonly<PlayerState>;
   on<K extends keyof PlayerEvents>(
     event: K,
@@ -58,6 +62,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     emptyMessage: HTMLElement | undefined,
     outlineButton: HTMLButtonElement | undefined,
     stageElement: HTMLElement | undefined,
+    choicesElement: HTMLElement | undefined,
     focusOrigin: Element | null = null;
   let doc: ProjectDocument | undefined,
     clock: PlayerClock | undefined,
@@ -68,7 +73,8 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     spatialSupported = true,
     focusRequested = false,
     focusAllowed = false,
-    pathRendered: string | null | undefined;
+    pathRendered: string | null | undefined,
+    choicesRendered = "";
   let media: MediaQueryList | undefined,
     manualReduced = options.motion === "reduced",
     oldTabindex: string | null = null;
@@ -104,6 +110,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
   };
   const state = (): PlayerState =>
     machine?.getState() ?? {
+      view: "scene",
       status: destroyed ? "destroyed" : "unmounted",
       pathId: null,
       nodeId: null,
@@ -141,7 +148,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     for (const scene of doc.scenes) {
       const wrapper = element("div", "sd-scene");
       wrapper.dataset.sceneId = scene.id;
-      wrapper.hidden = !scene.visible;
+      wrapper.hidden = !isSceneVisible(doc, scene.id);
       const matrix = getWorldMatrix(doc, scene.id);
       if (matrix.ok)
         wrapper.style.transform = `matrix3d(${matrix.value.join(",")})`;
@@ -168,13 +175,16 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     if (
       focusRequested &&
       focusOrigin &&
-      host?.ownerDocument.activeElement !== focusOrigin
+      host?.ownerDocument.activeElement !== focusOrigin &&
+      (focusOrigin.isConnected ||
+        host?.ownerDocument.activeElement !== host?.ownerDocument.body)
     )
       focusAllowed = false;
-    if (emptyMessage) emptyMessage.hidden = s.status !== "empty";
+    const showEmpty = s.status === "empty" && s.view === "scene";
+    if (emptyMessage) emptyMessage.hidden = !showEmpty;
     if (outlineButton)
       outlineButton.disabled = !spatialSupported || s.status === "empty";
-    if (stageElement) stageElement.hidden = outlineOpen || s.status === "empty";
+    if (stageElement) stageElement.hidden = outlineOpen || showEmpty;
     if (s.camera && world)
       world.style.transform = `matrix3d(${viewMatrix(s.camera).join(",")})`;
     for (const [id, scene] of scenes) {
@@ -187,9 +197,23 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       pathRendered = s.pathId;
       outline.replaceChildren();
       const path = doc.paths.find((p) => p.id === s.pathId);
-      let id = path?.startNodeId ?? null;
-      while (id && path) {
+      const visited = new Set<string>(),
+        ordered = [];
+      const stack = path?.startNodeId ? [path.startNodeId] : [];
+      while (stack.length && path) {
+        const id = stack.pop()!;
+        if (visited.has(id)) continue;
+        visited.add(id);
         const node = path.nodes.find((n) => n.id === id)!;
+        ordered.push(node);
+        stack.push(
+          ...path.edges
+            .filter((e) => e.from === id)
+            .map((e) => e.to)
+            .reverse(),
+        );
+      }
+      for (const node of ordered) {
         const scene = doc.scenes.find((s) => s.id === node.sceneId)!;
         const li = element("li"),
           button = element("button");
@@ -203,7 +227,6 @@ export function createPlayer(options: PlayerOptions = {}): Player {
           li.append(p);
         }
         outline.append(li);
-        id = path.edges.find((e) => e.from === id)?.to ?? null;
       }
     }
     outline?.querySelectorAll("button").forEach((button) => {
@@ -212,6 +235,41 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         String(button.dataset.nodeId === s.nodeId),
       );
     });
+    const path = doc.paths.find((p) => p.id === s.pathId);
+    const showChoices =
+      s.choices.length > 1 ||
+      s.choices.some(
+        (c) =>
+          c.disabledReason ||
+          path?.edges.find((e) => e.id === c.edgeId)?.condition?.kind ===
+            "manual",
+      );
+    const choiceKey = JSON.stringify([
+      s.pathId,
+      s.nodeId,
+      s.choices,
+      showChoices,
+    ]);
+    if (choicesElement && choiceKey !== choicesRendered) {
+      choicesRendered = choiceKey;
+      choicesElement.replaceChildren();
+      choicesElement.hidden = !showChoices;
+      if (showChoices) {
+        const label = element("p");
+        label.textContent = "Scegli il percorso";
+        choicesElement.append(label);
+        for (const choice of s.choices) {
+          const button = element("button");
+          button.type = "button";
+          button.dataset.edgeId = choice.edgeId;
+          button.textContent =
+            choice.label +
+            (choice.disabledReason ? ` — ${choice.disabledReason}` : "");
+          button.disabled = !!choice.disabledReason;
+          choicesElement.append(button);
+        }
+      }
+    }
     if (live) {
       const title =
         doc.scenes.find((scene) => scene.id === s.sceneId)?.title ??
@@ -280,7 +338,48 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       motionToggle.type = "button";
       motionToggle.textContent = "Riduci movimento";
       motionToggle.setAttribute("aria-pressed", String(manualReduced));
-      controls.append(outlineToggle, motionToggle);
+      const overview = element("button");
+      overview.type = "button";
+      overview.textContent = "Panoramica";
+      const inspection = element("details", "sd-inspection");
+      const summary = element("summary");
+      summary.textContent = "Camera";
+      inspection.append(summary);
+      const tools = element("div", "sd-camera-tools");
+      const tool = (label: string, action: () => void) => {
+        const button = element("button");
+        button.type = "button";
+        button.textContent = label;
+        button.addEventListener("click", action);
+        tools.append(button);
+        cleanup.push(() => button.removeEventListener("click", action));
+      };
+      tool("Vista scena", () => {
+        player.setView("scene");
+      });
+      for (const [label, x, y, factor] of [
+        ["Pan sinistra", -100, 0, 1],
+        ["Pan destra", 100, 0, 1],
+        ["Pan alto", 0, -100, 1],
+        ["Pan basso", 0, 100, 1],
+        ["Zoom +", 0, 0, 1.25],
+        ["Zoom −", 0, 0, 0.8],
+      ] as const)
+        tool(label, () => {
+          const camera = state().camera;
+          if (camera)
+            player.setCamera({
+              ...camera,
+              position: [
+                camera.position[0] + x / camera.zoom,
+                camera.position[1] + y / camera.zoom,
+                camera.position[2],
+              ],
+              zoom: camera.zoom * factor,
+            });
+        });
+      inspection.append(tools);
+      controls.append(outlineToggle, motionToggle, overview, inspection);
       const stage = element("div", "sd-stage");
       stageElement = stage;
       emptyMessage = element("p", "sd-empty");
@@ -303,7 +402,10 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       live.setAttribute("aria-live", "polite");
       live.setAttribute("aria-atomic", "true");
       buildScenes();
-      root.append(controls, stage, outline, live, emptyMessage);
+      choicesElement = element("nav", "sd-choices");
+      choicesElement.setAttribute("aria-label", "Scelte del percorso");
+      choicesElement.hidden = true;
+      root.append(controls, stage, outline, live, emptyMessage, choicesElement);
       host.append(root);
       const listen = (
         target: EventTarget,
@@ -315,6 +417,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       };
       const resize = () => {
         if (!host || !viewport || !doc) return;
+        stage.style.top = `${controls.offsetHeight}px`;
         const bounds = stage.getBoundingClientRect();
         const fit = Math.min(
           bounds.width / doc.settings.viewport.width,
@@ -377,6 +480,23 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         motionToggle.setAttribute("aria-pressed", String(manualReduced));
         applyMotion();
       });
+      listen(overview, "click", () => {
+        const result = player.setView("overview");
+        if (!result.ok)
+          emit("diagnostic", {
+            instanceId,
+            diagnostic: result.diagnostics[0]!,
+          });
+      });
+      listen(choicesElement, "click", (event) => {
+        const button = (event.target as Element).closest<HTMLButtonElement>(
+          "button[data-edge-id]",
+        );
+        if (button?.dataset.edgeId) {
+          focusRequested = true;
+          void player.next({ edgeId: button.dataset.edgeId });
+        }
+      });
       listen(outline, "click", (event) => {
         const button = (event.target as Element).closest<HTMLButtonElement>(
           "button[data-node-id]",
@@ -423,7 +543,8 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         });
       resizeView = resize;
       const observer = new win.ResizeObserver(resize);
-      observer.observe(stage);
+      observer.observe(container);
+      observer.observe(controls);
       cleanup.push(() => observer.disconnect());
       applyMotion();
       machine.setHidden(container.ownerDocument.hidden);
@@ -491,6 +612,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       emptyMessage = undefined;
       outlineButton = undefined;
       stageElement = undefined;
+      choicesElement = undefined;
       focusOrigin = null;
       doc = undefined;
       media = undefined;
@@ -503,6 +625,20 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     prev: () => (machine ? invoke(() => machine!.prev()) : unavailable()),
     setPath: (pathId) =>
       machine ? invoke(() => machine!.setPath(pathId)) : unavailable(),
+    setView: (view) =>
+      machine
+        ? machine.setView(view)
+        : failure(
+            destroyed ? "PLAYER_DESTROYED" : "PLAYER_UNMOUNTED",
+            "Player is unavailable",
+          ),
+    setCamera: (pose) =>
+      machine
+        ? machine.setCamera(pose)
+        : failure(
+            destroyed ? "PLAYER_DESTROYED" : "PLAYER_UNMOUNTED",
+            "Player is unavailable",
+          ),
     getState: state,
     on(event, handler) {
       if (destroyed) return () => {};

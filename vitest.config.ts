@@ -8,5 +8,18 @@ export default defineConfig({
       ).pathname,
     },
   },
-  test: { include: ["packages/**/*.test.ts", "scripts/**/*.test.ts"] },
+  test: {
+    include: ["packages/**/*.test.ts", "scripts/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      include: ["packages/core/src/**/*.ts"],
+      exclude: [
+        "packages/core/src/document/types.ts",
+        "packages/core/src/document/validator.d.ts",
+      ],
+      reporter: ["text", "json-summary", "html"],
+      reportsDirectory: "test-results/coverage",
+      thresholds: { statements: 85, branches: 80 },
+    },
+  },
 });

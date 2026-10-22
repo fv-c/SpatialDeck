@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useId } from "react";
 import type { Scene, Result } from "@spatialdeck/core";
 import { editScene } from "../commands/index.js";
 import { parseFinite } from "../store/index.js";
 import type { EditorStore } from "../store/index.js";
-function Numeric({
+export function Numeric({
   label,
   value,
   apply,
@@ -18,7 +18,7 @@ function Numeric({
     setDraft(String(value));
     setError("");
   }, [value]);
-  const fieldId = `field-${label.replaceAll(" ", "-")}`;
+  const fieldId = useId();
   function commit() {
     const parsed = parseFinite(draft);
     const result = parsed.ok ? apply(parsed.value) : parsed;
@@ -59,7 +59,7 @@ function Numeric({
     </label>
   );
 }
-function TextField({
+export function TextField({
   label,
   value,
   apply,
@@ -70,6 +70,7 @@ function TextField({
   apply: (value: string) => Result<void>;
   multiline?: boolean;
 }) {
+  const fieldId = useId();
   const [draft, setDraft] = useState(value),
     [error, setError] = useState("");
   useEffect(() => {
@@ -95,14 +96,14 @@ function TextField({
         commit();
     },
     "aria-invalid": !!error,
-    "aria-describedby": error ? `error-${label}` : undefined,
+    "aria-describedby": error ? `${fieldId}-error` : undefined,
   };
   return (
     <label className="text-field">
       {label}
       {multiline ? <textarea {...props} rows={4} /> : <input {...props} />}{" "}
       {error && (
-        <span className="field-error" id={`error-${label}`}>
+        <span className="field-error" id={`${fieldId}-error`}>
           {error}
         </span>
       )}

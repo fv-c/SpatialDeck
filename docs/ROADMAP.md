@@ -104,3 +104,10 @@ I gate applicativi locali passano ora su tutti e tre i motori senza skip: Chromi
 Studio 0.2 è implementato nei path previsti: editor React, mappa XY con geometria core, inspector, scene/duplicazione/eliminazione, undo/redo atomici, preview/presentazione player condivise, file JSON e IndexedDB. Schema resta 1.0.0. Il [rapporto 0.2](verification/phase-0.2.md) registra 119 unità + 66 E2E locali passati, zero fail/skip, roundtrip tramite file reale e nuova sessione con confronto modello/camera/landmark, recovery dopo reload, quota negata/rollback e conflitti in due tab. Tutti gli script contrattuali e i due server dev sono verificati.
 
 La prova locale conserva il runner WebKit macOS 14 1.61.1 e il principale 1.64.1 per Chromium/Firefox. La CI Linux 0.2 non è stata eseguita; l'evidenza remota della sezione 8 resta limitata a 0.1. La guida autore è in [AUTHORING](AUTHORING.md). Le restrizioni per path importati non sincronizzati e l'espulsione della history sono dichiarate nella specifica e nel rapporto. Il punto di partenza per 0.3 è ora questo editor con tutte le regressioni 1.0.0; nessun lavoro strutturale futuro è stato anticipato.
+
+
+## 10. Avanzamento Struttura 0.3 — 21–22 ottobre 2026
+
+0.3 è implementata con schema 1.1.0 e migrazione da 1.0.0, preservando fixture e rapporti storici. Rami A/B/C/D e prev effettivo, loop manuale limitato, parent/reparent world-preserving con undo, camera indipendente, track/cue, timeline edit/scrub e overview sono operativi sia via API sia in Studio. Il [rapporto 0.3](verification/phase-0.3.md) raccoglie comandi, conteggi, coverage, bundle, landmark e roundtrip/download/riapertura, recovery e screenshot reali.
+
+187 unità e 90 E2E locali superati, senza fail/skip, con i runner browser già fissati. I gate 0.1/0.2 restano regressioni cumulative; i nuovi artefatti non sostituiscono quelli storici. CI Linux 0.3 e verifiche pre-1.0 su Safari reale, screen reader e prestazioni controllate restano non eseguite. Nessuna fase successiva avviata: il prerequisito per 0.4 è ora questo modello corrente, con regressioni verdi e fixture storiche conservate.

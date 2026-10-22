@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { sceneMatrix } from "@spatialdeck/core";
+import { getWorldMatrix, isSceneVisible } from "@spatialdeck/core";
 import type { EditorSession, EditorStore } from "../store/index.js";
 export function MapView({
   store,
@@ -25,12 +25,13 @@ export function MapView({
       ?.getAttribute("data-map-scene");
     const scene = document.scenes.find((s) => s.id === id);
     if (scene) store.beginDrag(scene.id);
+    const world = scene ? getWorldMatrix(document, scene.id) : null;
     gesture.current = {
       pointer: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      x: scene?.position[0] ?? map.x,
-      y: scene?.position[1] ?? map.y,
+      x: world?.ok ? world.value[12]! : map.x,
+      y: world?.ok ? world.value[13]! : map.y,
       scene: !!scene,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
@@ -94,7 +95,8 @@ export function MapView({
           if (!matrix) return;
           const dx = (event.clientX - g.startX) / matrix.a,
             dy = (event.clientY - g.startY) / matrix.d;
-          if (g.scene) store.moveDrag(g.x + dx / map.zoom, g.y + dy / map.zoom);
+          if (g.scene)
+            store.moveWorldDrag(g.x + dx / map.zoom, g.y + dy / map.zoom);
           else store.setMap({ ...map, x: g.x + dx, y: g.y + dy });
         }}
         onPointerUp={() => finish()}
@@ -166,14 +168,16 @@ export function MapView({
         <g transform={`translate(${map.x} ${map.y}) scale(${map.zoom})`}>
           <path d="M -2400 0 H 2400 M 0 -1600 V 1600" className="map-axis" />
           {document.scenes.map((scene, index) => {
-            const m = sceneMatrix(scene);
+            const world = getWorldMatrix(document, scene.id);
+            if (!world.ok) return null;
+            const m = world.value;
             return (
               <g
                 key={scene.id}
                 data-map-scene={scene.id}
                 className={`map-scene ${session.selection === scene.id ? "selected" : ""}`}
                 transform={`matrix(${m[0]} ${m[1]} ${m[4]} ${m[5]} ${m[12]} ${m[13]})`}
-                opacity={scene.visible ? 1 : 0.4}
+                opacity={isSceneVisible(document, scene.id) ? 1 : 0.4}
               >
                 <rect
                   x={-scene.size[0] / 2}

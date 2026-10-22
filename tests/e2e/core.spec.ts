@@ -66,9 +66,9 @@ test("three scenes project independent corner landmarks and fit in the viewport"
       expect(Math.abs(p.y - p.expectedY)).toBeLessThan(1);
     }
     if (info.project.name === "chromium")
-      await page
-        .locator("#player-1 .sd-player")
-        .screenshot({ path: `docs/verification/scene-${sceneId}.png` });
+      await page.locator("#player-1 .sd-player").screenshot({
+        path: `docs/verification/structure-regressions/scene-${sceneId}.png`,
+      });
   }
 });
 test("local keyboard, focus and text fields isolate two instances", async ({
@@ -128,9 +128,9 @@ test("outline reads all text in path order and navigates with reduced motion", a
       ),
   ).toBe(true);
   if (info.project.name === "chromium")
-    await page
-      .locator("#player-1 .sd-player")
-      .screenshot({ path: "docs/verification/outline.png" });
+    await page.locator("#player-1 .sd-player").screenshot({
+      path: "docs/verification/structure-regressions/outline.png",
+    });
 });
 test("latest-wins, invalid commands, AbortSignal, event order and changing motion", async ({
   page,

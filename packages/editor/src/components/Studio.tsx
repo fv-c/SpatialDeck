@@ -10,7 +10,7 @@ import { serializeDocument, validateDocument } from "@spatialdeck/core";
 import type { Result } from "@spatialdeck/core";
 import {
   createScene,
-  deleteImpact,
+  editImpact,
   deleteScene,
   emptyProject,
 } from "../commands/index.js";
@@ -20,6 +20,10 @@ import type { Revision } from "../storage/index.js";
 import { Dialog } from "./Dialog.js";
 import { Inspector } from "./Inspector.js";
 import { MapView } from "./MapView.js";
+import { HierarchyTree } from "./HierarchyTree.js";
+import { PathPanel } from "./PathPanel.js";
+import type { NavigationSelection } from "./PathPanel.js";
+import type { Capture } from "./CameraTimeline.js";
 import { PlayerSurface } from "./PlayerSurface.js";
 export interface StudioProps {
   store?: EditorStore;
@@ -52,6 +56,10 @@ export function Studio({
     } | null>(null),
     [revisions, setRevisions] = useState<Revision[]>([]),
     [recoveryIndex, setRecoveryIndex] = useState(0);
+  const [navigation, setNavigation] = useState<NavigationSelection | null>(
+      null,
+    ),
+    [capture, setCapture] = useState<Capture | null>(null);
   const openButton = useRef<HTMLButtonElement>(null);
   const undoButton = useRef<HTMLButtonElement>(null),
     redoButton = useRef<HTMLButtonElement>(null);
@@ -189,16 +197,17 @@ export function Studio({
   }
   function remove() {
     if (!selected) return;
-    const impact = deleteImpact(session.document, selected.id);
-    if (impact.length) {
-      setError(`Eliminazione rifiutata: ${impact.join(", ")}.`);
+    const edit = deleteScene(selected.id, true);
+    const impact = editImpact(session.document, edit);
+    if (!impact.ok) {
+      report(impact);
       return;
     }
     setDialog({
       title: "Eliminare la scena?",
-      body: `“${selected.title}” sarà rimossa e il percorso principale ricucito. Annulla ripristinerà anche le transizioni originali.`,
+      body: `“${selected.title}”: ${impact.value.description}`,
       confirm: "Elimina scena",
-      action: () => report(store.execute(deleteScene(selected.id))),
+      action: () => report(store.execute(edit)),
     });
   }
   async function recoverList() {
@@ -278,7 +287,7 @@ export function Studio({
         <div className="brand">
           <span className="brand-mark">S↗</span>
           <span>
-            SpatialDeck <small>STUDIO / 0.2</small>
+            SpatialDeck <small>STUDIO / 0.3</small>
           </span>
         </div>
         <nav aria-label="Strumenti documento">
@@ -411,7 +420,11 @@ export function Studio({
                 <button
                   tabIndex={0}
                   aria-pressed={scene.id === session.selection}
-                  onClick={() => store.select(scene.id)}
+                  onClick={() => {
+                    store.select(scene.id);
+                    setNavigation(null);
+                    setCapture(null);
+                  }}
                 >
                   <span className="scene-number">
                     {String(index + 1).padStart(2, "0")}
@@ -428,28 +441,32 @@ export function Studio({
             <button
               tabIndex={0}
               className="primary"
-              onClick={() =>
+              onClick={() => {
+                setNavigation(null);
+                setCapture(null);
                 report(
                   store.execute(
                     createScene(session.selection ?? undefined),
                     true,
                   ),
-                )
-              }
+                );
+              }}
             >
               + Nuova scena
             </button>
             <button
               tabIndex={0}
               disabled={!selected}
-              onClick={() =>
+              onClick={() => {
+                setNavigation(null);
+                setCapture(null);
                 report(
                   store.execute(
                     createScene(session.selection ?? undefined, true),
                     true,
                   ),
-                )
-              }
+                );
+              }}
             >
               Duplica scena
             </button>
@@ -457,6 +474,7 @@ export function Studio({
               Elimina scena
             </button>
           </div>
+          <HierarchyTree store={store} session={session} />
           <p className="local-note">
             Locale, sul tuo dispositivo.
             <br />
@@ -476,6 +494,8 @@ export function Studio({
               <PlayerSurface
                 document={session.document}
                 selection={session.selection}
+                navigation={navigation}
+                capture={capture}
                 {...(onPlayer ? { onPlayer } : {})}
               />
             </section>
@@ -486,6 +506,12 @@ export function Studio({
             Inspector <span>{selected ? "SCENA" : "VUOTO"}</span>
           </summary>
           <Inspector store={store} scene={selected} />
+          <PathPanel
+            store={store}
+            document={session.document}
+            onNavigation={setNavigation}
+            onCapture={setCapture}
+          />
         </details>
       </div>
       <footer className="statusbar">
@@ -495,8 +521,9 @@ export function Studio({
             : "○ Documento salvato"}
         </span>
         <span>
-          schema 1.0.0 · {session.document.scenes.length} scene ·{" "}
-          {session.historyLength} comandi
+          schema {session.document.schemaVersion} ·{" "}
+          {session.document.scenes.length} scene · {session.historyLength}{" "}
+          comandi
         </span>
       </footer>
       {present && (

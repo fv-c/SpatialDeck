@@ -74,12 +74,13 @@ describe("editor atomic commands", () => {
     expect(result.diagnostics[0]!.message).toContain("Alternativo");
     expect(store.getSnapshot().document).toEqual(input);
   });
-  it("refuses structural edits of a reordered or repeated main path", () => {
+  it("adds independent scenes without rewriting a reordered main path", () => {
     const input = project();
     input.scenes.reverse();
     const store = new EditorStore(input);
-    expect(store.execute(createScene()).ok).toBe(false);
-    expect(store.getSnapshot().document).toEqual(input);
+    expect(store.execute(createScene()).ok).toBe(true);
+    expect(store.getSnapshot().document.paths).toEqual(input.paths);
+    expect(store.getSnapshot().document.scenes).toHaveLength(4);
     expect(
       store.execute(editScene("intro", { notes: "still editable" })).ok,
     ).toBe(true);

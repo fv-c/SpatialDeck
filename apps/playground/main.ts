@@ -1,5 +1,8 @@
 import { createPlayer } from "@spatialdeck/player";
-import project from "../../examples/core-three-scenes/project.json";
+import legacy from "../../examples/core-three-scenes/project.json";
+import structure from "../../examples/structure-branching/project.json";
+const structured = location.pathname.startsWith("/structure");
+const project = structured ? structure : legacy;
 import "./style.css";
 const players = [];
 for (let index = 0; index < 2; index++) {
@@ -17,9 +20,9 @@ for (let index = 0; index < 2; index++) {
   for (const [label, action] of [
     ["Indietro", () => player.prev()],
     ["Avanti", () => player.next()],
-    ["Prima scena", () => player.goTo({ nodeId: "n1" })],
-    ["Terza scena", () => player.goTo({ nodeId: "n3" })],
-    ["Riavvia percorso", () => player.setPath("main")],
+    ["Prima scena", () => player.goTo({ nodeId: structured ? "A" : "n1" })],
+    ["Terza scena", () => player.goTo({ nodeId: structured ? "D" : "n3" })],
+    ["Riavvia percorso", () => player.setPath(structured ? "branch" : "main")],
   ] as const) {
     const button = document.createElement("button");
     button.textContent = label;

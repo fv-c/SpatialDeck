@@ -40,7 +40,7 @@ const result = {
   artifacts,
 };
 await writeFile(
-  "docs/verification/bundle.json",
+  "docs/verification/structure-bundle.json",
   JSON.stringify(result, null, 2) + "\n",
 );
 console.log(JSON.stringify(result));

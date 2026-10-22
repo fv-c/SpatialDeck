@@ -5,7 +5,7 @@ import standalone from "ajv/dist/standalone/index.js";
 const schema = JSON.parse(
   await readFile(
     new URL(
-      "../packages/core/schema/project-1.0.0.schema.json",
+      "../packages/core/schema/project-1.1.0.schema.json",
       import.meta.url,
     ),
     "utf8",
@@ -17,9 +17,22 @@ const ajv = new Ajv({
   code: { source: true, esm: true },
   inlineRefs: true,
 });
-const validate = ajv.compile(schema);
+const legacy = JSON.parse(
+  await readFile(
+    new URL(
+      "../packages/core/schema/project-1.0.0.schema.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+ajv.addSchema(legacy, "legacy");
+ajv.addSchema(schema, "current");
 // A standalone module, never the Ajv compiler, enters the browser graph.
-let source = standalone(ajv, validate);
+let source = standalone(ajv, {
+  validateLegacy: "legacy",
+  validateCurrent: "current",
+});
 source = source.replace(
   /const (\w+) = require\("ajv\/dist\/runtime\/([^"/]+)"\)\.default;/g,
   'import $1Module from "ajv/dist/runtime/$2.js"; const $1 = $1Module.default ?? $1Module;',
@@ -41,6 +54,11 @@ const names = {
   node: "PathNode",
   edge: "PathEdge",
   path: "ScenePath",
+  cameraPose: "AuthoredCameraPose",
+  keyframe: "CameraKeyframe",
+  cameraTrack: "CameraTrack",
+  condition: "EdgeCondition",
+  cue: "Cue",
 };
 const type = (s) => {
   if (s.$ref) return names[s.$ref.split("/").at(-1)];

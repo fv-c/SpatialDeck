@@ -2,8 +2,9 @@ interface SchemaError {
   instancePath: string;
   message?: string;
 }
-declare const validate: {
+interface Validator {
   (input: unknown): boolean;
   errors?: SchemaError[] | null;
-};
-export default validate;
+}
+export const validateLegacy: Validator;
+export const validateCurrent: Validator;
