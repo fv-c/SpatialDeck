@@ -18,7 +18,7 @@ L'anteprima usa il player reale e inquadra la scena selezionata. Le rotazioni ri
 
 ## File e recupero
 
-**Salva JSON** scarica una copia con schema 1.1.0, comprendente testi, note, parent, percorsi, camera, track/cue ed estensioni opache. **Apri JSON** legge il file come copia in memoria. Prima valida il candidato; JSON invalido lascia intatto il lavoro. Se ci sono modifiche da salvare, puoi annullare la sostituzione. Un file storico 1.0.0 viene validato e migrato in memoria; Salva JSON scarica una nuova copia 1.1.0. Nessuna operazione modifica direttamente il file aperto sul disco.
+**Salva JSON** scarica una copia con lo schema corrente 1.2.0, comprendente testi, contenuti, note, parent, percorsi, camera, track/cue ed estensioni opache. **Apri JSON** legge il file come copia in memoria. Prima valida il candidato; JSON invalido lascia intatto il lavoro. Se ci sono modifiche da salvare, puoi annullare la sostituzione. Un file storico 1.0.0 o 1.1.0 viene validato e migrato in memoria; Salva JSON scarica una nuova copia 1.2.0. Nessuna operazione modifica direttamente il file aperto sul disco.
 
 L'autosave locale scrive in IndexedDB dopo 750 ms e conserva le ultime dieci revisioni per progetto. Al reload propone il recupero con titolo, revisione, data e numero di scene; puoi annullare. Il pulsante **Recupero** permette di scegliere anche una revisione precedente. Salva il risultato come JSON per conservarlo fuori dal browser.
 
@@ -57,6 +57,8 @@ Per provare il documento completo apri `examples/structure-branching/project.jso
 Il documento corrente è schema 1.2.0. L’apertura di 1.0.0/1.1.0 migra una copia mantenendo scene, percorsi, note, testo ed estensioni; salvare una nuova copia conserva il predecessore.
 
 Nell’inspector, **Contenuti** mantiene l’ordine di lettura. **Aggiungi testo** conserva il testo letterale storico; **Tipo contenuto** e **Aggiungi contenuto** aggiungono Markdown, HTML, SVG, LaTeX, immagine, audio, video, link interno, embed o plugin. Le sorgenti sono textarea con anteprima nel player condiviso. **Dati tipo** espone tutti i campi JSON tipizzati (alt, label, display, assetId, posterAssetId, captionsAssetId, target del link, autoplay/loop/onExit). Un valore invalido mostra l’errore e lascia il documento precedente. Sposta su/giù ed Elimina sono comandi annullabili. Il badge locale ha anche un inspector separato per label; le impostazioni plugin documento sono modificabili nel loro campo JSON.
+
+I contenuti di una scena sono impilati in verticale nell’ordine di lettura, nella card standard del player: in questa versione non puoi scegliere posizione, dimensione, colori o font dei singoli contenuti, né nascondere il titolo. Non usare HTML o Markdown per impaginare: stili, classi e immagini incorporate vengono rimossi dalla sanitizzazione. Il posizionamento libero, il tema e lo stile a token sono pianificati per la 0.5 ([roadmap](ROADMAP.md)).
 
 In **Risorse locali**, aggiungi prima un file e poi il blocco immagine/audio/video: il blocco usa il primo asset del tipo corrispondente, modificabile nei Dati. Il pannello mostra nome, ID, MIME e dimensione; il JSON espone il registro completo. **Associa file mancante** verifica dimensione/firma e digest originali. **Sostituisci** aggiorna i metadati mantenendo l’ID; undo recupera i byte precedenti conservati in memoria. I file non sono inseriti come blob URL nel documento.
 
