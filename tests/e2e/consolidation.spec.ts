@@ -174,7 +174,7 @@ test("Studio preview with 50 MiB of media stays incremental: no digests or URLs 
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   for (let i = 0; i < 3; i++)
     await page
-      .getByRole("button", { name: "+ Nuova scena", exact: true })
+      .getByRole("button", { name: "Nuova scena", exact: true })
       .click();
   for (const file of [
     files.image,

@@ -124,7 +124,7 @@ test("axe: Studio empty, with content and dialogs has no serious or critical vio
     .getByRole("dialog")
     .getByRole("button", { name: "Annulla" })
     .click();
-  await page.getByRole("button", { name: "Presenta ↗" }).click();
+  await page.getByRole("button", { name: "Presenta" }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   await audit(page, "studio-presentation", info);
 });

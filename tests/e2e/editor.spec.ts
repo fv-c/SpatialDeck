@@ -57,7 +57,7 @@ test("editor → real JSON download → new browser session → player preserves
   await open(page);
   for (let i = 1; i <= 3; i++) {
     await page
-      .getByRole("button", { name: "+ Nuova scena", exact: true })
+      .getByRole("button", { name: "Nuova scena", exact: true })
       .click();
     await page.getByLabel("Titolo scena", { exact: true }).fill(`Idea ${i}`);
     await page.getByLabel("Titolo scena", { exact: true }).press("Tab");
@@ -163,7 +163,7 @@ test("editor → real JSON download → new browser session → player preserves
   for (let i = 0; i < points.length; i++)
     for (let j = 0; j < 2; j++)
       expect(Math.abs(points[i]![j]! - reopenedPoints[i]![j]!)).toBeLessThan(1);
-  await reopened.getByRole("button", { name: "Presenta ↗" }).click();
+  await reopened.getByRole("button", { name: "Presenta" }).click();
   const nodeId = saved.paths[0]!.nodes.find((n) => n.sceneId === selected)!.id;
   await reopened.evaluate(async (nodeId) => {
     await window.studio!.presentation!.goTo({ nodeId }, { durationMs: 0 });
@@ -204,7 +204,7 @@ test("editor → real JSON download → new browser session → player preserves
   }
   await reopened.keyboard.press("Escape");
   await expect(
-    reopened.getByRole("button", { name: "Presenta ↗" }),
+    reopened.getByRole("button", { name: "Presenta" }),
   ).toBeFocused();
   expect(
     await reopened.evaluate(() => window.studio!.store.getSnapshot().document),
@@ -331,9 +331,7 @@ test("denied IndexedDB and quota failure keep document, manual save, and atomic 
   await expect(page.locator(".warning")).toContainText(
     "Recupero non disponibile",
   );
-  await page
-    .getByRole("button", { name: "+ Nuova scena", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Nuova scena", exact: true }).click();
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
   await dl;
@@ -473,7 +471,7 @@ test("essential authoring workflow is keyboard-only, including file open/save an
     throw new Error(`Keyboard did not reach ${label}`);
   }
   for (let i = 0; i < 3; i++) {
-    await reach("+ Nuova scena");
+    await reach("Nuova scena");
     await page.keyboard.press("Enter");
   }
   await reach("X", "textbox");
@@ -497,7 +495,7 @@ test("essential authoring workflow is keyboard-only, including file open/save an
   const dl = page.waitForEvent("download");
   await page.keyboard.press("ControlOrMeta+s");
   const path = (await (await dl).path())!;
-  await reach("Apri JSON", "button", true);
+  await reach("Apri", "button", true);
   const chooser = page.waitForEvent("filechooser");
   await page.keyboard.press("Enter");
   await (await chooser).setFiles(path);
@@ -506,13 +504,13 @@ test("essential authoring workflow is keyboard-only, including file open/save an
       page.evaluate(() => window.studio!.store.getSnapshot().document),
     )
     .toEqual(model);
-  await reach("Presenta ↗");
+  await reach("Presenta");
   await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Presenta ↗" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Presenta" })).toBeFocused();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(model);
@@ -530,16 +528,14 @@ test("tablet and mobile remain usable, collapsible panels and reduced motion pre
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
-    await expect(
-      page.getByRole("button", { name: "Presenta ↗" }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Presenta" })).toBeVisible();
     if (width === 390 && info.project.name === "chromium")
       await page.screenshot({
         path: evidencePath("regressions/editor-mobile.png"),
         fullPage: true,
       });
   }
-  await page.getByRole("button", { name: "Presenta ↗" }).click();
+  await page.getByRole("button", { name: "Presenta" }).click();
   await page.locator(".presentation-player").focus();
   await page.keyboard.press("ArrowRight");
   expect(
@@ -592,7 +588,7 @@ test("player updateDocument validates atomically, cancels transitions and rebuil
     history: 1,
     count: 1,
   });
-  await page.getByRole("button", { name: "Presenta ↗" }).click();
+  await page.getByRole("button", { name: "Presenta" }).click();
   const state = await page.evaluate(async () => {
     const player = window.studio!.presentation!,
       doc = structuredClone(window.studio!.store.getSnapshot().document);
@@ -675,7 +671,7 @@ test("player invalid update during transition leaves it running, active deletion
 }) => {
   await open(page);
   await upload(page);
-  await page.getByRole("button", { name: "Presenta ↗" }).click();
+  await page.getByRole("button", { name: "Presenta" }).click();
   const result = await page.evaluate(async () => {
     const player = window.studio!.presentation!,
       doc = structuredClone(window.studio!.store.getSnapshot().document);

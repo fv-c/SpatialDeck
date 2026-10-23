@@ -164,6 +164,8 @@ type Gesture = {
   start: Point;
   frames: Record<string, Frame>;
   primary: string;
+  /** Scene point of the grabbed resize handle: the edge follows the pointer's offset, never jumps to it. */
+  anchor: Point;
 };
 export function LayoutEditor({
   store,
@@ -293,12 +295,19 @@ export function LayoutEditor({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.focus({ preventScroll: true });
+    const frames = framesOf(ids),
+      grabbed = frames[primary]!,
+      at = handles.find(([h]) => h === kind)?.[2] ?? [0.5, 0.5];
     gesture.current = {
       pointer: event.pointerId,
       kind,
       start,
-      frames: framesOf(ids),
+      frames,
       primary,
+      anchor: frameToScene(grabbed, [
+        at[0] * grabbed.width,
+        at[1] * grabbed.height,
+      ]),
     };
   }
   function move(event: ReactPointerEvent<HTMLElement>) {
@@ -332,7 +341,10 @@ export function LayoutEditor({
       next[g.primary] = resizeFrame(
         first,
         g.kind,
-        [Math.round(point[0]), Math.round(point[1])],
+        [
+          Math.round(g.anchor[0] + point[0] - g.start[0]),
+          Math.round(g.anchor[1] + point[1] - g.start[1]),
+        ],
         scene.size,
         grid,
       );

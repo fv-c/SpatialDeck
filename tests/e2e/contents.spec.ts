@@ -553,7 +553,7 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
   const canonical = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
-  await page.getByRole("button", { name: "Presenta ↗", exact: true }).click();
+  await page.getByRole("button", { name: "Presenta", exact: true }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Torna all’editor", exact: true })

@@ -40,6 +40,7 @@ import { AssetPanel } from "./AssetPanel.js";
 import { LayoutEditor } from "./LayoutEditor.js";
 import { LayoutPanel } from "./LayoutPanel.js";
 import { ThemePanel } from "./ThemePanel.js";
+import { Icon, IconButton } from "./icons.js";
 export interface StudioProps {
   store?: EditorStore;
   repository?: RecoveryRepository;
@@ -416,14 +417,32 @@ export function Studio({
     >
       <header className="toolbar">
         <div className="brand">
-          <span className="brand-mark">S↗</span>
-          <span>
-            SpatialDeck <small>STUDIO / 0.5</small>
+          <span className="brand-mark" aria-hidden="true">
+            S↗
           </span>
+          <h1 className="brand-name">SpatialDeck</h1>
+          <span className="brand-version">Studio 0.5</span>
         </div>
-        <nav aria-label="Strumenti documento">
-          <button
-            tabIndex={0}
+        <label className="title-field">
+          <span className="visually-hidden">Titolo progetto</span>
+          <input
+            aria-label="Titolo progetto"
+            value={session.document.metadata.title}
+            onChange={(e) =>
+              report(
+                store.coalesce("metadata.title", (document) => {
+                  document.metadata.title = e.target.value;
+                  return { ok: true, value: document, diagnostics: [] };
+                }),
+              )
+            }
+            onBlur={() => store.endCoalesce()}
+          />
+        </label>
+        <nav aria-label="Strumenti documento" className="toolbar-actions">
+          <IconButton
+            icon="new"
+            label="Nuovo"
             onClick={() =>
               confirmReplace(() => {
                 autosave.cancelPending();
@@ -431,71 +450,80 @@ export function Studio({
                 setWarning("");
               })
             }
-          >
-            Nuovo
-          </button>
-          <button
-            tabIndex={0}
+          />
+          <IconButton
+            icon="open"
+            label="Apri"
+            shortcut="⌘O · JSON o .spatialdeck"
             ref={openButton}
             onClick={() => file.current?.click()}
-          >
-            Apri JSON
-          </button>
-          <button tabIndex={0} onClick={() => file.current?.click()}>
-            Apri archivio
-          </button>
-          <button tabIndex={0} onClick={save}>
-            Salva JSON
-          </button>
-          <button tabIndex={0} onClick={() => void savePortable()}>
-            Salva archivio
-          </button>
-          <span className="toolbar-divider" />
+          />
           <button
+            type="button"
             tabIndex={0}
+            className="tool-button"
+            aria-label="Salva JSON"
+            data-tip="Salva JSON · ⌘S"
+            onClick={save}
+          >
+            <Icon name="save" />
+            Salva
+          </button>
+          <IconButton
+            icon="archive"
+            label="Salva archivio"
+            shortcut="file .spatialdeck con le risorse"
+            onClick={() => void savePortable()}
+          />
+          <span className="toolbar-divider" aria-hidden="true" />
+          <IconButton
+            icon="undo"
+            label="Annulla"
+            shortcut="⌘Z"
             ref={undoButton}
             disabled={!session.canUndo}
             onClick={() => {
               store.undo();
               if (!store.getSnapshot().canUndo) redoButton.current?.focus();
             }}
-            aria-label="Annulla"
-          >
-            ↶ Annulla
-          </button>
-          <button
-            tabIndex={0}
+          />
+          <IconButton
+            icon="redo"
+            label="Ripristina"
+            shortcut="⇧⌘Z"
             ref={redoButton}
             disabled={!session.canRedo}
             onClick={() => {
               store.redo();
               if (!store.getSnapshot().canRedo) undoButton.current?.focus();
             }}
-            aria-label="Ripristina"
-          >
-            ↷ Ripristina
-          </button>
-          <button tabIndex={0} onClick={() => void recoverList()}>
-            Recupero
-          </button>
-          <button
-            tabIndex={0}
-            aria-pressed={preview}
+          />
+          <span className="toolbar-divider" aria-hidden="true" />
+          <IconButton
+            icon="history"
+            label="Recupero"
+            shortcut="revisioni locali"
+            onClick={() => void recoverList()}
+          />
+          <IconButton
+            icon="eye"
+            label="Anteprima"
+            pressed={preview}
             onClick={() => setPreview(!preview)}
-          >
-            Anteprima
-          </button>
+          />
           <button
+            type="button"
             tabIndex={0}
             ref={presentButton}
-            className="primary"
+            className="primary present-button"
             onClick={() => {
               store.endDrag();
               setPresent(true);
             }}
             disabled={!session.document.scenes.length}
           >
-            Presenta ↗
+            <Icon name="play" />
+            Presenta
           </button>
         </nav>
         <input
@@ -536,22 +564,64 @@ export function Studio({
           <summary>
             Scene <span>{session.document.scenes.length}</span>
           </summary>
-          <label className="project-title">
-            Titolo progetto
-            <input
-              aria-label="Titolo progetto"
-              value={session.document.metadata.title}
-              onChange={(e) =>
+          <div
+            className="panel-actions"
+            role="toolbar"
+            aria-label="Azioni scene"
+          >
+            <IconButton
+              icon="plus"
+              label="Nuova scena"
+              onClick={() => {
+                setNavigation(null);
+                setCapture(null);
                 report(
-                  store.coalesce("metadata.title", (document) => {
-                    document.metadata.title = e.target.value;
-                    return { ok: true, value: document, diagnostics: [] };
-                  }),
-                )
-              }
-              onBlur={() => store.endCoalesce()}
+                  store.execute(
+                    createScene(session.selection ?? undefined),
+                    true,
+                  ),
+                );
+              }}
             />
-          </label>
+            <IconButton
+              icon="copy"
+              label="Duplica scena"
+              disabled={!selected}
+              onClick={() => {
+                setNavigation(null);
+                setCapture(null);
+                report(
+                  store.execute(
+                    createScene(session.selection ?? undefined, true),
+                    true,
+                  ),
+                );
+              }}
+            />
+            <IconButton
+              icon="trash"
+              label="Elimina scena"
+              shortcut="Canc"
+              disabled={!selected}
+              onClick={remove}
+            />
+          </div>
+          {!session.document.scenes.length && (
+            <div className="empty-scenes">
+              <p>Nessuna scena. Una scena è un rettangolo nello spazio.</p>
+              <button
+                type="button"
+                tabIndex={0}
+                className="primary"
+                onClick={() =>
+                  report(store.execute(createScene(undefined), true))
+                }
+              >
+                <Icon name="plus" />
+                Crea la prima scena
+              </button>
+            </div>
+          )}
           <ol aria-label="Elenco scene">
             {session.document.scenes.map((scene, index) => (
               <li key={scene.id}>
@@ -567,51 +637,17 @@ export function Studio({
                   <span className="scene-number">
                     {String(index + 1).padStart(2, "0")}
                   </span>
-                  <span>
+                  <span className="scene-label">
                     {scene.title || "Senza titolo"}
-                    <small>{scene.position.map(Math.round).join(" / ")}</small>
+                    <small>
+                      {scene.layout === "canvas" ? "Canvas" : "Flow"} ·{" "}
+                      {scene.position.map(Math.round).join(" / ")}
+                    </small>
                   </span>
                 </button>
               </li>
             ))}
           </ol>
-          <div className="scene-actions">
-            <button
-              tabIndex={0}
-              className="primary"
-              onClick={() => {
-                setNavigation(null);
-                setCapture(null);
-                report(
-                  store.execute(
-                    createScene(session.selection ?? undefined),
-                    true,
-                  ),
-                );
-              }}
-            >
-              + Nuova scena
-            </button>
-            <button
-              tabIndex={0}
-              disabled={!selected}
-              onClick={() => {
-                setNavigation(null);
-                setCapture(null);
-                report(
-                  store.execute(
-                    createScene(session.selection ?? undefined, true),
-                    true,
-                  ),
-                );
-              }}
-            >
-              Duplica scena
-            </button>
-            <button tabIndex={0} disabled={!selected} onClick={remove}>
-              Elimina scena
-            </button>
-          </div>
           <HierarchyTree store={store} session={session} />
           <AssetPanel
             store={store}
@@ -620,9 +656,7 @@ export function Studio({
             onBlobs={loadBlobs}
           />
           <p className="local-note">
-            Locale, sul tuo dispositivo.
-            <br />
-            Salva un JSON per conservare il lavoro.
+            Locale, sul tuo dispositivo. Salva un file per conservare il lavoro.
           </p>
         </details>
         <div className={`center-column ${layoutScene ? "is-layout" : ""}`}>
@@ -633,14 +667,15 @@ export function Studio({
               aria-label="Anteprima"
             >
               <div className="panel-heading">
-                <h2>
-                  Anteprima <span>PLAYER CONDIVISO</span>
-                </h2>
-                <span>{selected?.title ?? "Nessuna scena"}</span>
+                <h2>Anteprima</h2>
+                <span className="panel-context">
+                  {selected?.title ?? "Nessuna scena"}
+                </span>
                 <button
                   type="button"
                   tabIndex={0}
-                  className="layout-toggle"
+                  className="tool-button layout-toggle"
+                  data-tip="Disponi i contenuti della scena"
                   aria-pressed={layoutMode}
                   disabled={!selected}
                   onClick={() => {
@@ -655,6 +690,7 @@ export function Studio({
                     );
                   }}
                 >
+                  <Icon name="frame" />
                   Impagina
                 </button>
               </div>

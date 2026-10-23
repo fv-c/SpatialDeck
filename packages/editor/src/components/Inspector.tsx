@@ -8,10 +8,13 @@ export function Numeric({
   label,
   value,
   apply,
+  short,
 }: {
   label: string;
   value: number;
   apply: (value: number) => Result<void>;
+  /** Visible abbreviation; the accessible name stays the full label. */
+  short?: string;
 }) {
   const [draft, setDraft] = useState(String(value)),
     [error, setError] = useState("");
@@ -29,7 +32,7 @@ export function Numeric({
   }
   return (
     <label className="numeric" htmlFor={fieldId}>
-      {label}
+      <span className="numeric-label">{short ?? label}</span>
       <input
         aria-label={label}
         id={fieldId}
@@ -150,7 +153,7 @@ export function Inspector({
       />
       <fieldset>
         <legend>
-          Posizione <span>px CSS</span>
+          Posizione <span>px</span>
         </legend>
         <div className="numeric-row">
           {["X", "Y", "Z"].map((axis, i) => (
@@ -169,13 +172,14 @@ export function Inspector({
       </fieldset>
       <fieldset>
         <legend>
-          Rotazione <span>gradi · Rz Ry Rx</span>
+          Rotazione <span>° · Rz Ry Rx</span>
         </legend>
         <div className="numeric-row">
           {["Rotazione X", "Rotazione Y", "Rotazione Z"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-r${i}`}
               label={axis}
+              short={axis.slice(-1)}
               value={scene.rotation[i]!}
               apply={(value) => {
                 const rotation: [number, number, number] = [...scene.rotation];
@@ -199,6 +203,7 @@ export function Inspector({
             <Numeric
               key={`${scene.id}-s${i}`}
               label={axis}
+              short={i ? "Alt." : "Largh."}
               value={scene.size[i]!}
               apply={(value) => {
                 const size: [number, number] = [...scene.size];
