@@ -10,6 +10,7 @@ import type { AssetBlobs } from "@spatialdeck/player";
 import { serializeDocument, validateDocument } from "@spatialdeck/core";
 import type { Result, ProjectDocument } from "@spatialdeck/core";
 import {
+  convertToFlow,
   createScene,
   editImpact,
   deleteScene,
@@ -36,6 +37,9 @@ import type { NavigationSelection } from "./PathPanel.js";
 import type { Capture } from "./CameraTimeline.js";
 import { PlayerSurface } from "./PlayerSurface.js";
 import { AssetPanel } from "./AssetPanel.js";
+import { LayoutEditor } from "./LayoutEditor.js";
+import { LayoutPanel } from "./LayoutPanel.js";
+import { ThemePanel } from "./ThemePanel.js";
 export interface StudioProps {
   store?: EditorStore;
   repository?: RecoveryRepository;
@@ -84,6 +88,14 @@ export function Studio({
       null,
     ),
     [capture, setCapture] = useState<Capture | null>(null);
+  // Scene editor (Impagina): UI state only, never part of the document.
+  const [layoutMode, setLayoutMode] = useState(false),
+    [blockSelection, setBlockSelection] = useState<string[]>([]),
+    [grid, setGrid] = useState(0),
+    [announcement, setAnnouncement] = useState(""),
+    [previewHost, setPreviewHost] = useState<HTMLDivElement | null>(null),
+    [previewRevision, setPreviewRevision] = useState(0);
+  const previewUnsubscribe = useRef<(() => void) | null>(null);
   const openButton = useRef<HTMLButtonElement>(null);
   const undoButton = useRef<HTMLButtonElement>(null),
     redoButton = useRef<HTMLButtonElement>(null);
@@ -100,6 +112,25 @@ export function Studio({
   const selected = session.document.scenes.find(
     (s) => s.id === session.selection,
   );
+  const layoutScene = layoutMode && preview ? selected : undefined;
+  // Block selection belongs to one scene and drops blocks that no longer exist.
+  useEffect(() => setBlockSelection([]), [session.selection, layoutMode]);
+  useEffect(() => {
+    setBlockSelection((ids) => {
+      const kept = ids.filter((id) =>
+        selected?.blocks.some((b) => b.id === id),
+      );
+      return kept.length === ids.length ? ids : kept;
+    });
+  }, [selected]);
+  function previewPlayer(player: Player | null, present: boolean) {
+    onPlayer?.(player, present);
+    if (present) return;
+    previewUnsubscribe.current?.();
+    previewUnsubscribe.current = player
+      ? player.on("documentchange", () => setPreviewRevision((n) => n + 1))
+      : null;
+  }
   function report(result: Result<unknown>) {
     setError(
       result.ok ? "" : result.diagnostics.map((d) => d.message).join("; "),
@@ -387,7 +418,7 @@ export function Studio({
         <div className="brand">
           <span className="brand-mark">S↗</span>
           <span>
-            SpatialDeck <small>STUDIO / 0.4.1</small>
+            SpatialDeck <small>STUDIO / 0.5</small>
           </span>
         </div>
         <nav aria-label="Strumenti documento">
@@ -594,24 +625,64 @@ export function Studio({
             Salva un JSON per conservare il lavoro.
           </p>
         </details>
-        <div className="center-column">
+        <div className={`center-column ${layoutScene ? "is-layout" : ""}`}>
           <MapView store={store} session={session} />
           {preview && (
-            <section className="preview-panel" aria-label="Anteprima">
+            <section
+              className={`preview-panel ${layoutScene ? "is-layout" : ""}`}
+              aria-label="Anteprima"
+            >
               <div className="panel-heading">
                 <h2>
                   Anteprima <span>PLAYER CONDIVISO</span>
                 </h2>
                 <span>{selected?.title ?? "Nessuna scena"}</span>
+                <button
+                  type="button"
+                  tabIndex={0}
+                  className="layout-toggle"
+                  aria-pressed={layoutMode}
+                  disabled={!selected}
+                  onClick={() => {
+                    store.endDrag();
+                    setNavigation(null);
+                    setCapture(null);
+                    setLayoutMode(!layoutMode);
+                    setAnnouncement(
+                      layoutMode
+                        ? "Impaginazione chiusa."
+                        : "Impaginazione: scena inquadrata frontalmente.",
+                    );
+                  }}
+                >
+                  Impagina
+                </button>
               </div>
-              <PlayerSurface
-                document={session.document}
-                selection={session.selection}
-                navigation={navigation}
-                capture={capture}
-                blobs={blobs}
-                {...(onPlayer ? { onPlayer } : {})}
-              />
+              <div className="preview-stage">
+                <PlayerSurface
+                  document={session.document}
+                  selection={session.selection}
+                  navigation={layoutScene ? null : navigation}
+                  capture={layoutScene ? null : capture}
+                  blobs={blobs}
+                  layout={!!layoutScene}
+                  onHost={setPreviewHost}
+                  onPlayer={previewPlayer}
+                />
+                {layoutScene && (
+                  <LayoutEditor
+                    store={store}
+                    document={session.document}
+                    scene={layoutScene}
+                    host={previewHost}
+                    revision={previewRevision}
+                    selection={blockSelection}
+                    onSelect={setBlockSelection}
+                    grid={grid}
+                    announce={setAnnouncement}
+                  />
+                )}
+              </div>
             </section>
           )}
         </div>
@@ -619,6 +690,34 @@ export function Studio({
           <summary>
             Inspector <span>{selected ? "SCENA" : "VUOTO"}</span>
           </summary>
+          {layoutScene && (
+            <LayoutPanel
+              store={store}
+              document={session.document}
+              scene={layoutScene}
+              host={previewHost}
+              revision={previewRevision}
+              selection={blockSelection}
+              onSelect={setBlockSelection}
+              grid={grid}
+              onGrid={setGrid}
+              announcement={announcement}
+              announce={setAnnouncement}
+              onFlow={() =>
+                setDialog({
+                  title: "Tornare a flow?",
+                  body: `Le posizioni, le dimensioni, le rotazioni e i livelli di ${layoutScene.blocks.length} contenuti di “${layoutScene.title}” andranno persi; i contenuti tornano impilati nell’ordine di lettura. Annulla li ripristina.`,
+                  confirm: "Torna a flow",
+                  action: () => {
+                    const result = store.execute(convertToFlow(layoutScene.id));
+                    report(result);
+                    if (result.ok)
+                      setAnnouncement("Scena tornata a flow: frame rimossi.");
+                  },
+                })
+              }
+            />
+          )}
           <Inspector store={store} scene={selected} />
           <PathPanel
             store={store}
@@ -626,6 +725,7 @@ export function Studio({
             onNavigation={setNavigation}
             onCapture={setCapture}
           />
+          <ThemePanel store={store} document={session.document} />
         </details>
       </div>
       <footer className="statusbar">

@@ -155,7 +155,7 @@ describe("IndexedDB versionchange and blocked upgrades", () => {
       /versione più recente/,
     );
     expect(warnings.at(-1)).toMatch(/versione più recente/);
-    expect(doc.schemaVersion).toBe("1.2.0");
+    expect(doc.schemaVersion).toBe("1.3.0");
     await repo.close();
   });
   it("database deletion from another tab closes and transparently reopens", async () => {

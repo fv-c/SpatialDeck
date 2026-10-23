@@ -20,6 +20,8 @@ export function PlayerSurface({
   navigation = null,
   capture = null,
   blobs,
+  layout = false,
+  onHost,
 }: {
   document: ProjectDocument;
   selection: string | null;
@@ -28,12 +30,17 @@ export function PlayerSurface({
   capture?: Capture | null;
   onPlayer?: (player: Player | null, present: boolean) => void;
   blobs?: AssetBlobs;
+  /** Scene editor: the selected scene is always framed frontally with resolveSceneCamera. */
+  layout?: boolean;
+  onHost?: (host: HTMLDivElement | null) => void;
 }) {
   const host = useRef<HTMLDivElement>(null),
     player = useRef<Player | null>(null);
   const initial = useRef(document),
-    callback = useRef(onPlayer);
+    callback = useRef(onPlayer),
+    hostCallback = useRef(onHost);
   callback.current = onPlayer;
+  hostCallback.current = onHost;
   const assets = useRef(
     createAssetResolver(document.assets, blobs ?? new Map()),
   );
@@ -58,7 +65,9 @@ export function PlayerSurface({
           .join("; ");
     });
     callback.current?.(instance, present);
+    hostCallback.current?.(host.current);
     return () => {
+      hostCallback.current?.(null);
       callback.current?.(null, present);
       instance.destroy();
       builtins.plugins.destroy();
@@ -82,9 +91,10 @@ export function PlayerSurface({
           void instance
             .goTo({ pathId: path.id, nodeId: node.id }, { durationMs: 0 })
             .then(() => {
-              const pose = node.camera
-                ? success(cameraPose(node.camera))
-                : resolveSceneCamera(document, node.sceneId);
+              const pose =
+                node.camera && !layout
+                  ? success(cameraPose(node.camera))
+                  : resolveSceneCamera(document, node.sceneId);
               if (pose.ok) instance.setCamera(pose.value);
             });
         else if (selection) {
@@ -94,16 +104,16 @@ export function PlayerSurface({
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [document, selection, present, navigation, blobs]);
+  }, [document, selection, present, navigation, blobs, layout]);
   useEffect(() => {
-    if (!present) {
+    if (!present && !layout) {
       if (capture)
         player.current?.setCamera(
           sampleTransition(capture.plan, capture.elapsedMs).camera,
         );
       else player.current?.setView("scene");
     }
-  }, [capture, present]);
+  }, [capture, present, layout]);
   return (
     <div
       ref={host}

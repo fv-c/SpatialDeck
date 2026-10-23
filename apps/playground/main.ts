@@ -1,9 +1,12 @@
 import { createPlayer } from "@spatialdeck/player";
+import "@spatialdeck/player/fonts.css";
 import legacy from "../../examples/core-three-scenes/project.json";
 import structure from "../../examples/structure-branching/project.json";
 import "./style.css";
 if (location.pathname.startsWith("/content"))
   await (await import("./content.js")).contentDemo();
+else if (location.pathname.startsWith("/layout"))
+  await (await import("./layout.js")).layoutDemo();
 else await legacyDemo();
 async function legacyDemo() {
   const structured = location.pathname.startsWith("/structure");

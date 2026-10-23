@@ -2,6 +2,7 @@ import {
   NavigationMachine,
   diagnostic,
   failure,
+  frameMatrix,
   getWorldMatrix,
   validateDocument,
   viewMatrix,
@@ -11,6 +12,7 @@ import type {
   Block,
   CameraPose,
   Diagnostic,
+  FontId,
   NavigationOptions,
   NavigationResult,
   PlayerEvents,
@@ -72,6 +74,10 @@ interface BlockView {
   key: string;
   host: HTMLElement;
   mount: ContentMount;
+  /** Frame and style tokens last applied to the host; layout never remounts a renderer. */
+  layout: string;
+  /** True while the host carries frame or colour properties. */
+  styled: boolean;
   /** An asset failed to resolve: the next document update tries the block again. */
   unresolved(): boolean;
 }
@@ -80,9 +86,37 @@ interface SceneView {
   content: HTMLElement;
   title: HTMLElement;
   transform: string;
+  appearance: string;
   blocks: Map<string, BlockView>;
 }
 const assetFields = ["assetId", "posterAssetId", "captionsAssetId"] as const;
+/** Allowlisted font stacks: the document names a FontId, never a CSS value. */
+const fontStacks: Readonly<Record<FontId, string>> = {
+  "system-sans": "system-ui, sans-serif",
+  "system-serif": 'ui-serif, Georgia, "Times New Roman", serif',
+  "system-mono": 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
+  "atkinson-hyperlegible":
+    '"SpatialDeck Atkinson Hyperlegible", system-ui, sans-serif',
+};
+const hexColor = /^#[0-9a-f]{6}$/;
+/** Renderers see content only: frame and style are applied by the player to the host. */
+const contentBlock = (block: Block): Block => {
+  if (!block.frame && !block.style) return block;
+  const content = { ...block };
+  delete content.frame;
+  delete content.style;
+  return content;
+};
+const styleClasses = (block: Block) => {
+  const style = block.style ?? {};
+  return [
+    ...(block.frame ? ["sd-framed"] : []),
+    ...(style.align ? [`sd-align-${style.align}`] : []),
+    ...(style.verticalAlign ? [`sd-valign-${style.verticalAlign}`] : []),
+    ...(style.size ? [`sd-size-${style.size}`] : []),
+  ];
+};
+const tokenClass = /^sd-(?:framed|align-|valign-|size-)/;
 export function createPlayer(options: PlayerOptions = {}): Player {
   const instanceId = Array.from(
     globalThis.crypto.getRandomValues(new Uint32Array(4)),
@@ -193,7 +227,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       Record<(typeof assetFields)[number], string>
     >;
     return JSON.stringify([
-      block,
+      contentBlock(block),
       assetFields.flatMap((field) => {
         const id = data[field];
         return id
@@ -241,7 +275,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     const mount = new ContentMount(
       blockHost,
       {
-        block,
+        block: contentBlock(block),
         document: d,
         instanceId: `${instanceId}-${scene.id}-${block.id}`,
         active: false,
@@ -278,7 +312,61 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       options.registry,
     );
     layout++;
-    return { key, host: blockHost, mount, unresolved: () => unresolved };
+    return {
+      key,
+      host: blockHost,
+      mount,
+      layout: "",
+      styled: false,
+      unresolved: () => unresolved,
+    };
+  };
+  const paletteColor = (d: ProjectDocument, id: string | null | undefined) => {
+    const value = d.theme.palette.find((p) => p.id === id)?.value;
+    return value && hexColor.test(value) ? value : null;
+  };
+  /** Theme tokens become custom properties set through CSSOM with validated values. */
+  const applyTheme = (d: ProjectDocument) => {
+    if (!root) return;
+    const { colors, fonts, typeScale } = d.theme;
+    const properties: Array<[string, string | null]> = [
+      ["--sd-text", paletteColor(d, colors.text)],
+      ["--sd-background", paletteColor(d, colors.background)],
+      ["--sd-accent", paletteColor(d, colors.accent)],
+      ["--sd-backdrop", paletteColor(d, colors.backdrop)],
+      ["--sd-font-body", fontStacks[fonts.body] ?? null],
+      ["--sd-font-heading", fontStacks[fonts.heading] ?? null],
+      ["--sd-size-body", `${typeScale.body}px`],
+      ["--sd-size-title", `${typeScale.title}px`],
+    ];
+    for (const [name, value] of properties)
+      if (value === null) root.style.removeProperty(name);
+      else if (root.style.getPropertyValue(name) !== value)
+        root.style.setProperty(name, value);
+  };
+  /** Frame and style tokens: CSSOM values from the core frame matrix, classes from an allowlist. */
+  const placeBlock = (d: ProjectDocument, view: BlockView, block: Block) => {
+    const color = paletteColor(d, block.style?.color);
+    const key = JSON.stringify([
+      block.frame ?? null,
+      block.style ?? null,
+      color,
+    ]);
+    if (key === view.layout) return;
+    view.layout = key;
+    const host = view.host;
+    for (const name of [...host.classList])
+      if (tokenClass.test(name)) host.classList.remove(name);
+    host.classList.add(...styleClasses(block));
+    const f = block.frame;
+    // Flow blocks without tokens keep the 1.2.0 DOM: no style attribute at all.
+    if (!f && !color && !view.styled) return;
+    view.styled = !!f || !!color;
+    host.style.width = f ? `${f.width}px` : "";
+    host.style.height = f ? `${f.height}px` : "";
+    host.style.transform = f ? `matrix(${frameMatrix(f).join(",")})` : "";
+    host.style.zIndex = f ? String(f.z) : "";
+    host.style.color = color ?? "";
   };
   const removeBlock = (view: BlockView) => {
     view.mount.destroy();
@@ -289,6 +377,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
   const syncScenes = () => {
     if (!doc || !world || !viewport) return;
     const d = doc;
+    applyTheme(d);
     if (mediaButton)
       mediaButton.hidden = !d.scenes.some((s) =>
         s.blocks.some((b) => b.type === "audio" || b.type === "video"),
@@ -312,9 +401,19 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         const content = element("article", "sd-content");
         const title = element("h2");
         title.tabIndex = -1;
+        title.id = `sd-title-${instanceId}-${scene.id}`;
+        // A hidden title stays the accessible name of the scene.
+        content.setAttribute("aria-labelledby", title.id);
         content.append(title);
         wrapper.append(content);
-        view = { wrapper, content, title, transform: "", blocks: new Map() };
+        view = {
+          wrapper,
+          content,
+          title,
+          transform: "",
+          appearance: "",
+          blocks: new Map(),
+        };
         scenes.set(scene.id, view);
         layout++;
       }
@@ -329,6 +428,35 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       view.content.style.height = `${scene.size[1]}px`;
       if (view.title.textContent !== scene.title)
         view.title.textContent = scene.title;
+      const background = paletteColor(d, scene.appearance.background);
+      const appearance = JSON.stringify([
+        scene.layout,
+        scene.appearance.variant,
+        scene.appearance.titleVisible,
+        background,
+      ]);
+      if (appearance !== view.appearance) {
+        view.appearance = appearance;
+        view.content.classList.toggle(
+          "sd-layout-canvas",
+          scene.layout === "canvas",
+        );
+        view.content.classList.toggle(
+          "sd-variant-plain",
+          scene.appearance.variant === "plain",
+        );
+        view.title.classList.toggle(
+          "sd-title-hidden",
+          !scene.appearance.titleVisible,
+        );
+        // Without a visible title, focus lands on the labelled scene itself.
+        if (scene.appearance.titleVisible)
+          view.content.removeAttribute("tabindex");
+        else view.content.tabIndex = -1;
+        if (background)
+          view.content.style.setProperty("--sd-scene-background", background);
+        else view.content.style.removeProperty("--sd-scene-background");
+      }
       const keep = new Set(scene.blocks.map((b) => b.id));
       for (const [id, block] of view.blocks)
         if (!keep.has(id)) {
@@ -350,6 +478,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
           current = createBlock(d, scene, block, key);
           view.blocks.set(block.id, current);
         } else current.mount.refresh(d);
+        placeBlock(d, current, block);
         if (before.nextSibling !== current.host)
           view.content.insertBefore(current.host, before.nextSibling);
         before = current.host;
@@ -737,8 +866,13 @@ export function createPlayer(options: PlayerOptions = {}): Player {
             outline
               ?.querySelector<HTMLButtonElement>('[aria-current="true"]')
               ?.focus({ preventScroll: true });
-          else if (state().sceneId)
-            scenes.get(state().sceneId!)?.title.focus({ preventScroll: true });
+          else if (state().sceneId) {
+            const view = scenes.get(state().sceneId!);
+            const target = view?.title.classList.contains("sd-title-hidden")
+              ? view.content
+              : view?.title;
+            target?.focus({ preventScroll: true });
+          }
         }
       });
       const applyMotion = () =>

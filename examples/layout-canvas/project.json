@@ -1,0 +1,354 @@
+{
+  "schemaVersion": "1.3.0",
+  "id": "layout-canvas",
+  "metadata": {
+    "title": "Impaginazione nella scena",
+    "language": "it",
+    "author": "SpatialDeck example",
+    "description": "Esempio 0.5: scene canvas con contenuti affiancati, sovrapposti e ruotati, titolo nascosto, tema non predefinito e ordine di lettura diverso dall'ordine visivo."
+  },
+  "settings": {
+    "viewport": {
+      "width": 1280,
+      "height": 720,
+      "perspective": 1000
+    },
+    "presentation": {
+      "fit": "contain",
+      "motion": "system",
+      "defaultTransition": {
+        "durationMs": 600,
+        "easing": "ease-in-out"
+      }
+    }
+  },
+  "requiredCapabilities": ["linear", "structure", "blocks", "layout"],
+  "theme": {
+    "palette": [
+      {
+        "id": "ink",
+        "value": "#1b1f3b"
+      },
+      {
+        "id": "paper",
+        "value": "#fffaf0"
+      },
+      {
+        "id": "rust",
+        "value": "#9a3412"
+      },
+      {
+        "id": "orange",
+        "value": "#f97316"
+      },
+      {
+        "id": "night",
+        "value": "#1e293b"
+      },
+      {
+        "id": "sky",
+        "value": "#dbeafe"
+      }
+    ],
+    "colors": {
+      "text": "ink",
+      "background": "paper",
+      "accent": "orange",
+      "backdrop": "night"
+    },
+    "fonts": {
+      "body": "atkinson-hyperlegible",
+      "heading": "system-serif"
+    },
+    "typeScale": {
+      "body": 26,
+      "title": 52
+    }
+  },
+  "scenes": [
+    {
+      "id": "cover",
+      "title": "Spazi che si leggono",
+      "position": [0, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [1200, 675],
+      "visible": true,
+      "parentId": null,
+      "layout": "canvas",
+      "appearance": {
+        "variant": "card",
+        "background": null,
+        "titleVisible": false
+      },
+      "blocks": [
+        {
+          "id": "headline",
+          "type": "text",
+          "data": {
+            "text": "Spazi che si leggono"
+          },
+          "frame": {
+            "x": 640,
+            "y": 80,
+            "width": 500,
+            "height": 190,
+            "rotation": 0,
+            "z": 2
+          },
+          "style": {
+            "size": "xxl",
+            "color": "rust"
+          }
+        },
+        {
+          "id": "summary",
+          "type": "markdown",
+          "data": {
+            "source": "Immagine e testo **affiancati**. L’ordine di lettura segue l’elenco dei contenuti, non la posizione né il livello."
+          },
+          "frame": {
+            "x": 640,
+            "y": 290,
+            "width": 500,
+            "height": 230,
+            "rotation": 0,
+            "z": 1
+          }
+        },
+        {
+          "id": "picture",
+          "type": "image",
+          "data": {
+            "assetId": "skyline",
+            "alt": "Illustrazione: tre volumi colorati davanti a un sole, su un orizzonte chiaro",
+            "fit": "cover"
+          },
+          "frame": {
+            "x": 60,
+            "y": 70,
+            "width": 520,
+            "height": 540,
+            "rotation": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "stamp",
+          "type": "svg",
+          "data": {
+            "source": "<svg viewBox=\"0 0 100 100\"><polygon points=\"50.0,2.0 58.8,17.2 74.0,8.4 74.0,26.0 91.6,26.0 82.8,41.2 98.0,50.0 82.8,58.8 91.6,74.0 74.0,74.0 74.0,91.6 58.8,82.8 50.0,98.0 41.2,82.8 26.0,91.6 26.0,74.0 8.4,74.0 17.2,58.8 2.0,50.0 17.2,41.2 8.4,26.0 26.0,26.0 26.0,8.4 41.2,17.2\" fill=\"#f97316\"/><circle cx=\"50\" cy=\"50\" r=\"22\" fill=\"#fffaf0\"/><circle cx=\"50\" cy=\"50\" r=\"12\" fill=\"#9a3412\"/></svg>",
+            "alt": "Timbro decorativo a stella"
+          },
+          "frame": {
+            "x": 470,
+            "y": 30,
+            "width": 150,
+            "height": 150,
+            "rotation": 12,
+            "z": 4
+          }
+        },
+        {
+          "id": "note",
+          "type": "text",
+          "data": {
+            "text": "Il testo ruotato resta selezionabile e leggibile dagli screen reader."
+          },
+          "frame": {
+            "x": 640,
+            "y": 540,
+            "width": 500,
+            "height": 100,
+            "rotation": -3,
+            "z": 3
+          },
+          "style": {
+            "align": "center",
+            "verticalAlign": "center",
+            "size": "s",
+            "color": "rust"
+          }
+        }
+      ],
+      "notes": "Il titolo è nascosto alla vista ma resta il nome accessibile della scena e compare nella vista testuale.",
+      "extensions": {}
+    },
+    {
+      "id": "context",
+      "title": "Flusso con aspetto semplice",
+      "position": [1500, 0, 0],
+      "rotation": [0, 0, 0],
+      "scale": 1,
+      "size": [900, 506],
+      "visible": true,
+      "parentId": null,
+      "layout": "flow",
+      "appearance": {
+        "variant": "plain",
+        "background": "sky",
+        "titleVisible": true
+      },
+      "blocks": [
+        {
+          "id": "flow-1",
+          "type": "markdown",
+          "data": {
+            "source": "Le scene **flow** restano impilate nell’ordine di lettura; tema e stile a token valgono anche qui."
+          },
+          "style": {
+            "align": "center"
+          }
+        },
+        {
+          "id": "flow-2",
+          "type": "text",
+          "data": {
+            "text": "Sfondo dalla palette, nessun bordo, titolo visibile."
+          },
+          "style": {
+            "size": "s",
+            "align": "center"
+          }
+        }
+      ],
+      "notes": "",
+      "extensions": {}
+    },
+    {
+      "id": "details",
+      "title": "Colonne e collegamenti",
+      "position": [0, 900, -200],
+      "rotation": [10, -15, 4],
+      "scale": 0.8,
+      "size": [1000, 600],
+      "visible": true,
+      "parentId": "cover",
+      "layout": "canvas",
+      "appearance": {
+        "variant": "card",
+        "background": null,
+        "titleVisible": true
+      },
+      "blocks": [
+        {
+          "id": "column-a",
+          "type": "text",
+          "data": {
+            "text": "Prima colonna: il frame fissa posizione e dimensione; il testo che eccede resta tagliato e Studio lo segnala."
+          },
+          "frame": {
+            "x": 60,
+            "y": 150,
+            "width": 420,
+            "height": 300,
+            "rotation": 0,
+            "z": 0
+          },
+          "style": {
+            "align": "justify"
+          }
+        },
+        {
+          "id": "column-b",
+          "type": "text",
+          "data": {
+            "text": "Seconda colonna, allineata in basso a destra."
+          },
+          "frame": {
+            "x": 520,
+            "y": 150,
+            "width": 420,
+            "height": 300,
+            "rotation": 0,
+            "z": 0
+          },
+          "style": {
+            "align": "end",
+            "verticalAlign": "end"
+          }
+        },
+        {
+          "id": "back",
+          "type": "link",
+          "data": {
+            "label": "Torna alla copertina",
+            "target": {
+              "pathId": "main",
+              "nodeId": "n1"
+            }
+          },
+          "frame": {
+            "x": 60,
+            "y": 480,
+            "width": 420,
+            "height": 80,
+            "rotation": 0,
+            "z": 1
+          }
+        }
+      ],
+      "notes": "Scena figlia della copertina, ruotata: i frame restano geometria 2D del rettangolo contenuti.",
+      "extensions": {}
+    }
+  ],
+  "cameraTracks": [],
+  "cues": [],
+  "assets": [
+    {
+      "id": "skyline",
+      "path": "assets/skyline.svg",
+      "mime": "image/svg+xml",
+      "byteLength": 508,
+      "sha256": "ddcc1f4afc51f8dc11cb703ffe68bcd3da5ec9e13ff29dfa96bbc1d9079f0a54"
+    }
+  ],
+  "paths": [
+    {
+      "id": "main",
+      "name": "Principale",
+      "startNodeId": "n1",
+      "nodes": [
+        {
+          "id": "n1",
+          "sceneId": "cover",
+          "holdMs": 0
+        },
+        {
+          "id": "n2",
+          "sceneId": "context",
+          "holdMs": 0
+        },
+        {
+          "id": "n3",
+          "sceneId": "details",
+          "holdMs": 0
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "n1",
+          "to": "n2",
+          "label": "",
+          "transition": {
+            "durationMs": 700,
+            "easing": "ease-in-out"
+          }
+        },
+        {
+          "id": "e2",
+          "from": "n2",
+          "to": "n3",
+          "label": "",
+          "transition": {
+            "durationMs": 700,
+            "easing": "ease-in-out"
+          }
+        }
+      ]
+    }
+  ],
+  "defaultPathId": "main",
+  "extensions": {}
+}

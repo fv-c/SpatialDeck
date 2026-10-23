@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { failure, success } from "@spatialdeck/core";
 import type { Block, Scene, JsonValue } from "@spatialdeck/core";
-import { editScene, randomId } from "../commands/index.js";
+import { defaultFrame, editScene, randomId } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { TextField } from "./Inspector.js";
 import { sampleInspector } from "@spatialdeck/plugins/sample";
@@ -83,7 +83,13 @@ export function ContentPanel({
     };
     const result = edit([
       ...scene.blocks,
-      { id: randomId(), type: kind, data: defaults[kind] } as Block,
+      {
+        id: randomId(),
+        type: kind,
+        data: defaults[kind],
+        // A canvas scene requires a frame for every block.
+        ...(scene.layout === "canvas" ? { frame: defaultFrame(scene) } : {}),
+      } as Block,
     ]);
     setError(
       result.ok ? "" : result.diagnostics.map((d) => d.message).join("; "),

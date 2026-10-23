@@ -6,6 +6,7 @@ import {
   emptyProject,
 } from "@spatialdeck/editor";
 import type { Player } from "@spatialdeck/player";
+import "@spatialdeck/player/fonts.css";
 const store = new EditorStore(emptyProject()),
   repository = new RecoveryRepository();
 // Embedding/debug API, like the vanilla playground; no second document model.

@@ -11,6 +11,11 @@ export default defineConfig({
         "../../packages/core/src/index.ts",
         import.meta.url,
       ).pathname,
+      // Listed before the package entry, which would otherwise match as a prefix.
+      "@spatialdeck/player/fonts.css": new URL(
+        "../../packages/player/src/fonts.css",
+        import.meta.url,
+      ).pathname,
       "@spatialdeck/player": new URL(
         "../../packages/player/src/browser.ts",
         import.meta.url,

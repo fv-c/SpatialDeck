@@ -1,14 +1,22 @@
 import {
+  clampFrame,
+  defaultAppearance,
+  defaultTheme,
   failure,
   success,
   reparentScene,
   updateCapabilities,
 } from "@spatialdeck/core";
 import type {
+  Block,
+  BlockStyle,
+  Frame,
   ProjectDocument,
   Result,
   Scene,
+  SceneAppearance,
   ScenePath,
+  Theme,
 } from "@spatialdeck/core";
 export type DocumentEdit = (
   document: ProjectDocument,
@@ -26,7 +34,7 @@ export function randomId(): string {
 const id = randomId;
 export function emptyProject(): ProjectDocument {
   return {
-    schemaVersion: "1.2.0",
+    schemaVersion: "1.3.0",
     id: id(),
     metadata: { title: "Senza titolo", language: "it" },
     settings: {
@@ -45,6 +53,7 @@ export function emptyProject(): ProjectDocument {
     paths: [],
     defaultPathId: null,
     extensions: {},
+    theme: defaultTheme(),
   };
 }
 function mainPath(document: ProjectDocument): Result<ScenePath> {
@@ -163,6 +172,8 @@ export function createScene(afterId?: string, duplicate = false): DocumentEdit {
             ],
             notes: "",
             extensions: {},
+            layout: "flow",
+            appearance: defaultAppearance(),
           };
     const index = source
       ? document.scenes.indexOf(source) + 1
@@ -409,4 +420,135 @@ export function editImpact(
     document: next,
     description: `${document.scenes.length - next.scenes.length} scene, ${document.paths.length - next.paths.length} percorsi, ${nodes} visite, ${edges} connessioni e ${document.cues.length - next.cues.length} cue rimossi; ${parents} figli ricollocati conservando la posa nel mondo. Le visite non più raggiungibili vengono rimosse. Annulla ripristina tutti i dati.`,
   });
+}
+
+/** Layout commands: tokens and frames only; frame math lives in the core. */
+function sceneById(document: ProjectDocument, sceneId: string) {
+  return document.scenes.find((s) => s.id === sceneId);
+}
+/** Initial frame of a block added to a canvas scene: centred, above the others. */
+export function defaultFrame(scene: Scene): Frame {
+  const width = Math.min(400, scene.size[0]),
+    height = Math.min(160, scene.size[1]);
+  const top = Math.max(-1, ...scene.blocks.map((b) => b.frame?.z ?? 0));
+  return clampFrame(
+    {
+      x: (scene.size[0] - width) / 2,
+      y: (scene.size[1] - height) / 2,
+      width,
+      height,
+      rotation: 0,
+      z: Math.min(1000, top + 1),
+    },
+    scene.size,
+  );
+}
+export function setFrames(
+  sceneId: string,
+  frames: Readonly<Record<string, Frame>>,
+): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (scene.layout !== "canvas")
+      return failure("LAYOUT_FLOW", "La scena non è in modalità canvas.");
+    for (const [id, frame] of Object.entries(frames)) {
+      const block = scene.blocks.find((b) => b.id === id);
+      if (!block) return failure("SELECTION", "Contenuto assente.");
+      block.frame = structuredClone(frame);
+    }
+    return success(document);
+  };
+}
+/** Applies the patch to every listed block; tokens set to undefined are removed. */
+export function setBlockStyle(
+  sceneId: string,
+  blockIds: readonly string[],
+  patch: Readonly<Partial<Record<keyof BlockStyle, string | undefined>>>,
+): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    for (const id of blockIds) {
+      const block = scene.blocks.find((b) => b.id === id);
+      if (!block) return failure("SELECTION", "Contenuto assente.");
+      const style: Record<string, string | undefined> = {
+        ...block.style,
+        ...patch,
+      };
+      for (const key of Object.keys(style))
+        if (style[key] === undefined) delete style[key];
+      if (Object.keys(style).length) block.style = style as BlockStyle;
+      else delete block.style;
+    }
+    return success(document);
+  };
+}
+export function setAppearance(
+  sceneId: string,
+  patch: Partial<SceneAppearance>,
+): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    scene.appearance = { ...scene.appearance, ...structuredClone(patch) };
+    return success(document);
+  };
+}
+/** One command: canvas layout with a frame for every block, measured by the caller. */
+export function convertToCanvas(
+  sceneId: string,
+  frames: Readonly<Record<string, Frame>>,
+): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (scene.layout === "canvas")
+      return failure("LAYOUT_CANVAS", "La scena è già in modalità canvas.");
+    for (const block of scene.blocks) {
+      const frame = frames[block.id];
+      if (!frame)
+        return failure(
+          "FRAME_REQUIRED",
+          "Manca la misura di un contenuto: riprova con l’anteprima visibile.",
+        );
+      block.frame = clampFrame(structuredClone(frame), scene.size);
+    }
+    scene.layout = "canvas";
+    return success(document);
+  };
+}
+/** Removes every frame: positions, sizes, rotations and levels are lost (undo restores them). */
+export function convertToFlow(sceneId: string): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    scene.layout = "flow";
+    for (const block of scene.blocks) delete block.frame;
+    return success(document);
+  };
+}
+/** Reading order is the array order: moving a block never changes its frame or z. */
+export function moveInReadingOrder(
+  sceneId: string,
+  blockId: string,
+  delta: number,
+): DocumentEdit {
+  return (document) => {
+    const scene = sceneById(document, sceneId);
+    if (!scene) return failure("SELECTION", "Scena assente.");
+    const from = scene.blocks.findIndex((b) => b.id === blockId),
+      to = from + delta;
+    if (from < 0) return failure("SELECTION", "Contenuto assente.");
+    if (to < 0 || to >= scene.blocks.length) return success(document);
+    const [block] = scene.blocks.splice(from, 1) as [Block];
+    scene.blocks.splice(to, 0, block);
+    return success(document);
+  };
+}
+export function editTheme(change: (theme: Theme) => void): DocumentEdit {
+  return (document) => {
+    change(document.theme);
+    return success(document);
+  };
 }

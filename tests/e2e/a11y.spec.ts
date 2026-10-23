@@ -84,7 +84,7 @@ async function audit(
     ),
   ).toEqual([]);
 }
-for (const route of ["/core", "/structure", "/content"])
+for (const route of ["/core", "/structure", "/content", "/layout"])
   test(`axe: playground ${route} has no serious or critical violations`, async ({
     page,
   }, info) => {
@@ -127,4 +127,24 @@ test("axe: Studio empty, with content and dialogs has no serious or critical vio
   await page.getByRole("button", { name: "Presenta ↗" }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   await audit(page, "studio-presentation", info);
+});
+test("axe: Studio scene editor, its panels and the theme have no serious or critical violations", async ({
+  page,
+}, info) => {
+  await page.goto(studioURL);
+  await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
+  await page
+    .getByLabel("File progetto JSON")
+    .setInputFiles("examples/layout-canvas/layout-canvas.spatialdeck");
+  await expect(page.getByLabel("Titolo progetto")).toHaveValue(
+    "Impaginazione nella scena",
+  );
+  await page.getByRole("button", { name: "Impagina", exact: true }).click();
+  await expect(page.locator("[data-layout-block]")).toHaveCount(5);
+  await page.locator('[data-layout-block="summary"]').focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".layout-handle")).toHaveCount(9);
+  await audit(page, "studio-layout", info);
+  await page.locator("summary", { hasText: "Tema del documento" }).click();
+  await audit(page, "studio-theme", info);
 });

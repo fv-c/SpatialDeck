@@ -1,11 +1,14 @@
 import {
+  validateBlocksSchema,
   validateCurrent,
   validateLegacy,
   validateStructureSchema,
 } from "./validator.js";
 import { validateStructure } from "./structure.js";
 import { validateContents } from "./contents.js";
+import { defaultAppearance, defaultTheme, validateLayout } from "./layout.js";
 export { usesBlocks } from "./contents.js";
+export { defaultAppearance, defaultTheme, usesLayout } from "./layout.js";
 export { updateCapabilities, usesStructure } from "./structure.js";
 import type { ProjectDocument } from "./types.js";
 export * from "./types.js";
@@ -38,17 +41,33 @@ export const success = <T>(value: T): Result<T> => ({
   diagnostics: [],
 });
 const limit = 10 * 1024 * 1024;
+/** Shape error found before Ajv, with the JSON Pointer of the offending value. */
+class JsonShapeError extends Error {
+  constructor(
+    message: string,
+    readonly pointer: string,
+    readonly code = "INVALID_JSON",
+  ) {
+    super(message);
+  }
+}
+const token = (key: string) => key.replace(/~/g, "~0").replace(/\//g, "~1");
 // Reject non-JSON objects/cycles before Ajv; do not invoke getters or toJSON.
 function inspect(
   value: unknown,
   depth = 0,
   ancestors = new Set<object>(),
   budget = { nodes: 0 },
+  pointer = "",
 ): void {
   if (++budget.nodes > limit) throw new Error("JSON exceeds 10 MiB");
-  if (depth > 64) throw new Error("JSON depth exceeds 64");
+  if (depth > 64) throw new JsonShapeError("JSON depth exceeds 64", pointer);
   if (typeof value === "number" && !Number.isFinite(value))
-    throw new Error("Numbers must be finite");
+    throw new JsonShapeError(
+      "Numbers must be finite",
+      pointer,
+      "NON_FINITE_NUMBER",
+    );
   if (
     value === null ||
     typeof value === "boolean" ||
@@ -87,7 +106,13 @@ function inspect(
       throw new Error("Accessors are not JSON");
     if (new TextEncoder().encode(key).length > limit)
       throw new Error("JSON exceeds 10 MiB");
-    inspect(descriptor.value, depth + 1, ancestors, budget);
+    inspect(
+      descriptor.value,
+      depth + 1,
+      ancestors,
+      budget,
+      `${pointer}/${token(key)}`,
+    );
   }
   ancestors.delete(value);
 }
@@ -125,7 +150,9 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     if (new TextEncoder().encode(JSON.stringify(data)).length > limit)
       return failure("JSON_LIMIT", "JSON exceeds 10 MiB");
   } catch (error) {
-    return failure("INVALID_JSON", String(error));
+    return error instanceof JsonShapeError
+      ? failure(error.code, String(error), error.pointer)
+      : failure("INVALID_JSON", String(error));
   }
   if (
     data &&
@@ -133,11 +160,12 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     "schemaVersion" in data &&
     data.schemaVersion !== "1.0.0" &&
     data.schemaVersion !== "1.1.0" &&
-    data.schemaVersion !== "1.2.0"
+    data.schemaVersion !== "1.2.0" &&
+    data.schemaVersion !== "1.3.0"
   )
     return failure(
       "UNSUPPORTED_VERSION",
-      "Supported schemas: 1.0.0, 1.1.0 and 1.2.0",
+      "Supported schemas: 1.0.0, 1.1.0, 1.2.0 and 1.3.0",
       "/schemaVersion",
     );
   const legacy =
@@ -150,11 +178,18 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
     typeof data === "object" &&
     "schemaVersion" in data &&
     data.schemaVersion === "1.1.0";
+  const blocks =
+    !!data &&
+    typeof data === "object" &&
+    "schemaVersion" in data &&
+    data.schemaVersion === "1.2.0";
   const validate = legacy
     ? validateLegacy
     : previous
       ? validateStructureSchema
-      : validateCurrent;
+      : blocks
+        ? validateBlocksSchema
+        : validateCurrent;
   if (!validate(data))
     return {
       ok: false,
@@ -176,9 +211,15 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
   }
   const doc = data as ProjectDocument,
     diagnostics: Diagnostic[] = [];
-  if (legacy || previous) {
-    doc.schemaVersion = "1.2.0";
-    doc.pluginSettings = {};
+  if (legacy || previous) doc.pluginSettings = {};
+  // 1.2.0 -> 1.3.0: the default theme and flow/card scenes reproduce the 1.2.0 rendering.
+  if (legacy || previous || blocks) {
+    doc.schemaVersion = "1.3.0";
+    doc.theme = defaultTheme();
+    doc.scenes.forEach((s) => {
+      s.layout = "flow";
+      s.appearance = defaultAppearance();
+    });
     if (!validateCurrent(doc))
       return failure(
         "MIGRATION_INVALID",
@@ -283,6 +324,7 @@ export function validateDocument(input: unknown): Result<ProjectDocument> {
   });
   diagnostics.push(...validateStructure(doc));
   diagnostics.push(...validateContents(doc));
+  diagnostics.push(...validateLayout(doc));
   return diagnostics.length
     ? { ok: false, diagnostics }
     : success(structuredClone(doc));

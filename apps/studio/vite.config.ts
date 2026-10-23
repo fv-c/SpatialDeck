@@ -35,6 +35,10 @@ export default defineConfig({
         find: "@spatialdeck/player/style.css",
         replacement: source("../../packages/player/src/style.css"),
       },
+      {
+        find: "@spatialdeck/player/fonts.css",
+        replacement: source("../../packages/player/src/fonts.css"),
+      },
     ],
   },
   build: {
