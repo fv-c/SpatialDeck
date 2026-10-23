@@ -140,7 +140,7 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 | SPDX e licenza dei pacchetti non decisi, campo `license` assente | P0 | G0: `GPL-3.0-or-later`; 0.6 applica |
 | Codice di terze parti copiato nei `dist` senza note di licenza e insieme dichiarato come dipendenza (sanitizer non aggiornabile dai consumer) | P0 | 0.6 |
 | Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0: scope del maintainer; 0.6 verifica la proprietà e completa i manifest |
-| Nessun posizionamento, dimensione o stile dei contenuti dentro la scena | P1 prodotto | 0.5 |
+| Nessun posizionamento, dimensione o stile dei contenuti dentro la scena | P1 prodotto | 0.5 — **chiusa** |
 | Firme asset: SVG con prologo/commento/DOCTYPE rifiutati; testo UTF-8 troncato al byte 4096 rifiutato | P1 | 0.4.1 — **chiusa** |
 | Digest SHA-256 dipendente da `crypto.subtle`: asset non caricabili su HTTP non-localhost | P1 | 0.4.1 — **chiusa** |
 | Preview Studio che ricostruisce tutti i renderer e ricalcola i digest a ogni modifica; autosave che ricalcola e riscrive tutti gli asset | P1 | 0.4.1 — **chiusa** |
@@ -176,3 +176,9 @@ Le voci marcate **chiusa** sono state chiuse dalla 0.4.1 con un test che falliva
 ## 14. Chiusura del gate G0 — 22 ottobre 2026
 
 Il maintainer ha preso le quattro decisioni G0: licenza `GPL-3.0-or-later` per tutti i pacchetti, player incorporabile incluso; scope npm `@spatialdeck` di sua proprietà, con organizzazione da creare prima del publish e proprietà verificata in 0.6; inglese come lingua predefinita dell'interfaccia e della documentazione pubblica (player in 0.6, Studio e guide entro 1.0); modello di impaginazione 1.3.0 confermato senza modifiche. Dettagli e conseguenze nella [specifica, sezione 21](PROJECT_SPEC.md). I prerequisiti di 0.5 sono soddisfatti; la fase non è ancora avviata.
+
+## 15. Avanzamento Impaginazione 0.5 — 23 ottobre 2026
+
+0.5 è implementata con schema 1.3.0, quattro validatori standalone, tipi derivati e migrazione in copia da 1.0.0/1.1.0/1.2.0 senza attivare `layout`; le fixture storiche restano invariate su disco e si aprono con la stessa resa (confronto di pixel e geometria contro una build 0.4.1 e controlli degli stili calcolati nella suite). La geometria del frame è nel core e alimenta player ed editor; il player rende scene canvas ritagliate, tema, aspetto e stile a token senza CSS libero; Studio ha la modalità **Impagina** sopra la preview del player condiviso, con un comando per gesto, Escape, frecce, campi numerici, allinea/distribuisci, griglia, livelli, ordine di lettura, conversioni, pannelli di tema, aspetto e stile e diagnostica di testo tagliato, sovrapposizioni e contrasto. Esempio `examples/layout-canvas/` e route `/layout`. Esiti, misure e limiti nel [rapporto 0.5](verification/phase-0.5.md); decisioni nella [specifica, sezione 22](PROJECT_SPEC.md).
+
+Prerequisiti per 0.6: modello 1.3.0 congelato e provato (gli export devono riprodurre canvas, tema e font del tema con lo stesso player e incorporare `fonts.css`/woff2 con `OFL.txt` nel manifest); bundle minimo da rimisurare sul consumer realistico; nessuna voce 0.5 rinviata. La CI aggiornata non è stata eseguita: nulla è stato inviato al remoto.

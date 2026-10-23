@@ -1,4 +1,4 @@
-# Creare una presentazione con Studio 0.4.1
+# Creare una presentazione con Studio 0.5
 
 Avvia `pnpm dev:studio` dalla root dopo l'installazione descritta nel README. Apri l'indirizzo locale stampato da Vite, normalmente `http://127.0.0.1:5174`. Tutto il lavoro avviene nel browser, senza account o backend.
 
@@ -18,7 +18,7 @@ L'anteprima usa il player reale e inquadra la scena selezionata. Le rotazioni ri
 
 ## File e recupero
 
-**Salva JSON** scarica una copia con lo schema corrente 1.2.0, comprendente testi, contenuti, note, parent, percorsi, camera, track/cue ed estensioni opache. **Apri JSON** legge il file come copia in memoria. Prima valida il candidato; JSON invalido lascia intatto il lavoro. Se ci sono modifiche da salvare, puoi annullare la sostituzione. Un file storico 1.0.0 o 1.1.0 viene validato e migrato in memoria; Salva JSON scarica una nuova copia 1.2.0. Nessuna operazione modifica direttamente il file aperto sul disco.
+**Salva JSON** scarica una copia con lo schema corrente 1.3.0, comprendente testi, contenuti, note, parent, percorsi, camera, track/cue, impaginazione, tema ed estensioni opache. **Apri JSON** legge il file come copia in memoria. Prima valida il candidato; JSON invalido lascia intatto il lavoro. Se ci sono modifiche da salvare, puoi annullare la sostituzione. Un file storico 1.0.0, 1.1.0 o 1.2.0 viene validato e migrato in memoria, con resa identica; Salva JSON scarica una nuova copia 1.3.0. Nessuna operazione modifica direttamente il file aperto sul disco.
 
 L'autosave locale scrive in IndexedDB dopo 750 ms e conserva le ultime dieci revisioni per progetto. Al reload propone il recupero con titolo, revisione, data e numero di scene solo se l'ultima revisione contiene modifiche non salvate in un file: dopo **Salva JSON** o **Salva archivio** non viene più proposto. Il pulsante **Recupero** permette sempre di scegliere anche una revisione precedente. Salva il risultato come JSON per conservarlo fuori dal browser.
 
@@ -56,11 +56,11 @@ Per provare il documento completo apri `examples/structure-branching/project.jso
 
 ## Contenuti e risorse 0.4
 
-Il documento corrente è schema 1.2.0. L’apertura di 1.0.0/1.1.0 migra una copia mantenendo scene, percorsi, note, testo ed estensioni; salvare una nuova copia conserva il predecessore.
+Il documento corrente è schema 1.3.0. L’apertura di 1.0.0/1.1.0/1.2.0 migra una copia mantenendo scene, percorsi, note, testo ed estensioni; salvare una nuova copia conserva il predecessore.
 
 Nell’inspector, **Contenuti** mantiene l’ordine di lettura. **Aggiungi testo** conserva il testo letterale storico; **Tipo contenuto** e **Aggiungi contenuto** aggiungono Markdown, HTML, SVG, LaTeX, immagine, audio, video, link interno, embed o plugin. Le sorgenti sono textarea con anteprima nel player condiviso. **Dati tipo** espone tutti i campi JSON tipizzati (alt, label, display, assetId, posterAssetId, captionsAssetId, target del link, autoplay/loop/onExit). Un valore invalido mostra l’errore e lascia il documento precedente. Sposta su/giù ed Elimina sono comandi annullabili. Il badge locale ha anche un inspector separato per label; le impostazioni plugin documento sono modificabili nel loro campo JSON.
 
-I contenuti di una scena sono impilati in verticale nell’ordine di lettura, nella card standard del player: in questa versione non puoi scegliere posizione, dimensione, colori o font dei singoli contenuti, né nascondere il titolo. Non usare HTML o Markdown per impaginare: stili, classi e immagini incorporate vengono rimossi dalla sanitizzazione. Il posizionamento libero, il tema e lo stile a token sono pianificati per la 0.5 ([roadmap](ROADMAP.md)).
+Nelle scene **flow** i contenuti sono impilati in verticale nell’ordine di lettura; posizione, dimensione, rotazione, livello, colori e font si scelgono con l’impaginazione descritta nella sezione seguente. Non usare HTML o Markdown per impaginare: stili, classi e immagini incorporate vengono rimossi dalla sanitizzazione.
 
 In **Risorse locali**, aggiungi prima un file e poi il blocco immagine/audio/video (SVG con prologo XML, commenti o DOCTYPE e file di testo UTF-8 di qualunque lunghezza sono accettati; funziona anche quando Studio è servito in HTTP da un indirizzo diverso da localhost): il blocco usa il primo asset del tipo corrispondente, modificabile nei Dati. Il pannello mostra nome, ID, MIME e dimensione; il JSON espone il registro completo. **Associa file mancante** verifica dimensione/firma e digest originali. **Sostituisci** aggiorna i metadati mantenendo l’ID; undo recupera i byte precedenti conservati in memoria. I file non sono inseriti come blob URL nel documento.
 
@@ -69,3 +69,27 @@ In **Risorse locali**, aggiungi prima un file e poi il blocco immagine/audio/vid
 Audio/video hanno controlli nativi e il pulsante **Riproduci label**; i video restano nella pagina anche sui telefoni (`playsinline`); **Abilita media** autorizza i blocchi con autoplay nel player corrente. Nessun autoplay sonoro è garantito. All’uscita `pause` mantiene il tempo, `stop` lo azzera; destroy interrompe e libera tutto. La preview Studio è muta; la presentazione può produrre audio. Modificare un contenuto aggiorna nella preview solo quel contenuto: un video in riproduzione non si interrompe se modifichi altro. Imposta una label, alt e un asset VTT nelle captions del video. Codec/file non disponibili hanno messaggi e azione di ripristino nel pannello Risorse. Cue e media non garantiscono sincronizzazione al campione.
 
 Per provare ogni contenuto, apri `/content` nel playground e scarica l’archivio gallery, oppure apri `examples/content-gallery/content-gallery.spatialdeck` in Studio. I contenuti locali funzionano senza Internet dopo il caricamento dell’app; l’embed è off e i plugin mancanti conservano i dati mostrando un placeholder. [Policy e SDK](PLUGINS.md).
+
+## Impaginazione 0.5
+
+Seleziona una scena e premi **Impagina** nell’intestazione dell’anteprima. La preview è sempre il player condiviso: la scena viene inquadrata frontalmente e sopra compaiono soltanto cornici e maniglie, nessuna copia dei contenuti. La mappa si riduce per lasciare spazio; premi di nuovo **Impagina** per tornare alla preview normale.
+
+**Flow e canvas.** Una scena **flow** impila i contenuti come prima. **Converti in canvas** misura i contenuti nella preview e crea un frame per ciascuno, in un solo comando: la scena resta visivamente uguale ma ogni contenuto diventa spostabile. **Torna a flow** chiede conferma, perché posizioni, dimensioni, rotazioni e livelli vanno persi; Annulla li ripristina.
+
+**Frame.** In canvas ogni contenuto ha un frame in pixel della scena, con origine nell’angolo in alto a sinistra: X, Y, larghezza e altezza (almeno 8 px), rotazione attorno al centro (−360…360°) e livello z intero (−1000…1000). Il frame non ruotato deve restare dentro la scena; una parte ruotata che sporge e il testo che eccede il frame vengono tagliati, e la diagnostica lo segnala. Immagini, SVG e video riempiono il frame: l’immagine con l’adattamento scelto nei Dati (`contain` o `cover`), il video lasciando spazio al pulsante di riproduzione.
+
+**Gesti.** Clic su una cornice seleziona; Maiusc/Cmd/Ctrl+clic aggiunge o toglie dalla selezione; clic sullo sfondo della scena deseleziona. Trascina una cornice per spostare (anche più cornici selezionate insieme), una maniglia per ridimensionare tenendo fermo il lato opposto, la maniglia ↻ per ruotare (con Maiusc a passi di 15°). Ogni gesto è un solo comando: Annulla lo ripristina per intero, Escape durante il gesto lo annulla senza lasciare traccia. Con **Griglia magnetica** spostamenti e ridimensionamenti si agganciano al passo scelto (8–64 px).
+
+**Tastiera e campi.** Ogni cornice e maniglia è raggiungibile con Tab, con focus visibile e annunci brevi. Invio o Spazio seleziona, Maiusc+Invio aggiunge. Sulla cornice le frecce spostano di 1 px, con Maiusc di 10 px; su una maniglia ridimensionano; sulla maniglia ↻ ruotano di 1° (15° con Maiusc). Tenere premuto un tasto produce un solo comando. Nel pannello **Impaginazione** dell’inspector i campi X frame, Y frame, Larghezza, Altezza, Rotazione e Livello z sono l’alternativa numerica a ogni trascinamento. Canc e Backspace dentro l’editor di scena non eliminano la scena.
+
+**Allinea, distribuisci, livelli.** Con un solo contenuto selezionato, Allinea usa la scena come riferimento; con più contenuti, i loro ingombri visivi. **Distribuisci** richiede tre contenuti e rende uguali gli spazi. **Porta avanti/indietro** cambia z di 1; **In primo piano/In fondo** porta il contenuto sopra o sotto tutti gli altri.
+
+**Ordine di lettura.** L’elenco **Ordine di lettura** è l’ordine dei contenuti nel documento: ordine del DOM, del tasto Tab, della vista testuale e degli screen reader. Le frecce ↑/↓ lo cambiano senza toccare posizioni o livelli; il livello z decide soltanto chi copre chi. Disponi quindi l’elenco nell’ordine in cui il contenuto va letto, anche se visivamente è diverso.
+
+**Aspetto e stile.** **Aspetto della scena**: card con bordo oppure semplice senza bordo, sfondo dalla palette (o quello predefinito della variante) e titolo visibile o nascosto. Un titolo nascosto resta il nome accessibile della scena e compare nella vista testuale. **Stile del blocco**, per i contenuti selezionati: allineamento del testo, allineamento verticale nel frame, dimensione (XS–XXL rispetto al corpo del tema) e colore dalla palette. Valgono anche nelle scene flow, selezionando il contenuto nell’elenco Ordine di lettura.
+
+**Tema del documento.** Nell’inspector, **Tema del documento** contiene la palette (fino a 32 colori `#rrggbb`), i ruoli (testo, sfondo delle card, accento e bordo, fondale), i font del testo e dei titoli e la scala tipografica in px. I font sono soltanto locali: tre famiglie di sistema e Atkinson Hyperlegible, incluso nel progetto con licenza SIL OFL 1.1 e scaricato dal browser solo quando un documento lo usa. Nessun campo accetta CSS: sono scelte da elenchi validati.
+
+**Diagnostica.** Il pannello Impaginazione mostra contrasto della palette sotto 4,5:1 per il testo o 3:1 per il bordo, contenuti tagliati dal proprio frame e frame che coprono controlli interattivi (link, pulsanti, media) di un contenuto sottostante. Studio non corregge i colori né ridimensiona il testo: decidi tu.
+
+**Salvataggio e presentazione.** JSON, archivio, autosave e recupero conservano frame, stile, aspetto e tema; la presentazione e il player vanilla mostrano la stessa resa. Per provare, apri `examples/layout-canvas/layout-canvas.spatialdeck` in Studio, oppure `/layout` nel playground, che apre anche i progetti salvati da Studio con **Apri progetto locale**: titolo nascosto, immagine e testo affiancati, un timbro sovrapposto e ruotato, una nota ruotata, una scena flow semplice e una scena figlia ruotata con colonne e collegamento. Nelle scene canvas la lettura a 320 px è affidata alla vista testuale, non alla vista spaziale.

@@ -739,3 +739,240 @@ dialog select {
   gap: 6px;
   margin-block: 12px;
 }
+/* Scene editor (Impagina): handles over the shared player preview. */
+.preview-stage {
+  position: relative;
+}
+/* The sticky centre column must fit the window: the map shrinks while editing a scene. */
+.preview-panel.is-layout .preview-player {
+  height: min(56vh, 620px);
+  min-height: 300px;
+}
+@media (min-width: 801px) {
+  .center-column.is-layout .map-panel {
+    height: max(180px, 20vh);
+    min-height: 0;
+  }
+  .center-column.is-layout .map-panel svg {
+    min-height: 0;
+  }
+}
+.panel-heading .layout-toggle {
+  font-size: 11px;
+  min-height: 28px;
+  padding: 4px 10px;
+}
+.layout-toggle[aria-pressed="true"] {
+  background: #294bd7;
+  border-color: #294bd7;
+  color: #fff;
+}
+.layout-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.layout-surface {
+  position: absolute;
+  pointer-events: auto;
+}
+.layout-surface.with-grid {
+  background-image:
+    linear-gradient(to right, #294bd740 1px, transparent 1px),
+    linear-gradient(to bottom, #294bd740 1px, transparent 1px);
+}
+.layout-frame {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px dashed #294bd7;
+  transform-origin: 0 0;
+  cursor: move;
+  touch-action: none;
+  pointer-events: auto;
+}
+.layout-frame.is-flow {
+  cursor: pointer;
+}
+.layout-frame.selected {
+  border: 2px solid #294bd7;
+  background: #294bd714;
+}
+.layout-frame:focus-visible,
+.layout-handle:focus-visible {
+  outline: 3px solid #b8460b;
+  outline-offset: 2px;
+}
+.layout-index {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  transform: translateY(-100%);
+  padding: 0 4px;
+  border-radius: 3px 3px 0 0;
+  background: #294bd7;
+  color: #fff;
+  font-size: 10px;
+  pointer-events: none;
+}
+/* 24 px targets (WCAG 2.5.8); the numeric fields are the equivalent alternative. */
+.layout-handle {
+  position: absolute;
+  /* Above every frame, while Tab keeps the frame -> its handles order. */
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid #294bd7;
+  border-radius: 3px;
+  background: #fff;
+  touch-action: none;
+  pointer-events: auto;
+}
+.handle-n,
+.handle-s {
+  cursor: ns-resize;
+}
+.handle-e,
+.handle-w {
+  cursor: ew-resize;
+}
+.handle-ne,
+.handle-sw {
+  cursor: nesw-resize;
+}
+.handle-nw,
+.handle-se {
+  cursor: nwse-resize;
+}
+.layout-rotate {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  cursor: grab;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.layout-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid #e3e7ee;
+}
+.layout-panel h2 {
+  margin: 0;
+  font-size: 13px;
+}
+.layout-panel h2 span,
+.layout-diagnostics h3 span,
+.theme-panel summary span {
+  margin-left: 6px;
+  color: #5d6a82;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.layout-actions,
+.layout-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block: 8px;
+}
+.layout-actions button,
+.layout-buttons button {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.layout-panel label,
+.theme-content label {
+  display: grid;
+  gap: 4px;
+  margin-block: 6px;
+  font-size: 11px;
+}
+.layout-panel .layout-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.layout-live {
+  min-height: 1.4em;
+  margin: 0;
+  color: #34486c;
+  font-size: 11px;
+}
+.layout-hint {
+  margin: 0;
+  color: #5b6880;
+  font-size: 11px;
+}
+.reading-order ol {
+  display: grid;
+  gap: 4px;
+  padding-inline-start: 0;
+  list-style: none;
+}
+.reading-order li {
+  display: flex;
+  gap: 4px;
+}
+.reading-order li > button:first-child {
+  flex: 1;
+  text-align: left;
+}
+.layout-diagnostics h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+.layout-diagnostics ul,
+.contrast-list {
+  margin: 0;
+  padding-inline-start: 18px;
+  color: #8a3b00;
+  font-size: 11px;
+}
+.layout-diagnostics p {
+  margin: 0;
+  font-size: 11px;
+}
+.theme-content {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.palette {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.palette li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.palette label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.palette input[type="color"] {
+  width: 36px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid #cbd2dd;
+  border-radius: 4px;
+}

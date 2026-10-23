@@ -135,7 +135,7 @@ test("editor → real JSON download → new browser session → player preserves
     await readFile(downloadPath, "utf8"),
   ) as ProjectDocument;
   expect(saved).toEqual(document);
-  expect(saved.schemaVersion).toBe("1.2.0");
+  expect(saved.schemaVersion).toBe("1.3.0");
   if (info.project.name === "chromium")
     await page.screenshot({
       path: evidencePath("regressions/editor-desktop.png"),

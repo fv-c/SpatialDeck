@@ -141,7 +141,7 @@ export async function contentDemo() {
   document.title = "SpatialDeck · Contenuti";
   const header = document.querySelector("main header");
   if (header) {
-    header.querySelector("p")!.textContent = "SpatialDeck 0.4.1 / vanilla";
+    header.querySelector("p")!.textContent = "SpatialDeck 0.5 / vanilla";
     header.querySelector("h1")!.textContent = "Contenuti locali";
   }
 }

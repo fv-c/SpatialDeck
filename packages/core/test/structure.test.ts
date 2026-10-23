@@ -75,12 +75,18 @@ describe("schema 1.1 and migration", () => {
     const before = structuredClone(legacy),
       current = value(migrateDocument(legacy));
     expect(legacy).toEqual(before);
-    expect(current.schemaVersion).toBe("1.2.0");
+    expect(current.schemaVersion).toBe("1.3.0");
     expect(current.requiredCapabilities).toEqual(["linear"]);
     expect(current.paths).toEqual(legacy.paths);
     expect(
-      current.scenes.map(({ parentId, ...s }) => {
+      current.scenes.map(({ parentId, layout, appearance, ...s }) => {
         expect(parentId).toBeNull();
+        expect(layout).toBe("flow");
+        expect(appearance).toEqual({
+          variant: "card",
+          background: null,
+          titleVisible: true,
+        });
         return s;
       }),
     ).toEqual(legacy.scenes);

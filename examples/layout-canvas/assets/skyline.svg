@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 540" width="520" height="540">
+  <title>Orizzonte con tre volumi</title>
+  <rect width="520" height="540" fill="#dbeafe"/>
+  <circle cx="392" cy="128" r="68" fill="#fde68a"/>
+  <rect x="40" y="250" width="150" height="290" fill="#1b1f3b"/>
+  <rect x="150" y="190" width="130" height="350" fill="#f97316"/>
+  <rect x="250" y="300" width="210" height="240" fill="#9a3412"/>
+  <path d="M0 470 Q130 430 260 470 T520 470 V540 H0 Z" fill="#fffaf0"/>
+</svg>

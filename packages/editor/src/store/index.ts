@@ -57,7 +57,8 @@ export class EditorStore {
   private saved: ProjectDocument | null;
   private undoStack: Command[] = [];
   private redoStack: Command[] = [];
-  private drag: { document: ProjectDocument; selection: string } | undefined;
+  private drag:
+    { document: ProjectDocument; selection: string | null } | undefined;
   private session: { key: string; command: Command } | undefined;
   private listeners = new Set<() => void>();
   private map: MapCamera = { x: 0, y: 0, zoom: 0.25 };
@@ -280,6 +281,29 @@ export class EditorStore {
     if (!local.ok) return local;
     scene.position = local.value;
     const valid = validateDocument(candidate);
+    if (!valid.ok) return valid;
+    this.document = freeze(valid.value);
+    this.publish();
+    return success(undefined);
+  }
+  /**
+   * Gesture on any document data (a frame drag, resize or rotation): previews
+   * without history from the snapshot taken here, one command at endDrag,
+   * cancelDrag restores. Autosave waits while it lasts.
+   */
+  beginGesture(): boolean {
+    if (this.drag) return false;
+    this.session = undefined;
+    this.drag = { document: this.document, selection: this.selection };
+    this.publish();
+    return true;
+  }
+  previewGesture(edit: DocumentEdit): Result<void> {
+    if (!this.drag) return failure("DRAG_INACTIVE", "Nessun trascinamento.");
+    const edited = edit(structuredClone(this.drag.document));
+    if (!edited.ok) return edited;
+    updateCapabilities(edited.value);
+    const valid = validateDocument(edited.value);
     if (!valid.ok) return valid;
     this.document = freeze(valid.value);
     this.publish();

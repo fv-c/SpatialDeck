@@ -266,7 +266,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     await readFile(pathToFile, "utf8"),
   ) as ProjectDocument;
   expect(saved).toEqual(expected);
-  expect(saved.schemaVersion).toBe("1.2.0");
+  expect(saved.schemaVersion).toBe("1.3.0");
   const context = await browser.newContext(),
     fresh = await context.newPage();
   await fresh.goto(studioURL);
@@ -371,7 +371,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
         () => window.studio!.store.getSnapshot().document.schemaVersion,
       ),
     )
-    .toBe("1.2.0");
+    .toBe("1.3.0");
   expect(
     await page.evaluate(() =>
       window
@@ -379,7 +379,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
         .document.scenes.every((s) => s.parentId === null),
     ),
   ).toBe(true);
-  await upload(page, { ...fixture, schemaVersion: "1.3.0" });
+  await upload(page, { ...fixture, schemaVersion: "1.4.0" });
   await expect(page.getByRole("alert")).toContainText("Supported schemas");
   expect(
     await page.evaluate(

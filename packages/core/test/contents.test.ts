@@ -1,9 +1,12 @@
 import { expect, it } from "vitest";
 import Ajv from "ajv/dist/2020.js";
 import schema from "../schema/project-1.2.0.schema.json";
+import current from "../schema/project-1.3.0.schema.json";
 import gallery from "../../../examples/content-gallery/project.json";
 import historical from "../../../examples/structure-branching/project.json";
 import {
+  defaultAppearance,
+  defaultTheme,
   validateDocument,
   serializeDocument,
   updateCapabilities,
@@ -17,7 +20,8 @@ function document(): ProjectDocument {
 it("schema/type union has precisely the eleven discriminants and validates every gallery block", () => {
   const validate = new Ajv({ strict: true }).compile(schema);
   const doc = document();
-  expect(validate(doc)).toBe(true);
+  expect(validate(gallery)).toBe(true);
+  expect(new Ajv({ strict: true }).compile(current)(doc)).toBe(true);
   expect(doc.scenes.map((s) => s.blocks[0]!.type).sort()).toEqual(
     [
       "text",
@@ -146,8 +150,14 @@ it("migrates 1.1 without losing source, text, notes or opaque extension data", (
   if (r.ok) {
     expect(r.value).toEqual({
       ...original,
-      schemaVersion: "1.2.0",
+      schemaVersion: "1.3.0",
       pluginSettings: {},
+      theme: defaultTheme(),
+      scenes: original.scenes.map((s) => ({
+        ...s,
+        layout: "flow",
+        appearance: defaultAppearance(),
+      })),
     });
     expect(validateDocument(r.value)).toEqual(r);
   }

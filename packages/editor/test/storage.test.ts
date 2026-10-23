@@ -65,7 +65,7 @@ it.each([new Error("QuotaExceededError"), new StorageConflict()])(
       autosave = new Autosave(new Repo(), new Map(), (m) => warnings.push(m));
     await autosave.flush(document);
     expect(warnings[0]).toContain("Salva JSON");
-    expect(document.schemaVersion).toBe("1.2.0");
+    expect(document.schemaVersion).toBe("1.3.0");
     autosave.dispose();
   },
 );

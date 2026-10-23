@@ -5,7 +5,7 @@ import standalone from "ajv/dist/standalone/index.js";
 const schema = JSON.parse(
   await readFile(
     new URL(
-      "../packages/core/schema/project-1.2.0.schema.json",
+      "../packages/core/schema/project-1.3.0.schema.json",
       import.meta.url,
     ),
     "utf8",
@@ -15,7 +15,8 @@ const ajv = new Ajv({
   strict: true,
   allErrors: true,
   code: { source: true, esm: true },
-  inlineRefs: true,
+  // Referenced definitions stay functions: frame and style recur in every block type.
+  inlineRefs: false,
 });
 const legacy = JSON.parse(
   await readFile(
@@ -39,11 +40,24 @@ ajv.addSchema(
   ),
   "structure",
 );
+ajv.addSchema(
+  JSON.parse(
+    await readFile(
+      new URL(
+        "../packages/core/schema/project-1.2.0.schema.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+  "blocks",
+);
 ajv.addSchema(schema, "current");
 // A standalone module, never the Ajv compiler, enters the browser graph.
 let source = standalone(ajv, {
   validateLegacy: "legacy",
   validateStructureSchema: "structure",
+  validateBlocksSchema: "blocks",
   validateCurrent: "current",
 });
 source = source.replace(
@@ -72,6 +86,13 @@ const names = {
   cameraTrack: "CameraTrack",
   condition: "EdgeCondition",
   cue: "Cue",
+  paletteId: "PaletteId",
+  color: "Color",
+  fontId: "FontId",
+  theme: "Theme",
+  appearance: "SceneAppearance",
+  frame: "Frame",
+  blockStyle: "BlockStyle",
   ...Object.fromEntries(
     [
       "text",
