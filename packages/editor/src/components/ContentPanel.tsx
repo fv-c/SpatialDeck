@@ -4,6 +4,7 @@ import type { Block, Scene, JsonValue } from "@spatialdeck/core";
 import { defaultFrame, editScene, randomId } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { TextField } from "./Inspector.js";
+import { Icon, IconButton } from "./icons.js";
 import { sampleInspector } from "@spatialdeck/plugins/sample";
 export function ContentPanel({
   store,
@@ -178,50 +179,50 @@ export function ContentPanel({
             </>
           )}
           <div className="block-actions">
-            <button
-              type="button"
-              tabIndex={0}
+            <IconButton
+              icon="up"
+              label={`Sposta su blocco ${i + 1}`}
+              tip="left"
               disabled={i === 0}
-              aria-label={`Sposta su blocco ${i + 1}`}
               onClick={() => {
                 const blocks = [...scene.blocks];
                 [blocks[i - 1], blocks[i]] = [blocks[i]!, blocks[i - 1]!];
                 edit(blocks);
               }}
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              tabIndex={0}
+            />
+            <IconButton
+              icon="down"
+              label={`Sposta giù blocco ${i + 1}`}
+              tip="left"
               disabled={i === scene.blocks.length - 1}
-              aria-label={`Sposta giù blocco ${i + 1}`}
               onClick={() => {
                 const blocks = [...scene.blocks];
                 [blocks[i + 1], blocks[i]] = [blocks[i]!, blocks[i + 1]!];
                 edit(blocks);
               }}
-            >
-              ↓
-            </button>
-            <button
-              type="button"
-              tabIndex={0}
+            />
+            <IconButton
+              icon="trash"
+              label={`Elimina blocco ${i + 1}`}
+              tip="left"
               onClick={() =>
                 edit(scene.blocks.filter((b) => b.id !== block.id))
               }
-              aria-label={`Elimina blocco ${i + 1}`}
-            >
-              Elimina
-            </button>
+            />
           </div>
         </fieldset>
       ))}
-      <button tabIndex={0} onClick={() => add("text")}>
-        Aggiungi testo
-      </button>
-      <label>
-        Tipo contenuto
+      <div className="content-add">
+        <button
+          type="button"
+          tabIndex={0}
+          className="tool-button"
+          aria-label="Aggiungi testo"
+          onClick={() => add("text")}
+        >
+          <Icon name="plus" />
+          Testo
+        </button>
         <select
           aria-label="Tipo contenuto"
           value={type}
@@ -245,31 +246,44 @@ export function ContentPanel({
             <option key={t}>{t}</option>
           ))}
         </select>
-      </label>
-      <button tabIndex={0} onClick={() => add(type)}>
-        Aggiungi contenuto
-      </button>
+        <button
+          type="button"
+          tabIndex={0}
+          className="tool-button"
+          aria-label="Aggiungi contenuto"
+          onClick={() => add(type)}
+        >
+          <Icon name="plus" />
+          Aggiungi
+        </button>
+      </div>
       {error && <p role="alert">{error}</p>}
-      <TextField
-        label="Impostazioni plugin documento"
-        value={JSON.stringify(
-          store.getSnapshot().document.pluginSettings ?? {},
-          null,
-          2,
-        )}
-        multiline
-        apply={(text) => {
-          try {
-            const data = JSON.parse(text);
-            return store.execute((doc) => {
-              doc.pluginSettings = data;
-              return success(doc);
-            });
-          } catch {
-            return failure("PLUGIN_SETTINGS", "JSON impostazioni non valido.");
-          }
-        }}
-      />
+      <details className="plugin-settings">
+        <summary>Impostazioni plugin documento</summary>
+        <TextField
+          label="Impostazioni plugin documento"
+          value={JSON.stringify(
+            store.getSnapshot().document.pluginSettings ?? {},
+            null,
+            2,
+          )}
+          multiline
+          apply={(text) => {
+            try {
+              const data = JSON.parse(text);
+              return store.execute((doc) => {
+                doc.pluginSettings = data;
+                return success(doc);
+              });
+            } catch {
+              return failure(
+                "PLUGIN_SETTINGS",
+                "JSON impostazioni non valido.",
+              );
+            }
+          }}
+        />
+      </details>
     </fieldset>
   );
 }

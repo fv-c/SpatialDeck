@@ -4,12 +4,13 @@ import type { FontId, ProjectDocument, Result, Theme } from "@spatialdeck/core";
 import { editTheme } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { Numeric } from "./Inspector.js";
+import { Icon, IconButton } from "./icons.js";
 
 export const fontNames: Record<FontId, string> = {
-  "system-sans": "Sistema, sans-serif",
-  "system-serif": "Sistema, serif",
-  "system-mono": "Sistema, monospace",
-  "atkinson-hyperlegible": "Atkinson Hyperlegible (locale, OFL)",
+  "system-sans": "Sans di sistema",
+  "system-serif": "Serif di sistema",
+  "system-mono": "Mono di sistema",
+  "atkinson-hyperlegible": "Atkinson Hyperlegible",
 };
 /** Where a contrast issue lives, in the words of the panels. */
 function where(document: ProjectDocument, pointer: string): string {
@@ -21,11 +22,11 @@ function where(document: ProjectDocument, pointer: string): string {
     ? `sfondo della scena “${title}”`
     : `blocco ${Number(block) + 1} della scena “${title}”`;
 }
-const roles: Array<[keyof Theme["colors"], string]> = [
-  ["text", "Colore del testo"],
-  ["background", "Sfondo delle card"],
-  ["accent", "Accento e bordo"],
-  ["backdrop", "Fondale"],
+const roles: Array<[keyof Theme["colors"], string, string]> = [
+  ["text", "Colore del testo", "Testo"],
+  ["background", "Sfondo delle card", "Card"],
+  ["accent", "Accento e bordo", "Accento"],
+  ["backdrop", "Fondale", "Fondale"],
 ];
 /** Document theme: palette, roles, local fonts and type scale; tokens only, never CSS. */
 export function ThemePanel({
@@ -49,10 +50,12 @@ export function ThemePanel({
   };
   const issues = contrastIssues(document);
   return (
-    <details className="theme-panel">
+    <details className="theme-panel inspector-details">
       <summary>
         Tema del documento{" "}
-        <span>{issues.length ? `${issues.length} avvisi` : "OK"}</span>
+        <span className={issues.length ? "count has-issues" : "count"}>
+          {issues.length ? `${issues.length} avvisi` : "OK"}
+        </span>
       </summary>
       <div className="theme-content">
         {error && (
@@ -60,12 +63,14 @@ export function ThemePanel({
             {error}
           </p>
         )}
-        <fieldset>
-          <legend>Palette</legend>
+        <div className="inspector-group">
+          <h3>
+            Palette <span>{theme.palette.length}/32</span>
+          </h3>
           <ul className="palette">
             {theme.palette.map((entry, i) => (
               <li key={entry.id}>
-                <label>
+                <label className="swatch">
                   <input
                     type="color"
                     aria-label={`Colore ${entry.id}`}
@@ -82,14 +87,13 @@ export function ThemePanel({
                     }
                     onBlur={() => store.endCoalesce()}
                   />
-                  <span>
-                    {entry.id} <code>{entry.value}</code>
-                  </span>
+                  <span className="swatch-name">{entry.id}</span>
+                  <code>{entry.value}</code>
                 </label>
-                <button
-                  type="button"
-                  tabIndex={0}
-                  aria-label={`Rimuovi colore ${entry.id}`}
+                <IconButton
+                  icon="close"
+                  label={`Rimuovi colore ${entry.id}`}
+                  tip="left"
                   disabled={theme.palette.length === 1}
                   onClick={() =>
                     report(
@@ -100,15 +104,15 @@ export function ThemePanel({
                       ),
                     )
                   }
-                >
-                  ×
-                </button>
+                />
               </li>
             ))}
           </ul>
           <button
             type="button"
             tabIndex={0}
+            className="tool-button"
+            aria-label="Aggiungi colore"
             disabled={theme.palette.length >= 32}
             onClick={() => {
               let n = theme.palette.length + 1;
@@ -122,75 +126,76 @@ export function ThemePanel({
               );
             }}
           >
-            Aggiungi colore
+            <Icon name="plus" />
+            Colore
           </button>
-        </fieldset>
-        <fieldset>
-          <legend>Ruoli</legend>
-          {roles.map(([role, label]) => (
-            <label key={role}>
-              {label}
-              <select
-                aria-label={label}
-                value={theme.colors[role]}
-                onChange={(e) =>
-                  report(
-                    store.execute(
-                      editTheme((t) => {
-                        t.colors[role] = e.target.value;
-                      }),
-                    ),
-                  )
-                }
-              >
-                {theme.palette.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.id} ({p.value})
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </fieldset>
-        <fieldset>
-          <legend>Font locali</legend>
-          {(
-            [
-              ["body", "Font del testo"],
-              ["heading", "Font dei titoli"],
-            ] as const
-          ).map(([slot, label]) => (
-            <label key={slot}>
-              {label}
-              <select
-                aria-label={label}
-                value={theme.fonts[slot]}
-                onChange={(e) =>
-                  report(
-                    store.execute(
-                      editTheme((t) => {
-                        t.fonts[slot] = e.target.value as FontId;
-                      }),
-                    ),
-                  )
-                }
-              >
-                {(Object.keys(fontNames) as FontId[]).map((id) => (
-                  <option key={id} value={id}>
-                    {fontNames[id]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </fieldset>
-        <fieldset>
-          <legend>
-            Scala tipografica <span>px</span>
-          </legend>
-          <div className="numeric-row">
+        </div>
+        <div className="inspector-group">
+          <h3>Ruoli</h3>
+          <div className="prop-grid two">
+            {roles.map(([role, label, short]) => (
+              <label key={role} className="prop">
+                <span>{short}</span>
+                <select
+                  aria-label={label}
+                  value={theme.colors[role]}
+                  onChange={(e) =>
+                    report(
+                      store.execute(
+                        editTheme((t) => {
+                          t.colors[role] = e.target.value;
+                        }),
+                      ),
+                    )
+                  }
+                >
+                  {theme.palette.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="inspector-group">
+          <h3>
+            Tipografia <span>font locali · px</span>
+          </h3>
+          <div className="prop-grid two">
+            {(
+              [
+                ["body", "Font del testo", "Testo"],
+                ["heading", "Font dei titoli", "Titoli"],
+              ] as const
+            ).map(([slot, label, short]) => (
+              <label key={slot} className="prop">
+                <span>{short}</span>
+                <select
+                  aria-label={label}
+                  value={theme.fonts[slot]}
+                  onChange={(e) =>
+                    report(
+                      store.execute(
+                        editTheme((t) => {
+                          t.fonts[slot] = e.target.value as FontId;
+                        }),
+                      ),
+                    )
+                  }
+                >
+                  {(Object.keys(fontNames) as FontId[]).map((id) => (
+                    <option key={id} value={id}>
+                      {fontNames[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
             <Numeric
               label="Corpo del testo"
+              short="Corpo"
               value={theme.typeScale.body}
               apply={(value) =>
                 report(
@@ -216,21 +221,25 @@ export function ThemePanel({
               }
             />
           </div>
-        </fieldset>
-        <section aria-label="Contrasto del tema">
+        </div>
+        <section className="inspector-group" aria-label="Contrasto del tema">
+          <h3>Contrasto</h3>
           {issues.length ? (
             <ul className="contrast-list">
               {issues.map((issue) => (
                 <li key={issue.pointer}>
-                  Contrasto {issue.ratio.toFixed(2)}:1 sotto {issue.minimum}:1 (
-                  {issue.kind === "text" ? "testo" : "componenti"}):{" "}
-                  {where(document, issue.pointer)}
+                  <Icon name="warning" />
+                  <span>
+                    {issue.ratio.toFixed(2)}:1, sotto {issue.minimum}:1 (
+                    {issue.kind === "text" ? "testo" : "componenti"}):{" "}
+                    {where(document, issue.pointer)}
+                  </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p>
-              Contrasto della palette sufficiente (4,5:1 testo, 3:1 componenti).
+            <p className="panel-note">
+              Sufficiente: 4,5:1 per il testo, 3:1 per i componenti.
             </p>
           )}
         </section>

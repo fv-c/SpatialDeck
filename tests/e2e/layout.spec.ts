@@ -1055,7 +1055,7 @@ test.describe("Studio scene editor", () => {
       fresh.locator('.preview-player [data-block-id="picture"] img'),
     ).toHaveCount(1);
     // Presenting in Studio uses the same player and the same frames.
-    await fresh.getByRole("button", { name: "Presenta ↗" }).click();
+    await fresh.getByRole("button", { name: "Presenta" }).click();
     await expect(fresh.locator(".presentation-player .sd-player")).toHaveCount(
       1,
     );

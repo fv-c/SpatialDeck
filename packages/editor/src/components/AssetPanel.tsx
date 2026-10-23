@@ -5,6 +5,7 @@ import { sha256, verifyAsset } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
 import type { EditorStore } from "../store/index.js";
 import { randomId } from "../commands/index.js";
+import { Icon } from "./icons.js";
 export function AssetPanel({
   store,
   document,
@@ -67,9 +68,11 @@ export function AssetPanel({
   }
   return (
     <details open className="asset-panel">
-      <summary>Risorse locali · {document.assets.length}</summary>
-      <label>
-        Aggiungi risorsa
+      <summary>
+        Risorse <span>{document.assets.length}</span>
+      </summary>
+      {/* The native picker stays the focusable control; the label is its visible face. */}
+      <label className="file-button">
         <input
           type="file"
           aria-label="Aggiungi risorsa locale"
@@ -79,21 +82,23 @@ export function AssetPanel({
             if (file) void add(file);
           }}
         />
+        <Icon name="plus" />
+        Aggiungi risorsa
       </label>
-      <p>
-        JSON conserva i riferimenti. L’archivio .spatialdeck include i file.
-      </p>
-      <ul>
+      <ul className="asset-list">
         {document.assets.map((a) => (
           <li key={a.id}>
-            <strong>{a.path.split("/").at(-1)}</strong>
-            <code>{a.id}</code>
+            <span className="asset-name">{a.path.split("/").at(-1)}</span>
             <small>
-              {a.mime} · {a.byteLength} B ·{" "}
-              {blobs.has(a.id) ? "disponibile" : "mancante"}
+              {a.mime} · {Math.max(1, Math.round(a.byteLength / 1024))} KB
             </small>
-            <label>
-              {blobs.has(a.id) ? "Sostituisci" : "Associa file mancante"}
+            <code>{a.id}</code>
+            <span
+              className={`asset-status ${blobs.has(a.id) ? "" : "missing"}`}
+            >
+              {blobs.has(a.id) ? "disponibile" : "mancante"}
+            </span>
+            <label className="file-button small">
               <input
                 type="file"
                 aria-label={`Associa ${a.id}`}
@@ -103,10 +108,14 @@ export function AssetPanel({
                   if (file) void add(file, a);
                 }}
               />
+              {blobs.has(a.id) ? "Sostituisci" : "Associa file mancante"}
             </label>
           </li>
         ))}
       </ul>
+      <p className="panel-note">
+        Il JSON conserva i riferimenti; l’archivio .spatialdeck include i file.
+      </p>
       {error && <p role="alert">{error}</p>}
     </details>
   );
