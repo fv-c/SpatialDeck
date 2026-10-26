@@ -60,7 +60,24 @@ async function imageLease(
     lease.release();
   }
 }
-function mediaRenderer(): ContentRenderer {
+/** Capture readiness: settles once metadata or an error arrives, never rejects. */
+function settled(media: HTMLMediaElement, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (media.readyState >= 1 || media.error || signal.aborted)
+      return resolve();
+    const done = () => resolve();
+    media.addEventListener("loadedmetadata", done, { once: true });
+    media.addEventListener("error", done, { once: true });
+    signal.addEventListener("abort", done, { once: true });
+  });
+}
+/** Capture readiness of an image: settles after decoding or a decode error. */
+const decoded = (image: HTMLImageElement): Promise<void> =>
+  typeof image.decode === "function"
+    ? image.decode().catch(() => undefined)
+    : Promise.resolve();
+/** Image, audio and video; `createBuiltinRegistry` loads this module on first use. */
+export function mediaRenderer(): ContentRenderer {
   let host: HTMLElement,
     context: ContentContext,
     element: HTMLMediaElement | undefined,
@@ -68,7 +85,8 @@ function mediaRenderer(): ContentRenderer {
     playButton: HTMLButtonElement | undefined,
     last = "",
     generation = 0,
-    failedState = false;
+    failedState = false,
+    building: Promise<void> = Promise.resolve();
   const leases: AssetLease[] = [];
   const text = () => context.messages ?? defaultMessages;
   function clear() {
@@ -131,6 +149,8 @@ function mediaRenderer(): ContentRenderer {
       void play();
   }
   async function build(token: number) {
+    // Loading states are shown at once; capture readiness waits for these too.
+    const waits: Promise<void>[] = [];
     const block = context.block;
     if (!["image", "audio", "video"].includes(block.type)) return;
     if (
@@ -163,6 +183,7 @@ function mediaRenderer(): ContentRenderer {
           if (!context.signal.aborted) failed(text().imageDecodeError);
         };
         host.prepend(img);
+        waits.push(decoded(img));
       } else {
         const media = host.ownerDocument.createElement(block.type);
         element = media;
@@ -201,6 +222,9 @@ function mediaRenderer(): ContentRenderer {
             }
             leases.push(poster);
             (media as HTMLVideoElement).poster = poster.url;
+            const preview = host.ownerDocument.createElement("img");
+            preview.src = poster.url;
+            waits.push(decoded(preview));
           }
           if (block.data.captionsAssetId) {
             resolving = block.data.captionsAssetId;
@@ -223,8 +247,10 @@ function mediaRenderer(): ContentRenderer {
           }
         }
         active();
+        waits.push(settled(media, context.signal));
       }
       if (!failedState) message("");
+      await Promise.all(waits);
     } catch (error) {
       if (!context.signal.aborted && token === generation)
         failed(assetMessage(text(), resolving, error));
@@ -243,7 +269,7 @@ function mediaRenderer(): ContentRenderer {
       status.lang = text().lang;
       host.append(status);
       message(text().mediaLoading);
-      void build(generation);
+      building = build(generation);
     } else if (wasActive !== next.active || wasEnabled !== next.mediaEnabled)
       active();
   }
@@ -254,6 +280,7 @@ function mediaRenderer(): ContentRenderer {
     },
     update,
     destroy: clear,
+    ready: () => building,
   };
 }
 export function registerMedia(registry: RendererRegistry): () => void {

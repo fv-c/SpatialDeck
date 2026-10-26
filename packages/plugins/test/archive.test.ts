@@ -148,3 +148,47 @@ it("packs arbitrary safe sidecar paths without rewriting the canonical JSON", as
   const result = await readArchive(await writeArchive(document, blobs));
   expect(result.document).toEqual(document);
 });
+/** Compression method of each entry, read from the central directory. */
+function methods(bytes: Uint8Array) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = bytes.length - 22;
+  while (view.getUint32(end, true) !== 0x06054b50) end--;
+  let p = view.getUint32(end + 16, true);
+  const result: Record<string, number> = {};
+  for (let i = 0; i < view.getUint16(end + 10, true); i++) {
+    const n = view.getUint16(p + 28, true);
+    const name = strFromU8(bytes.subarray(p + 46, p + 46 + n));
+    result[name] = view.getUint16(p + 10, true);
+    p += 46 + n + view.getUint16(p + 30, true) + view.getUint16(p + 32, true);
+  }
+  return result;
+}
+it("stores already compressed media and deflates text, JSON and SVG (0.6)", async () => {
+  const { document, blobs } = await gallery();
+  const bytes = new Uint8Array(
+    await (await writeArchive(document, blobs)).arrayBuffer(),
+  );
+  const m = methods(bytes);
+  expect(m["project.json"]).toBe(8);
+  expect(m["manifest.json"]).toBe(8);
+  const entry = (id: string) =>
+    Object.keys(m).find((name) => name.startsWith(`assets/${id}/`))!;
+  expect(m[entry("motion")]).toBe(0); // video/mp4
+  expect(m[entry("diagram")]).toBe(8); // image/svg+xml
+  expect(m[entry("tone")]).toBe(8); // audio/wav is not compressed
+  // The stored MP4 is byte-identical inside the archive.
+  const mp4 = new Uint8Array(await blobs.get("motion")!.arrayBuffer());
+  expect(unzipSync(bytes)[entry("motion")]).toEqual(mp4);
+});
+it("writeArchive yields to the event loop between chunks instead of blocking", async () => {
+  const { document, blobs } = await gallery();
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 0);
+  try {
+    await writeArchive(document, blobs);
+  } finally {
+    clearInterval(timer);
+  }
+  // A synchronous zipSync would complete before any interval callback ran.
+  expect(ticks).toBeGreaterThan(2);
+});

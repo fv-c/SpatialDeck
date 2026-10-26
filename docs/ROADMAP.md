@@ -137,32 +137,32 @@ L'audit pre-distribuzione ha confermato i gate locali (typecheck, lint, format, 
 
 | Carenza | Priorità | Fase |
 | --- | --- | --- |
-| SPDX e licenza dei pacchetti non decisi, campo `license` assente | P0 | G0: `GPL-3.0-or-later`; 0.6 applica |
-| Codice di terze parti copiato nei `dist` senza note di licenza e insieme dichiarato come dipendenza (sanitizer non aggiornabile dai consumer) | P0 | 0.6 |
-| Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0: scope del maintainer; 0.6 verifica la proprietà e completa i manifest |
+| SPDX e licenza dei pacchetti non decisi, campo `license` assente | P0 | G0: `GPL-3.0-or-later`; 0.6 applica — **chiusa** |
+| Codice di terze parti copiato nei `dist` senza note di licenza e insieme dichiarato come dipendenza (sanitizer non aggiornabile dai consumer) | P0 | 0.6 — **chiusa** |
+| Manifest privati e incompleti, peer React esatto, scope npm non verificato | P0 | G0: scope del maintainer; 0.6 — manifest completi e peer a intervallo **chiusi**; proprietà dello scope **non dimostrabile** (registry 404): `private` resta e la pubblicazione è bloccata |
 | Nessun posizionamento, dimensione o stile dei contenuti dentro la scena | P1 prodotto | 0.5 — **chiusa** |
 | Firme asset: SVG con prologo/commento/DOCTYPE rifiutati; testo UTF-8 troncato al byte 4096 rifiutato | P1 | 0.4.1 — **chiusa** |
 | Digest SHA-256 dipendente da `crypto.subtle`: asset non caricabili su HTTP non-localhost | P1 | 0.4.1 — **chiusa** |
 | Preview Studio che ricostruisce tutti i renderer e ricalcola i digest a ogni modifica; autosave che ricalcola e riscrive tutti gli asset | P1 | 0.4.1 — **chiusa** |
 | Testi del player cablati in italiano, `lang` del documento non applicato, outline con sorgente Markdown/HTML grezzo | P1 | 0.4.1 — **chiusa** |
 | CSP di produzione Studio con `connect-src ws:` | P1 | 0.4.1 — **chiusa** |
-| Peso reale di un consumer con contenuti ricchi (142 KB gzip JS, 954 KB gzip CSS per font KaTeX `data:` triplicati), builtin caricati tutti subito, chunk Studio da 976 KB | P1 | 0.6 |
-| `dist` pubblicati mai esercitati dagli E2E (app e test usano i sorgenti tramite alias) | P1 | 0.6 |
-| Stili inline di KaTeX e CSP degli export | P1 | 0.6, decisione a inizio fase |
+| Peso reale di un consumer con contenuti ricchi (142 KB gzip JS, 954 KB gzip CSS per font KaTeX `data:` triplicati), builtin caricati tutti subito, chunk Studio da 976 KB | P1 | 0.6 — **chiusa** (misure nel rapporto 0.6; soglia del consumer realistico da fissare prima della 1.0) |
+| `dist` pubblicati mai esercitati dagli E2E (app e test usano i sorgenti tramite alias) | P1 | 0.6 — **chiusa** |
+| Stili inline di KaTeX e CSP degli export | P1 | 0.6 — **chiusa**: KaTeX via DOM/CSSOM, nessun `unsafe-inline` |
 | `window.studio` esposto in produzione | P2 | 0.4.1 — **chiusa** |
 | Store: serializzazione e congelamento dell'intero documento a ogni pubblicazione; un undo per ogni tasto nel titolo; render del player che scorre tutti i blocchi a ogni frame | P2 | 0.4.1 — **chiusa** |
 | IndexedDB: `versionchange`/`blocked` rendono l'autosave inutilizzabile fino al reload; progetti non eliminabili; recupero proposto a ogni avvio | P2 | 0.4.1 — **chiusa** |
 | Messaggio «supera 10 MiB» anche per archivi; `playsinline` assente sui video | P2 | 0.4.1 — **chiusa** |
 | `check:bundle` riscrive un file tracciato; Actions non fissate per SHA; axe assente; coverage limitata al core e non eseguita in CI | P2 | 0.4.1 — **chiusa** in locale; esecuzione CI da verificare al primo push |
 | Documentazione superata (stato CI, schema in AUTHORING, ambiente in DEVELOPMENT) | P2 | 0.4.1 — **chiusa** |
-| Note private raggiungibili dai renderer plugin tramite il documento | P2 | 0.6, separazione dati pubblici |
-| Plugin demo `org.spatialdeck.badge` nei builtin di produzione; API interne dell'editor tutte esportate | P2 | 0.6 |
-| `writeArchive` sincrono e ricompresso sul thread principale; `readArchive` con memoria circa tripla dell'archivio | P2 | 0.6 |
-| Presentazione Studio senza fullscreen | P2 | 0.6, con il presenter |
+| Note private raggiungibili dai renderer plugin tramite il documento | P2 | 0.6 — **chiusa** |
+| Plugin demo `org.spatialdeck.badge` nei builtin di produzione; API interne dell'editor tutte esportate | P2 | 0.6 — **chiusa** |
+| `writeArchive` sincrono e ricompresso sul thread principale; `readArchive` con memoria circa tripla dell'archivio | P2 | 0.6 — **chiusa** per la scrittura; lettura con una copia in meno (resta il buffer intero dell'archivio) |
+| Presentazione Studio senza fullscreen | P2 | 0.6 — **chiusa** |
 | Fuzzing di parser ZIP e policy di sanitizzazione; `navigator.onLine` come segnale offline dei plugin; embed sandbox inutilizzabile per embed con script | P2 | 1.0 |
 | AVIF, FLAC, MOV non supportati; toolchain con Node/pnpm a versione esatta | P2 | 1.0, valutare |
 | Documentazione solo in italiano; CHANGELOG, CONTRIBUTING, SECURITY assenti | P2 | G0: inglese; 1.0 |
-| Testi predefiniti del player e interfaccia di Studio in italiano, lingua predefinita decisa in G0: inglese | P2 | 0.6 player (set italiano esportato come alternativa); 1.0 Studio |
+| Testi predefiniti del player e interfaccia di Studio in italiano, lingua predefinita decisa in G0: inglese | P2 | 0.6 player — **chiusa** (`italianMessages` esportato); 1.0 Studio |
 | Link ai prompt validi solo in locale | Informativo | Scelta del maintainer, nessuna azione |
 
 Le prove non eseguite già note (Safari reale, dispositivi mobili, screen reader, heap e benchmark controllati) restano gate della 1.0 e non sono riassegnate.
@@ -182,3 +182,9 @@ Il maintainer ha preso le quattro decisioni G0: licenza `GPL-3.0-or-later` per t
 0.5 è implementata con schema 1.3.0, quattro validatori standalone, tipi derivati e migrazione in copia da 1.0.0/1.1.0/1.2.0 senza attivare `layout`; le fixture storiche restano invariate su disco e si aprono con la stessa resa (confronto di pixel e geometria contro una build 0.4.1 e controlli degli stili calcolati nella suite). La geometria del frame è nel core e alimenta player ed editor; il player rende scene canvas ritagliate, tema, aspetto e stile a token senza CSS libero; Studio ha la modalità **Impagina** sopra la preview del player condiviso, con un comando per gesto, Escape, frecce, campi numerici, allinea/distribuisci, griglia, livelli, ordine di lettura, conversioni, pannelli di tema, aspetto e stile e diagnostica di testo tagliato, sovrapposizioni e contrasto. Esempio `examples/layout-canvas/` e route `/layout`. Esiti, misure e limiti nel [rapporto 0.5](verification/phase-0.5.md); decisioni nella [specifica, sezione 22](PROJECT_SPEC.md).
 
 Prerequisiti per 0.6: modello 1.3.0 congelato e provato (gli export devono riprodurre canvas, tema e font del tema con lo stesso player e incorporare `fonts.css`/woff2 con `OFL.txt` nel manifest); bundle minimo da rimisurare sul consumer realistico; nessuna voce 0.5 rinviata. La CI aggiornata non è stata eseguita: nulla è stato inviato al remoto.
+
+## 16. Avanzamento Distribuzione 0.6 — 26 ottobre 2026
+
+0.6 è implementata con schema 1.3.0 invariato. Comando `spatialdeck` (validate, build, export html/pdf/video) con exit code del contratto, input JSON o archivio confinati, output atomici e `ExportManifest`; HTML autonomo con CSP a hash e `connect-src 'none'` aperto da `file://` offline nei tre motori; build statica su HTTP; PDF con una pagina per visita dell'itinerario (stampe a pagina singola unite senza nuova resa, perché Chromium sposta il contenuto 3D in un documento a più pagine); WebM VP9 minimo con conteggio dei frame e durata verificati da ffprobe e pose uguali al campionatore; `renderAt` nel player e piano di capture nel core; vista relatore in Studio con finestra pubblica, note private, anteprime, timer, riconnessione e fallback; shell offline versionata di Studio con aggiornamento esplicito. Pacchetti con manifest completi, dipendenze di terze parti esterne, renderer su richiesta, IIFE con note generate, verificati da tarball in un consumer esterno anche negli E2E. Esiti, misure e limiti nel [rapporto 0.6](verification/phase-0.6.md); decisioni nella [specifica, sezione 23](PROJECT_SPEC.md); guida in [DISTRIBUTION](DISTRIBUTION.md).
+
+Blocker esplicito: la proprietà dello scope npm `@spatialdeck` non è dimostrabile (registry 404 il 26 ottobre 2026): i manifest restano `private` e nessuna preparazione al publish è stata fatta. Prerequisiti per 1.0: soglia motivata del consumer realistico, CI aggiornata da osservare al primo push, prove Safari reale e dispositivi, import impress.js. 1.0 non è avviata.

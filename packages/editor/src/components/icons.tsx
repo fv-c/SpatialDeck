@@ -41,6 +41,12 @@ const paths = {
     </>
   ),
   play: <path d="M5 3v10l8-5z" />,
+  presenter: (
+    <>
+      <rect x="1.5" y="2.5" width="9" height="7" rx="1" />
+      <path d="M4 12.5h4M6 9.5v3M12.5 4.5v6M14.5 6.5v2" />
+    </>
+  ),
   plus: <path d="M8 3v10M3 8h10" />,
   copy: (
     <>

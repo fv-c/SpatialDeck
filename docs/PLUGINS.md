@@ -1,4 +1,4 @@
-# Renderer e plugin 0.5
+# Renderer e plugin 0.6
 
 Il core contiene soltanto JSON, schema e semantica. Il player espone `RendererRegistry`, `ContentRenderer`, `ContentContext` e `AssetResolver`; non importa plugin, parser, React o editor. L’app registra esplicitamente i renderer. Il bundle minimo non include DOMPurify, marked, KaTeX o fflate.
 
@@ -34,7 +34,7 @@ player.destroy();
 plugins.destroy();
 ```
 
-Gli entrypoint `rich`, `media`, `navigation`, `sample`, `archive` e SDK sono separati. `builtins` fornisce `createBuiltinRegistry()` per la combinazione usata dalle due app, incluso il badge di esempio. Il CSS delle formule e i font sono locali; un consumer degli artefatti compilati deve importare il CSS plugin. La sua CSP deve permettere quei font incorporati (`font-src data:`) oppure trasformarli in file locali; Studio/playground compilano invece dai sorgenti con font su file e `assetsInlineLimit: 0`.
+Gli entrypoint `rich`, `media`, `navigation`, `sample`, `archive` e SDK sono separati. `builtins` fornisce `createBuiltinRegistry()` per la combinazione usata dalle due app. Da 0.6 i renderer rich e media sono caricati su richiesta (`lazyRenderer`, import dinamico: chunk separati nel bundle del consumer, montaggio sincrono dopo il primo caricamento) e il badge di esempio **non** è più un builtin: un host che lo vuole lo approva con `createBuiltinRegistry({ plugins: [samplePlugin()] })`, come fanno Studio e playground. `replace` sostituisce il renderer di singoli tipi (usato dai profili degli export). DOMPurify, marked, KaTeX e fflate sono dipendenze importate, non copiate nei `dist`: il consumer le aggiorna nel proprio lockfile. `@spatialdeck/plugins/style.css` è il foglio KaTeX con le sole sorgenti woff2 come file locali (`dist/fonts/`, licenza KaTeX accanto); nessun `data:` e nessun formato duplicato. Le formule sono costruite con `katex.render`, che assegna gli stili di posizionamento via CSSOM: funzionano con una CSP senza `'unsafe-inline'` per gli stili (decisione 0.6 in [DISTRIBUTION](DISTRIBUTION.md)).
 
 ## Contratto SDK 1.0.0
 
@@ -48,7 +48,7 @@ Da 0.5 (schema 1.3.0) un blocco può avere `frame` e `style`, ma il renderer non
 
 Plugin assenti, versioni dati non disponibili o payload/impostazioni non validi producono placeholder con dati intatti. Un’API plugin diversa da 1.0.0 è invece un errore dello schema documento. Un progetto non può scegliere URL, import o script. L’inspector di esempio è un entrypoint separato e restituisce payload; è lo store editor a validare e registrare il comando undo/redo. Gli altri plugin possono usare l’editor JSON generico.
 
-`capture` è una dichiarazione per il futuro consumer della Distribuzione (0.6): fino alla 0.4.1 non esiste un export/capture implementato. Il badge dichiara `offline:true` e `capture:false`; i contenuti web non dichiarano disponibilità offline. Nessun MIDI o OSC viene registrato o richiesto.
+`capture` e `offline` sono dichiarazioni dei plugin; la CLI 0.6 non registra alcun plugin, quindi un blocco plugin è bloccante negli export strict e diventa un segnaposto con `--allow-partial`. Il badge dichiara `offline:true` e `capture:false`; i contenuti web non dichiarano disponibilità offline. Nessun MIDI o OSC viene registrato o richiesto.
 
 ## Trust model e minacce
 
@@ -73,3 +73,9 @@ Limiti: 50 MiB/file, 200 MiB totali decompressi incluse le entry JSON, 10 MiB pe
 IndexedDB (v3 da 0.4.1) mantiene revisioni e byte/MIME delle risorse nella medesima transazione. La lettura ricrea Blob, evitando il difetto WebKit macOS 14 nella clonazione di File-backed Blob. Le chiavi includono projectId, assetId e digest; i byte di una chiave già presente non vengono riletti né riscritti. La GC conta, tramite l’indice `assetKeys`, i riferimenti delle sole chiavi appartenute alle revisioni eliminate; undo conserva inoltre i Blob in memoria per la metadata precedente. Quota/conflitto non rendono il download dipendente dallo storage.
 
 Dipendenze fissate e licenze: [DOMPurify 3.4.17](https://registry.npmjs.org/dompurify/3.4.17) MPL-2.0 OR Apache-2.0; [marked 18.1.1](https://registry.npmjs.org/marked/18.1.1), [KaTeX 0.19.0](https://registry.npmjs.org/katex/0.19.0) e [fflate 0.8.3](https://registry.npmjs.org/fflate/0.8.3) MIT. Le risorse originali della gallery hanno [dedica CC0](../examples/content-gallery/LICENSE.md). La licenza del repository non viene cambiata.
+
+## Novità 0.6 per renderer e plugin
+
+- `ContentRenderer.ready?(): Promise<void>` è facoltativo (API plugin 1.0.0 invariata): risolve quando il contenuto è completo, per esempio dopo il caricamento o l'errore di un asset. `player.renderAt` (capture di PDF e video) lo attende; un renderer senza `ready` è pronto dopo mount/update. I builtin media attendono la decodifica dell'immagine, del poster o i metadati del media.
+- I renderer e i plugin ricevono in `context.document` la copia pubblica del documento (`publicDocument`): le note private delle scene sono stringhe vuote. Le note restano nel progetto autoriale e nella console del relatore.
+- I testi predefiniti (`defaultMessages`) sono in inglese; `italianMessages` è il set italiano. I builtin usano `context.messages` come prima.

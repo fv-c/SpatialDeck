@@ -1,13 +1,22 @@
 import { defineConfig } from "vite";
+import {
+  externalDependencies,
+  noBundledDependencies,
+} from "../../scripts/library.mjs";
+// gl-matrix and the Ajv runtime helpers stay dependencies, never copied into dist.
 export default defineConfig({
+  plugins: [noBundledDependencies()],
   build: {
     target: ["chrome120", "firefox120", "safari17"],
     lib: {
       entry: "src/index.ts",
       formats: ["es"],
       fileName: "index",
-      cssFileName: "player",
     },
-    rollupOptions: { external: ["@spatialdeck/core"] },
+    rollupOptions: {
+      external: externalDependencies(
+        new URL("./package.json", import.meta.url).pathname,
+      ),
+    },
   },
 });

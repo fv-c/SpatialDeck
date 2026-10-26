@@ -1,4 +1,11 @@
-import { Unzip, UnzipInflate, zipSync, strToU8 } from "fflate";
+import {
+  Unzip,
+  UnzipInflate,
+  Zip,
+  ZipDeflate,
+  ZipPassThrough,
+  strToU8,
+} from "fflate";
 import {
   normalizedPath,
   serializeDocument,
@@ -34,10 +41,10 @@ const crcTable = Array.from({ length: 256 }, (_, i) => {
   for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
   return c >>> 0;
 });
-function crc32(bytes: Uint8Array) {
-  let c = 0xffffffff;
+/** Incremental CRC-32: feed chunks, then finish with `^ 0xffffffff`. */
+function crcUpdate(c: number, bytes: Uint8Array) {
   for (const b of bytes) c = crcTable[(c ^ b) & 255]! ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
+  return c;
 }
 /** Inspect central AND local headers before allocating decompressed output. ZIP64/multidisk/encrypted archives are deliberately unsupported. */
 function inventory(bytes: Uint8Array): Entry[] {
@@ -165,7 +172,9 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
   if (blob.size > ARCHIVE_LIMIT) throw new Error("Archivio troppo grande.");
   const bytes = new Uint8Array(await blob.arrayBuffer()),
     entries = inventory(bytes),
-    files = new Map<string, Uint8Array>();
+    // Inflated chunks are kept as they come: Blobs are built from them without
+    // concatenating a second copy of every resource.
+    files = new Map<string, Uint8Array[]>();
   let total = 0,
     failure: Error | undefined;
   const unzip = new Unzip((file) => {
@@ -173,7 +182,8 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
     if (!entry || files.has(file.name))
       throw new Error("Entry non indicizzata.");
     const chunks: Uint8Array[] = [];
-    let size = 0;
+    let size = 0,
+      crc = 0xffffffff;
     file.ondata = (error, chunk, final) => {
       if (failure) return;
       if (
@@ -186,22 +196,17 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
         return;
       }
       chunks.push(chunk);
+      crc = crcUpdate(crc, chunk);
       if (final) {
         if (size !== entry.size) {
           failure = new Error("Dimensione decompresso incoerente.");
           return;
         }
-        const output = new Uint8Array(size);
-        let at = 0;
-        for (const c of chunks) {
-          output.set(c, at);
-          at += c.length;
-        }
-        if (crc32(output) !== entry.crc) {
+        if ((crc ^ 0xffffffff) >>> 0 !== entry.crc) {
           failure = new Error("CRC ZIP errato.");
           return;
         }
-        files.set(file.name, output);
+        files.set(file.name, chunks);
       }
     };
     file.start();
@@ -214,9 +219,13 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
   }
   if (files.size !== entries.length) throw new Error("Archivio incompleto.");
   const decode = (name: string) => {
-    const b = files.get(name);
-    if (!b) throw new Error(`Manca ${name}`);
-    return new TextDecoder("utf-8", { fatal: true }).decode(b);
+    const parts = files.get(name);
+    if (!parts) throw new Error(`Manca ${name}`);
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    return (
+      parts.map((p) => decoder.decode(p, { stream: true })).join("") +
+      decoder.decode()
+    );
   };
   const valid = validateDocument(decode("project.json"));
   if (!valid.ok)
@@ -253,7 +262,7 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
       throw new Error("Asset manifest incoerente.");
     const data = files.get(m.entry);
     if (!data) throw new Error(`Risorsa assente: ${a.path}`);
-    const assetBlob = new Blob([data as Uint8Array<ArrayBuffer>], {
+    const assetBlob = new Blob(data as Uint8Array<ArrayBuffer>[], {
       type: a.mime,
     });
     await verifyAsset(a, assetBlob);
@@ -266,14 +275,30 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
     throw new Error("File extra non dichiarati nel manifest.");
   return { document: valid.value, blobs };
 }
+/** Already compressed formats are stored, not deflated again. */
+const STORED = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/webm",
+  "video/mp4",
+  "video/webm",
+  "font/woff2",
+  "application/zip",
+]);
+const WRITE_CHUNK = 1024 * 1024;
+/** Lets rendering and input run between chunks of archive work. */
+const yieldToEventLoop = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0));
 export async function writeArchive(
   document: ProjectDocument,
   blobs: AssetBlobs,
 ): Promise<Blob> {
   const valid = serializeDocument(document);
   if (!valid.ok) throw new Error("Documento invalido.");
-  const files: Record<string, Uint8Array> = Object.create(null);
-  files["project.json"] = strToU8(valid.value);
   const manifest = {
     version: "1.0.0",
     assets: [] as Array<{
@@ -285,6 +310,8 @@ export async function writeArchive(
       sha256: string;
     }>,
   };
+  const sources: Array<{ entry: string; blob: Blob; mime: string }> = [];
+  let total = 0;
   for (const a of document.assets) {
     const blob = blobs.get(a.id);
     if (!blob)
@@ -299,17 +326,54 @@ export async function writeArchive(
         .replace(/[^A-Za-z0-9._-]/g, "_") || "asset";
     const entry = `assets/${a.id}/${name}`;
     await verifyAsset(a, blob);
-    files[entry] = new Uint8Array(await blob.arrayBuffer());
     manifest.assets.push({ ...a, entry, sha256: await sha256(blob) });
+    sources.push({ entry, blob, mime: a.mime });
+    total += blob.size;
   }
-  files["manifest.json"] = strToU8(JSON.stringify(manifest));
-  if (
-    Object.values(files).reduce((total, bytes) => total + bytes.length, 0) >
-    TOTAL_LIMIT
-  )
+  const project = strToU8(valid.value),
+    index = strToU8(JSON.stringify(manifest));
+  if (total + project.length + index.length > TOTAL_LIMIT)
     throw new Error("Limite totale archivio decompresso superato.");
-  const zipped = zipSync(files, { level: 6 });
-  return new Blob([zipped as Uint8Array<ArrayBuffer>], {
+  // Streaming ZIP, one chunk at a time with a yield in between: the main
+  // thread stays responsive and compressed media are stored as they are.
+  const output: Uint8Array[] = [];
+  let failure: Error | null = null;
+  const zip = new Zip((error, data) => {
+    if (error) failure = error;
+    else output.push(data);
+  });
+  const add = async (
+    name: string,
+    read: (at: number) => Promise<Uint8Array>,
+    size: number,
+    store: boolean,
+  ) => {
+    const file = store
+      ? new ZipPassThrough(name)
+      : new ZipDeflate(name, { level: 6 });
+    zip.add(file);
+    if (size === 0) file.push(new Uint8Array(0), true);
+    for (let at = 0; at < size; at += WRITE_CHUNK) {
+      file.push(await read(at), at + WRITE_CHUNK >= size);
+      await yieldToEventLoop();
+      if (failure) throw failure;
+    }
+  };
+  const slice = (bytes: Uint8Array) => async (at: number) =>
+    bytes.subarray(at, at + WRITE_CHUNK);
+  await add("project.json", slice(project), project.length, false);
+  for (const { entry, blob, mime } of sources)
+    await add(
+      entry,
+      async (at) =>
+        new Uint8Array(await blob.slice(at, at + WRITE_CHUNK).arrayBuffer()),
+      blob.size,
+      STORED.has(mime),
+    );
+  await add("manifest.json", slice(index), index.length, false);
+  zip.end();
+  if (failure) throw failure;
+  return new Blob(output as Uint8Array<ArrayBuffer>[], {
     type: "application/zip",
   });
 }

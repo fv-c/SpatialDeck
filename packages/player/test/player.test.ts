@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { validateDocument } from "@spatialdeck/core";
+import {
+  planCapture,
+  sampleCapture,
+  validateDocument,
+  viewMatrix,
+} from "@spatialdeck/core";
 import type { Block, ProjectDocument } from "@spatialdeck/core";
 import fixture from "../../../examples/content-gallery/project.json";
 import {
@@ -8,6 +13,7 @@ import {
   createAssetResolver,
   createPlayer,
   defaultMessages,
+  italianMessages,
 } from "../src/index.js";
 import type {
   AssetLease,
@@ -576,17 +582,31 @@ describe("messages, language and outline", () => {
 });
 describe("message defaults and overrides", () => {
   it("every default is plain text and functions interpolate their arguments", () => {
-    for (const [key, value] of Object.entries(defaultMessages)) {
-      const text =
-        typeof value === "function"
-          ? (value as (...a: unknown[]) => string)("A", "signature")
-          : value;
-      expect(typeof text, key).toBe("string");
-      expect(text.length, key).toBeGreaterThan(0);
-    }
-    expect(defaultMessages.assetInvalid("x", "size")).toContain("dimensione");
-    expect(defaultMessages.assetInvalid("x", "digest")).toContain("Digest");
+    for (const set of [defaultMessages, italianMessages])
+      for (const [key, value] of Object.entries(set)) {
+        const text =
+          typeof value === "function"
+            ? (value as (...a: unknown[]) => string)("A", "signature")
+            : value;
+        expect(typeof text, key).toBe("string");
+        expect(text.length, key).toBeGreaterThan(0);
+      }
+    expect(Object.keys(italianMessages).sort()).toEqual(
+      Object.keys(defaultMessages).sort(),
+    );
+  });
+  it("defaults are English since 0.6; the former Italian set stays exported", () => {
+    expect(defaultMessages.lang).toBe("en");
+    expect(defaultMessages.outline).toBe("Text view");
+    expect(defaultMessages.assetInvalid("x", "size")).toContain("size");
     expect(defaultMessages.visitLimit(3, "n")).toBe(
+      "Limit of 3 visits reached for n",
+    );
+    expect(italianMessages.lang).toBe("it");
+    expect(italianMessages.outline).toBe("Vista testuale");
+    expect(italianMessages.assetInvalid("x", "size")).toContain("dimensione");
+    expect(italianMessages.assetInvalid("x", "digest")).toContain("Digest");
+    expect(italianMessages.visitLimit(3, "n")).toBe(
       "Limite di 3 visite raggiunto per n",
     );
   });
@@ -606,5 +626,131 @@ describe("message defaults and overrides", () => {
     expect(controls).toContain("Overview");
     expect(controls).toContain(defaultMessages.enableMedia);
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+  });
+});
+describe("capture clock and public data (0.6)", () => {
+  const plan = (doc: ProjectDocument) => {
+    const result = planCapture(
+      doc,
+      {
+        pathId: doc.paths[0]!.id,
+        visits: doc.paths[0]!.nodes.slice(0, 3).map((n) => ({ nodeId: n.id })),
+      },
+      { reducedMotion: false },
+    );
+    if (!result.ok) throw new Error(JSON.stringify(result.diagnostics));
+    return result.value;
+  };
+  it("renderAt samples the plan with the core sampler, without visits, events or cues", async () => {
+    const doc = edit(gallery(), (d) => {
+      for (const n of d.paths[0]!.nodes) n.holdMs = 500;
+    });
+    const { host, player } = await mounted(doc);
+    const events: string[] = [];
+    for (const name of [
+      "navigationstart",
+      "navigationend",
+      "scenechange",
+      "cue",
+    ] as const)
+      player.on(name, () => events.push(name));
+    const before = player.getState();
+    const p = plan(doc);
+    const world = host.querySelector<HTMLElement>(".sd-world")!;
+    const t = p.visits[0]!.transition!.startMs + 100;
+    expect((await player.renderAt(p, t)).ok).toBe(true);
+    const sample = sampleCapture(p, t);
+    expect(world.style.transform).toBe(
+      `matrix3d(${viewMatrix(sample.camera).join(",")})`,
+    );
+    const active = host.querySelector<HTMLElement>(
+      `[data-scene-id="${sample.sceneId}"]`,
+    )!;
+    expect(active.dataset.active).toBe("true");
+    expect((await player.renderAt(p, p.visits[1]!.arrivalMs)).ok).toBe(true);
+    expect(
+      host.querySelector<HTMLElement>(
+        `[data-scene-id="${p.visits[1]!.sceneId}"]`,
+      )!.dataset.active,
+    ).toBe("true");
+    expect(events).toEqual([]);
+    expect(player.getState().history).toEqual(before.history);
+    // A navigation command leaves capture and resumes the machine state.
+    await player.goTo({ nodeId: before.nodeId! }, { durationMs: 0 });
+    expect(world.style.transform).toBe(
+      `matrix3d(${viewMatrix(player.getState().camera!).join(",")})`,
+    );
+  });
+  it("renderAt refuses a plan for another document, a time outside it and a busy player", async () => {
+    const doc = gallery();
+    const clock = manualClock();
+    const { player } = await mounted(doc, { clock });
+    const p = plan(doc);
+    expect(
+      (await player.renderAt({ ...p, documentId: "other" }, 0)).diagnostics[0]!
+        .code,
+    ).toBe("CAPTURE_PLAN_MISMATCH");
+    expect((await player.renderAt(p, p.totalMs + 1)).diagnostics[0]!.code).toBe(
+      "INVALID_CAPTURE_TIME",
+    );
+    void player.goTo(
+      { nodeId: doc.paths[0]!.nodes[1]!.id },
+      { durationMs: 500 },
+    );
+    expect((await player.renderAt(p, 0)).diagnostics[0]!.code).toBe(
+      "CAPTURE_BUSY",
+    );
+    clock.advance(10000);
+  });
+  it("renderAt waits for renderer readiness", async () => {
+    const registry = new RendererRegistry();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    let settled = false;
+    registry.register("markdown", () => ({
+      mount() {},
+      update() {},
+      destroy() {},
+      ready: () => gate,
+    }));
+    const doc = gallery();
+    const { player } = await mounted(doc, { registry });
+    const rendering = player.renderAt(plan(doc), 0).then((r) => {
+      settled = true;
+      return r;
+    });
+    await flush();
+    expect(settled).toBe(false);
+    release();
+    expect((await rendering).ok).toBe(true);
+  });
+  it("renderers and plugins receive the document without private notes", async () => {
+    const registry = new RendererRegistry();
+    const seen: string[] = [];
+    registry.register("markdown", () => ({
+      mount(_host, context) {
+        seen.push(...context.document.scenes.map((s) => s.notes));
+      },
+      update(context) {
+        seen.push(...context.document.scenes.map((s) => s.notes));
+      },
+      destroy() {},
+    }));
+    const doc = edit(gallery(), (d) => {
+      for (const s of d.scenes) s.notes = `PRIVATE ${s.id}`;
+    });
+    const { host, player } = await mounted(doc, { registry });
+    await player.updateDocument(
+      edit(doc, (d) => void (d.metadata.title = "Changed")),
+    );
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((n) => n === "")).toBe(true);
+    expect(host.innerHTML).not.toContain("PRIVATE");
+  });
+  it("controls: false leaves only the stage for capture pages", async () => {
+    const { host } = await mounted(gallery(), { controls: false });
+    expect(host.querySelector<HTMLElement>(".sd-access")!.hidden).toBe(true);
+    expect(host.querySelector(".sd-choices")).toBeNull();
+    expect(host.querySelector<HTMLElement>(".sd-stage")!.style.top).toBe("0px");
   });
 });

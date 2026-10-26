@@ -1,10 +1,10 @@
-# Creare una presentazione con Studio 0.5
+# Creare una presentazione con Studio 0.6
 
 Avvia `pnpm dev:studio` dalla root dopo l'installazione descritta nel README. Apri l'indirizzo locale stampato da Vite, normalmente `http://127.0.0.1:5174`. Tutto il lavoro avviene nel browser, senza account o backend.
 
 ## Scene e spazio
 
-La barra in alto contiene il titolo del progetto (modificabile sul posto) e i comandi del documento come icone con descrizione al passaggio del mouse e al focus da tastiera: Nuovo, Apri, Salva (JSON), Salva archivio, Annulla, Ripristina, Recupero, Anteprima e **Presenta**. Ogni icona ha un nome accessibile uguale alla descrizione.
+La barra in alto contiene il titolo del progetto (modificabile sul posto) e i comandi del documento come icone con descrizione al passaggio del mouse e al focus da tastiera: Nuovo, Apri, Salva (JSON), Salva archivio, Annulla, Ripristina, Recupero, Anteprima, **Relatore** e **Presenta**. Ogni icona ha un nome accessibile uguale alla descrizione.
 
 Usa **Nuova scena** (icona + nell’intestazione del pannello Scene, oppure **Crea la prima scena** in un progetto vuoto) per iniziare. La scena viene inserita dopo quella selezionata; **Duplica scena** crea una copia con identità nuove. L'elenco a sinistra e il percorso principale mantengono lo stesso ordine. Seleziona una scena nell'elenco o trascinala nella mappa XY. Trascina lo sfondo per spostare la mappa; rotella, pulsanti +/− e Centra controllano la vista. Questi controlli non modificano il documento.
 
@@ -36,7 +36,7 @@ Tutti i pulsanti e campi sono raggiungibili con Tab; attivali con Invio/Spazio. 
 - Ctrl/Cmd+O: apri il selettore di file.
 - Ctrl/Cmd+Z e Ctrl/Cmd+Shift+Z: annulla/ripristina fuori dai campi di testo.
 - Canc/Backspace fuori dai campi: conferma eliminazione della scena selezionata.
-- **Presenta**: apre un'istanza dello stesso player; frecce/PageUp/PageDown/Spazio navigano quando il player ha focus. Escape o **Torna all'editor** ripristinano il focus e mantengono il modello.
+- **Presenta**: apre un'istanza dello stesso player e, da 0.6, chiede lo schermo intero del browser (se il browser lo nega la presentazione resta nella scheda); frecce/PageUp/PageDown/Spazio navigano quando il player ha focus. Escape o **Torna all'editor** ripristinano il focus, escono dallo schermo intero e mantengono il modello.
 
 La preferenza di sistema per movimento ridotto è rispettata. Vista testuale e Riduci movimento sono disponibili nel player. Tablet/mobile mantengono file, scene, inspector e presentazione; la mappa di precisione è pensata soprattutto per desktop. Le prove automatiche a 768, 390 e 320 px non equivalgono a una prova su dispositivi fisici.
 
@@ -95,3 +95,11 @@ Seleziona una scena e premi **Impagina** nell’intestazione dell’anteprima. L
 **Diagnostica.** Il pannello Impaginazione mostra contrasto della palette sotto 4,5:1 per il testo o 3:1 per il bordo, contenuti tagliati dal proprio frame e frame che coprono controlli interattivi (link, pulsanti, media) di un contenuto sottostante. Studio non corregge i colori né ridimensiona il testo: decidi tu.
 
 **Salvataggio e presentazione.** JSON, archivio, autosave e recupero conservano frame, stile, aspetto e tema; la presentazione e il player vanilla mostrano la stessa resa. Per provare, apri `examples/layout-canvas/layout-canvas.spatialdeck` in Studio, oppure `/layout` nel playground, che apre anche i progetti salvati da Studio con **Apri progetto locale**: titolo nascosto, immagine e testo affiancati, un timbro sovrapposto e ruotato, una nota ruotata, una scena flow semplice e una scena figlia ruotata con colonne e collegamento. Nelle scene canvas la lettura a 320 px è affidata alla vista testuale, non alla vista spaziale.
+
+## Relatore, export e uso offline (0.6)
+
+**Relatore** apre, con lo stesso clic, la finestra pubblica della presentazione e trasforma Studio nella console del relatore: scena corrente, anteprima della successiva o pulsanti delle scelte del ramo, **note private** della scena, timer (Avvia, Pausa, Azzera) e Indietro/Avanti; le frecce funzionano sulla console. La console è l'unica a comandare: i tasti, la vista testuale e le scelte nella finestra pubblica diventano richieste alla console. Le note non arrivano mai alla finestra pubblica; le anteprime sono mute e l'audio suona solo nella finestra pubblica. Nella finestra pubblica **Schermo intero** chiede il fullscreen del browser (spostala prima sullo schermo del pubblico: la scelta del monitor è del browser e del sistema). Se il browser blocca il popup, la console spiega come consentirlo e offre **Riprova ad aprire** o **Presenta in questa scheda**. Se si ricarica la finestra pubblica si risincronizza da sola; se si ricarica Studio, riaprire il progetto presentato e premere **Riprendi vista relatore**. **Termina** chiude la sessione. La vista relatore richiede Studio servito da host locale o HTTPS.
+
+**Export.** HTML autonomo, PDF e video si producono con il comando `spatialdeck` (vedi [DISTRIBUTION](DISTRIBUTION.md)) partendo dal JSON salvato con le risorse affiancate o dall'archivio `.spatialdeck`. Il PDF ha una pagina per visita di un itinerario esplicito; il video è senza audio e accetta solo testo, Markdown, HTML, SVG, formule, immagini e movimenti di camera. Embed, plugin e risorse remote non vengono esportati in modalità strict. Le note private non entrano in nessun export.
+
+**Offline.** Studio di produzione registra una shell offline dopo il primo caricamento: si riapre senza rete e i progetti locali tornano dal recupero. Una nuova versione mostra **Aggiorna e ricarica**: salva prima il lavoro nel recupero locale e non cancella mai i progetti; **Più tardi** lascia la versione corrente. IndexedDB resta un recupero, non un backup: salvare JSON o archivio.

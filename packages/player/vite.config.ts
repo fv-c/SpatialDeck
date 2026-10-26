@@ -1,13 +1,22 @@
 import { defineConfig } from "vite";
+import {
+  externalDependencies,
+  noBundledDependencies,
+} from "../../scripts/library.mjs";
 export default defineConfig({
+  plugins: [noBundledDependencies()],
   build: {
     target: ["chrome120", "firefox120", "safari17"],
     lib: {
-      entry: "src/browser.ts",
+      entry: { index: "src/browser.ts", presenter: "src/presenter.ts" },
       formats: ["es"],
-      fileName: "index",
+      fileName: (_format, name) => `${name}.js`,
       cssFileName: "player",
     },
-    rollupOptions: { external: ["@spatialdeck/core"] },
+    rollupOptions: {
+      external: externalDependencies(
+        new URL("./package.json", import.meta.url).pathname,
+      ),
+    },
   },
 });

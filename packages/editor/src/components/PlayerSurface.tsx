@@ -1,8 +1,13 @@
 import { useEffect, useRef } from "react";
-import { createPlayer, createAssetResolver } from "@spatialdeck/player";
+import {
+  createPlayer,
+  createAssetResolver,
+  italianMessages,
+} from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
+import type { PluginDefinition } from "@spatialdeck/plugins";
 import {
   sampleTransition,
   resolveSceneCamera,
@@ -22,6 +27,7 @@ export function PlayerSurface({
   blobs,
   layout = false,
   onHost,
+  plugins = [],
 }: {
   document: ProjectDocument;
   selection: string | null;
@@ -33,11 +39,14 @@ export function PlayerSurface({
   /** Scene editor: the selected scene is always framed frontally with resolveSceneCamera. */
   layout?: boolean;
   onHost?: (host: HTMLDivElement | null) => void;
+  /** Host-approved plugins; the builtins no longer include the demo badge. */
+  plugins?: readonly PluginDefinition[];
 }) {
   const host = useRef<HTMLDivElement>(null),
     player = useRef<Player | null>(null);
   const initial = useRef(document),
     callback = useRef(onPlayer),
+    approved = useRef(plugins),
     hostCallback = useRef(onHost);
   callback.current = onPlayer;
   hostCallback.current = onHost;
@@ -46,8 +55,10 @@ export function PlayerSurface({
   );
   assets.current = createAssetResolver(document.assets, blobs ?? new Map());
   useEffect(() => {
-    const builtins = createBuiltinRegistry();
+    const builtins = createBuiltinRegistry({ plugins: approved.current });
     const instance = createPlayer({
+      // Studio's interface is Italian until 1.0 (G0 decision 3).
+      messages: italianMessages,
       input: present,
       motion: present ? "system" : "reduced",
       registry: builtins.registry,

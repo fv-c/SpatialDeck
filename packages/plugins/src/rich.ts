@@ -1,6 +1,5 @@
 import { marked } from "marked";
 import katex from "katex";
-import "katex/dist/katex.min.css";
 import { sanitizeContent } from "./security.js";
 import { defaultMessages } from "@spatialdeck/player";
 import type {
@@ -9,7 +8,8 @@ import type {
   RendererRegistry,
 } from "@spatialdeck/player";
 export { sanitizeContent } from "./security.js";
-function rich(): ContentRenderer {
+/** Markdown, HTML, SVG and LaTeX; `createBuiltinRegistry` loads this module on first use. */
+export function richRenderer(): ContentRenderer {
   let host: HTMLElement,
     last = "";
   function update(context: ContentContext) {
@@ -39,8 +39,10 @@ function rich(): ContentRenderer {
       }
     } else if (b.type === "latex") {
       try {
-        // Only KaTeX-generated markup enters this sink. User HTML never uses it.
-        host.innerHTML = katex.renderToString(b.data.source, {
+        // KaTeX builds DOM nodes and sets its positioning styles through
+        // CSSOM, so a CSP without 'unsafe-inline' styles keeps the formula
+        // intact; no markup string is parsed. User HTML never reaches here.
+        katex.render(b.data.source, host, {
           trust: false,
           throwOnError: true,
           maxExpand: 500,
@@ -72,7 +74,7 @@ function rich(): ContentRenderer {
 }
 export function registerRich(registry: RendererRegistry): () => void {
   const off = (["markdown", "html", "svg", "latex"] as const).map((type) =>
-    registry.register(type, rich),
+    registry.register(type, richRenderer),
   );
   return () => off.forEach((dispose) => dispose());
 }

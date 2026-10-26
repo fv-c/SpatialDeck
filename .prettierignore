@@ -2,6 +2,7 @@ pnpm-lock.yaml
 .tools
 **/dist
 packages/core/src/document/validator.js
+packages/plugins/src/katex.css
 playwright-report
 test-results
 prompts

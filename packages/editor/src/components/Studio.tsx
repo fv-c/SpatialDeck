@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Player } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
+import type { PluginDefinition } from "@spatialdeck/plugins";
 import { serializeDocument, validateDocument } from "@spatialdeck/core";
 import type { Result, ProjectDocument } from "@spatialdeck/core";
 import {
@@ -41,15 +42,26 @@ import { LayoutEditor } from "./LayoutEditor.js";
 import { LayoutPanel } from "./LayoutPanel.js";
 import { ThemePanel } from "./ThemePanel.js";
 import { Icon, IconButton } from "./icons.js";
+import {
+  PRESENTER_SESSION_KEY,
+  PresenterView,
+  findPublicWindow,
+  openPublicWindow,
+} from "./PresenterView.js";
+import { randomToken } from "@spatialdeck/player/presenter";
+const noPlugins: readonly PluginDefinition[] = [];
 export interface StudioProps {
   store?: EditorStore;
   repository?: RecoveryRepository;
   onPlayer?: (player: Player | null, present: boolean) => void;
+  /** Plugins approved by the host application for preview and presentation. */
+  plugins?: readonly PluginDefinition[];
 }
 export function Studio({
   store: providedStore,
   repository: providedRepository,
   onPlayer,
+  plugins = noPlugins,
 }: StudioProps) {
   const store = useMemo(
     () => providedStore ?? new EditorStore(emptyProject()),
@@ -76,6 +88,18 @@ export function Studio({
     [storageWarning, setStorageWarning] = useState<string | null>(null),
     [error, setError] = useState(""),
     [present, setPresent] = useState(false),
+    [presenter, setPresenter] = useState<{
+      sessionId: string;
+      popup: Window | null;
+    } | null>(null),
+    // A presenter session survives a reload of this tab: it can be resumed.
+    [resumable, setResumable] = useState<string | null>(() => {
+      try {
+        return sessionStorage.getItem(PRESENTER_SESSION_KEY);
+      } catch {
+        return null;
+      }
+    }),
     [preview, setPreview] = useState(true);
   const [dialog, setDialog] = useState<{
       title: string;
@@ -175,15 +199,55 @@ export function Studio({
       }
     };
     window.addEventListener("beforeunload", unload);
+    // An offline-shell update first saves unsaved work to local recovery.
+    const beforeUpdate = (event: Event) => {
+      const current = store.getSnapshot();
+      const wait = (event as CustomEvent<{ wait(p: Promise<unknown>): void }>)
+        .detail?.wait;
+      if (current.dirty && !current.dragging && wait)
+        wait(autosave.flush(current.document));
+    };
+    window.addEventListener("spatialdeck:before-update", beforeUpdate);
     return () => {
       document.removeEventListener("visibilitychange", flush);
       window.removeEventListener("beforeunload", unload);
+      window.removeEventListener("spatialdeck:before-update", beforeUpdate);
     };
   }, [autosave, store]);
   useEffect(() => {
     if (present) presentation.current?.focus();
-    else presentButton.current?.focus({ preventScroll: true });
+    else {
+      presentButton.current?.focus({ preventScroll: true });
+      if (document.fullscreenElement) void document.exitFullscreen?.();
+    }
   }, [present]);
+  // The browser consumes Escape to leave fullscreen: leaving fullscreen ends
+  // the presentation too, so one Escape always returns to the editor.
+  useEffect(() => {
+    if (!present) return;
+    const left = () => {
+      if (!document.fullscreenElement) setPresent(false);
+    };
+    document.addEventListener("fullscreenchange", left);
+    return () => document.removeEventListener("fullscreenchange", left);
+  }, [present]);
+  /** Fullscreen needs the user's gesture: requested in the click handler, best effort. */
+  const presentHere = () => {
+    store.endDrag();
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+    setPresent(true);
+  };
+  const startPresenter = () => {
+    store.endDrag();
+    const sessionId = randomToken();
+    try {
+      sessionStorage.setItem(PRESENTER_SESSION_KEY, sessionId);
+    } catch {
+      /* Without sessionStorage a reload ends the session. */
+    }
+    setResumable(null);
+    setPresenter({ sessionId, popup: openPublicWindow(sessionId) });
+  };
   function confirmReplace(action: () => void) {
     if (store.getSnapshot().dirty)
       setDialog({
@@ -382,7 +446,7 @@ export function Studio({
           setPresent(false);
           return;
         }
-        if (present || dialog || revisions.length) return;
+        if (present || presenter || dialog || revisions.length) return;
         const editing = (event.target as Element).matches(
           "input,textarea,select,[contenteditable]",
         );
@@ -511,15 +575,19 @@ export function Studio({
             pressed={preview}
             onClick={() => setPreview(!preview)}
           />
+          <IconButton
+            icon="presenter"
+            label="Relatore"
+            shortcut="note, anteprime e finestra pubblica"
+            onClick={startPresenter}
+            disabled={!session.document.scenes.length}
+          />
           <button
             type="button"
             tabIndex={0}
             ref={presentButton}
             className="primary present-button"
-            onClick={() => {
-              store.endDrag();
-              setPresent(true);
-            }}
+            onClick={presentHere}
             disabled={!session.document.scenes.length}
           >
             <Icon name="play" />
@@ -704,6 +772,7 @@ export function Studio({
                   layout={!!layoutScene}
                   onHost={setPreviewHost}
                   onPlayer={previewPlayer}
+                  plugins={plugins}
                 />
                 {layoutScene && (
                   <LayoutEditor
@@ -776,6 +845,56 @@ export function Studio({
           comandi
         </span>
       </footer>
+      {resumable && !presenter && (
+        <div className="presenter-resume" role="status">
+          <span>
+            Sessione relatore attiva in un’altra finestra.
+            {!session.document.scenes.length &&
+              " Apri il progetto presentato per riprenderla."}
+          </span>
+          <button
+            type="button"
+            tabIndex={0}
+            disabled={!session.document.scenes.length}
+            onClick={() => {
+              setPresenter({
+                sessionId: resumable,
+                popup: findPublicWindow(resumable),
+              });
+              setResumable(null);
+            }}
+          >
+            Riprendi vista relatore
+          </button>
+          <button
+            type="button"
+            tabIndex={0}
+            onClick={() => {
+              sessionStorage.removeItem(PRESENTER_SESSION_KEY);
+              setResumable(null);
+            }}
+          >
+            Ignora
+          </button>
+        </div>
+      )}
+      {presenter && (
+        <div className="presentation presenter-overlay">
+          <PresenterView
+            document={session.document}
+            blobs={blobs}
+            plugins={plugins}
+            sessionId={presenter.sessionId}
+            popup={presenter.popup}
+            onClose={() => setPresenter(null)}
+            onSingleWindow={() => {
+              sessionStorage.removeItem(PRESENTER_SESSION_KEY);
+              setPresenter(null);
+              presentHere();
+            }}
+          />
+        </div>
+      )}
       {present && (
         <div
           className="presentation"
@@ -795,6 +914,7 @@ export function Studio({
             selection={null}
             present
             blobs={blobs}
+            plugins={plugins}
             {...(onPlayer ? { onPlayer } : {})}
           />
         </div>

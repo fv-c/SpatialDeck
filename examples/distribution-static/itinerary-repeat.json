@@ -1,0 +1,18 @@
+{
+  "pathId": "main",
+  "visits": [
+    {
+      "nodeId": "n1"
+    },
+    {
+      "nodeId": "n2"
+    },
+    {
+      "nodeId": "n3",
+      "edgeIdToNext": "e3"
+    },
+    {
+      "nodeId": "n1"
+    }
+  ]
+}

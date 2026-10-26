@@ -1,0 +1,516 @@
+import { createHash } from "node:crypto";
+import {
+  chmod,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { run } from "../src/index.js";
+
+const root = new URL("../../../examples/", import.meta.url).pathname;
+const dirs: string[] = [];
+afterEach(async () => {
+  for (const dir of dirs.splice(0)) {
+    await chmod(dir, 0o755).catch(() => undefined);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+async function temp() {
+  const dir = await mkdtemp(join(tmpdir(), "spatialdeck-cli-test-"));
+  dirs.push(dir);
+  return dir;
+}
+async function cli(...argv: string[]) {
+  const out: string[] = [],
+    err: string[] = [];
+  const code = await run(argv, {
+    out: (t) => out.push(t),
+    log: (t) => out.push(t),
+    warn: (t) => err.push(t),
+  });
+  return { code, out: out.join("\n"), err: err.join("\n") };
+}
+const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
+/** The fields of the fixture JSON that the tests alter. */
+interface Fixture {
+  schemaVersion: string;
+  requiredCapabilities: string[];
+  assets: Array<{
+    id: string;
+    path: string;
+    mime: string;
+    byteLength: number;
+    sha256?: string;
+  }>;
+  scenes: Array<{ blocks: unknown[] }>;
+  paths: Array<{ nodes: Array<{ holdMs: number }> }>;
+}
+/** A copy of the distribution fixture that a test may alter. */
+async function fixture(alter?: (doc: Fixture) => void) {
+  const dir = await temp();
+  await mkdir(join(dir, "assets"));
+  await copyFile(
+    join(root, "distribution-static/assets/orbit.svg"),
+    join(dir, "assets/orbit.svg"),
+  );
+  const doc = JSON.parse(
+    await readFile(join(root, "distribution-static/project.json"), "utf8"),
+  );
+  alter?.(doc);
+  const project = join(dir, "project.json");
+  await writeFile(project, JSON.stringify(doc));
+  return { dir, project, doc };
+}
+const itinerary = async (dir: string, value: unknown) => {
+  const path = join(dir, "itinerary.json");
+  await writeFile(path, JSON.stringify(value));
+  return path;
+};
+
+describe("arguments and exit codes", () => {
+  it("prints help and version with exit 0", async () => {
+    for (const args of [[], ["--help"], ["-h"]]) {
+      const r = await cli(...args);
+      expect(r.code).toBe(0);
+      expect(r.out).toContain("spatialdeck validate <project>");
+      expect(r.out).toContain("Exit codes: 0 success");
+    }
+    expect((await cli("--version")).out).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+  it("rejects unknown commands, options, repeated and missing values with exit 1", async () => {
+    const cases: Array<[string[], string]> = [
+      [["publish"], "Unknown command"],
+      [["validate", "x.json", "--bogus"], "Unknown option"],
+      [["validate", "x.json", "--out"], "--out needs a value"],
+      [["build", "x.json"], "Missing --out"],
+      [["export", "gif", "x.json", "--out", "y"], "Unknown export format"],
+      [["export", "html", "a.json", "b.json", "--out", "y"], "exactly one"],
+      [
+        ["export", "html", "x.json", "--out", "a", "--out", "b"],
+        "Repeated option",
+      ],
+      [
+        ["export", "html", "x.json", "--out", "a", "--lang", "fr"],
+        "--lang must be",
+      ],
+      [
+        [
+          "export",
+          "video",
+          "x.json",
+          "--out",
+          "a",
+          "--itinerary",
+          "i",
+          "--fps",
+          "-1",
+        ],
+        "--fps must be",
+      ],
+      [
+        [
+          "export",
+          "video",
+          "x.json",
+          "--out",
+          "a",
+          "--itinerary",
+          "i",
+          "--fps",
+          "3.5",
+        ],
+        "--fps must be",
+      ],
+      [["validate", "x.json", "--fps", "30"], "does not apply"],
+      [["export", "pdf", "x.json", "--out", "a"], "Missing --itinerary"],
+    ];
+    for (const [argv, message] of cases) {
+      const r = await cli(...argv);
+      expect(r.code, argv.join(" ")).toBe(1);
+      expect(r.err, argv.join(" ")).toContain(message);
+    }
+  });
+});
+
+describe("validate", () => {
+  it("accepts JSON projects and archives, with a machine-readable report", async () => {
+    expect(
+      (await cli("validate", join(root, "layout-canvas/project.json"))).code,
+    ).toBe(0);
+    expect(
+      (
+        await cli(
+          "validate",
+          join(root, "layout-canvas/layout-canvas.spatialdeck"),
+        )
+      ).code,
+    ).toBe(0);
+    const json = await cli(
+      "validate",
+      join(root, "distribution-static/project.json"),
+      "--json",
+    );
+    expect(json.code).toBe(0);
+    const report = JSON.parse(json.out);
+    expect(report).toMatchObject({
+      ok: true,
+      schemaVersion: "1.3.0",
+      kind: "json",
+    });
+    expect(report.resources[0]).toMatchObject({
+      id: "orbit",
+      status: "verified",
+    });
+    // Historical schemas validate as migrated copies; the source version is reported.
+    const legacy = JSON.parse(
+      (
+        await cli(
+          "validate",
+          join(root, "core-three-scenes/project.json"),
+          "--json",
+        )
+      ).out,
+    );
+    expect(legacy).toMatchObject({
+      ok: true,
+      schemaVersion: "1.3.0",
+      sourceSchemaVersion: "1.0.0",
+    });
+  });
+  it("rejects unreadable JSON, an unknown version and an undeclared capability with exit 1", async () => {
+    const dir = await temp();
+    const bad = join(dir, "bad.json");
+    await writeFile(bad, "{ not json");
+    expect((await cli("validate", bad)).code).toBe(1);
+    const { project } = await fixture((d) => void (d.schemaVersion = "1.4.0"));
+    const future = await cli("validate", project);
+    expect(future.code).toBe(1);
+    expect(future.err).toContain("UNSUPPORTED_VERSION");
+    const { project: under } = await fixture(
+      (d) => void (d.requiredCapabilities = ["linear"]),
+    );
+    expect((await cli("validate", under)).err).toContain("CAPABILITY_REQUIRED");
+    expect((await cli("validate", join(dir, "missing.json"))).code).toBe(1);
+  });
+  it("confines assets to the project root: traversal, encoded, absolute and symlinked paths fail", async () => {
+    for (const path of [
+      "../outside.svg",
+      "%2e%2e/outside.svg",
+      "/etc/hosts",
+      "assets\\orbit.svg",
+    ]) {
+      const { project } = await fixture((d) => void (d.assets[0]!.path = path));
+      const r = await cli("validate", project);
+      expect(r.code, path).toBe(1);
+    }
+    const { dir, project } = await fixture(
+      (d) => void (d.assets[0]!.path = "assets/link.svg"),
+    );
+    const outside = await temp();
+    await copyFile(join(dir, "assets/orbit.svg"), join(outside, "secret.svg"));
+    await symlink(join(outside, "secret.svg"), join(dir, "assets/link.svg"));
+    const r = await cli("validate", project);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("ASSET_PATH");
+    // A symlinked directory in the middle of the path is refused as well, even inside the root.
+    const { dir: d2, project: p2 } = await fixture(
+      (d) => void (d.assets[0]!.path = "linked/orbit.svg"),
+    );
+    await symlink(join(d2, "assets"), join(d2, "linked"));
+    const r2 = await cli("validate", p2);
+    expect(r2.code).toBe(1);
+  });
+  it("reports missing files, wrong size, digest and MIME signature", async () => {
+    const svg = await readFile(
+      join(root, "distribution-static/assets/orbit.svg"),
+    );
+    const cases: Array<[(d: Fixture) => void, string]> = [
+      [(d) => void (d.assets[0]!.path = "assets/none.svg"), "ASSET_MISSING"],
+      [(d) => void (d.assets[0]!.byteLength = svg.length + 1), "ASSET_SIZE"],
+      [
+        (d) => void (d.assets[0]!.sha256 = sha(Buffer.from("x"))),
+        "ASSET_DIGEST",
+      ],
+      [(d) => void (d.assets[0]!.mime = "image/png"), "ASSET_SIGNATURE"],
+    ];
+    for (const [alter, code] of cases) {
+      const { project } = await fixture(alter);
+      const r = await cli("validate", project, "--json");
+      expect(r.code, code).toBe(1);
+      expect(JSON.parse(r.out).diagnostics[0].code).toBe(code);
+    }
+  });
+  it("handles quotes, spaces and apostrophes in file names without a shell", async () => {
+    const { dir, doc } = await fixture();
+    const name = `it's a "quoted" deck; $(touch pwned).json`;
+    await mkdir(join(dir, `as "sets"`));
+    await copyFile(
+      join(dir, "assets/orbit.svg"),
+      join(dir, `as "sets"`, `o'rbit $x.svg`),
+    );
+    doc.assets[0]!.path = `as "sets"/o'rbit $x.svg`;
+    await writeFile(join(dir, name), JSON.stringify(doc));
+    expect((await cli("validate", join(dir, name))).code).toBe(0);
+    expect(await readdir(dir)).not.toContain("pwned");
+  });
+});
+
+describe("outputs", () => {
+  it("refuses an existing output without --overwrite and leaves it untouched", async () => {
+    const { dir, project } = await fixture();
+    const out = join(dir, "deck.html");
+    await writeFile(out, "keep");
+    const r = await cli("export", "html", project, "--out", out);
+    expect(r.code).toBe(3);
+    expect(r.err).toContain("--overwrite");
+    expect(await readFile(out, "utf8")).toBe("keep");
+    // An existing sidecar manifest counts as output too.
+    await writeFile(join(dir, "other.html.manifest.json"), "keep");
+    expect(
+      (await cli("export", "html", project, "--out", join(dir, "other.html")))
+        .code,
+    ).toBe(3);
+  });
+  it("replaces a build directory only when it is a previous build", async () => {
+    const { dir, project } = await fixture();
+    const target = join(dir, "site");
+    await mkdir(target);
+    await writeFile(join(target, "precious.txt"), "user data");
+    const r = await cli("build", project, "--out", target, "--overwrite");
+    expect(r.code).toBe(3);
+    expect(r.err).toContain("not a previous SpatialDeck build");
+    expect(await readFile(join(target, "precious.txt"), "utf8")).toBe(
+      "user data",
+    );
+  });
+  it("fails with exit 3 on a missing or read-only output directory and leaves no temporary file", async () => {
+    const { dir, project } = await fixture();
+    expect(
+      (
+        await cli(
+          "export",
+          "html",
+          project,
+          "--out",
+          join(dir, "nope/deck.html"),
+        )
+      ).code,
+    ).toBe(3);
+    if (process.getuid?.() === 0) return; // root ignores permissions
+    const locked = join(dir, "locked");
+    await mkdir(locked);
+    await chmod(locked, 0o555);
+    dirs.push(locked);
+    const r = await cli("validate", project);
+    expect(r.code).toBe(0);
+    const { writeAtomic } = await import("../src/io.js");
+    await expect(
+      writeAtomic(join(locked, "deck.html"), "x"),
+    ).rejects.toMatchObject({ exitCode: 3 });
+    expect(await readdir(locked)).toEqual([]);
+  });
+});
+
+describe("profiles and capture inputs (before any browser starts)", () => {
+  it("strict exports refuse embeds, plugins and remote resources in markup", async () => {
+    const cases: Array<[(d: Fixture) => void, string]> = [
+      [
+        (d) =>
+          d.scenes[1]!.blocks.push({
+            id: "web",
+            type: "embed",
+            data: { url: "https://example.org/", title: "Remote" },
+          }),
+        "EMBED_REMOTE",
+      ],
+      [
+        (d) => {
+          d.scenes[1]!.blocks.push({
+            id: "badge",
+            type: "plugin",
+            data: {
+              pluginId: "org.spatialdeck.badge",
+              apiVersion: "1.0.0",
+              dataVersion: "1.0.0",
+              payload: { label: "x" },
+            },
+          });
+        },
+        "PLUGIN_UNAVAILABLE",
+      ],
+      [
+        (d) =>
+          d.scenes[1]!.blocks.push({
+            id: "font",
+            type: "html",
+            data: {
+              source:
+                '<link rel="stylesheet" href="https://fonts.example/f.css"><p>x</p>',
+            },
+          }),
+        "REMOTE_RESOURCE",
+      ],
+      [
+        (d) =>
+          d.scenes[1]!.blocks.push({
+            id: "font2",
+            type: "html",
+            data: {
+              source:
+                "<style>@font-face{src:url(https://fonts.example/a.woff2)}</style>",
+            },
+          }),
+        "REMOTE_RESOURCE",
+      ],
+      [
+        (d) =>
+          d.scenes[1]!.blocks.push({
+            id: "pic",
+            type: "markdown",
+            data: { source: "![remote](https://example.org/a.png)" },
+          }),
+        "REMOTE_RESOURCE",
+      ],
+    ];
+    for (const [alter, code] of cases) {
+      const { dir, project } = await fixture(alter);
+      const out = join(dir, "deck.html");
+      const r = await cli("export", "html", project, "--out", out);
+      expect(r.code, code).toBe(1);
+      expect(r.err).toContain(code);
+      await expect(readFile(out)).rejects.toThrow();
+    }
+  });
+  it("audio and video are outside the video profile, a link only warns", async () => {
+    const { dir, project } = await fixture((d) => {
+      d.assets.push({
+        id: "tone",
+        path: "assets/tone.wav",
+        mime: "audio/wav",
+        byteLength: 4,
+      });
+      d.scenes[1]!.blocks.push({
+        id: "a",
+        type: "audio",
+        data: {
+          assetId: "tone",
+          label: "Tone",
+          autoplay: false,
+          loop: false,
+          onExit: "pause",
+        },
+      });
+    });
+    const path = await itinerary(dir, {
+      pathId: "main",
+      visits: [{ nodeId: "n1" }, { nodeId: "n2" }],
+    });
+    const r = await cli(
+      "export",
+      "video",
+      project,
+      "--itinerary",
+      path,
+      "--out",
+      join(dir, "v.webm"),
+    );
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("MEDIA_PROFILE");
+  });
+  it("validates the itinerary against the project before capture", async () => {
+    const { dir, project } = await fixture();
+    const cases: Array<[unknown, string]> = [
+      [
+        { pathId: "main", visits: [{ nodeId: "n1" }, { nodeId: "n3" }] },
+        "NOT_ADJACENT",
+      ],
+      [
+        { pathId: "main", visits: [{ nodeId: "n1", edgeIdToNext: "e1" }] },
+        "EDGE_AFTER_LAST",
+      ],
+      [{ pathId: "main", visits: [] }, "ITINERARY_EMPTY"],
+      [{ pathId: "nope", visits: [{ nodeId: "n1" }] }, "UNKNOWN_PATH"],
+      [
+        {
+          pathId: "main",
+          visits: ["n1", "n2", "n3", "n1", "n2", "n3", "n1"].map((nodeId) => ({
+            nodeId,
+          })),
+        },
+        "VISIT_LIMIT",
+      ],
+    ];
+    for (const [value, code] of cases) {
+      const r = await cli(
+        "export",
+        "pdf",
+        project,
+        "--itinerary",
+        await itinerary(dir, value),
+        "--out",
+        join(dir, "x.pdf"),
+      );
+      expect(r.code, code).toBe(1);
+      expect(r.err).toContain(code);
+    }
+    expect(
+      (
+        await cli(
+          "export",
+          "pdf",
+          project,
+          "--itinerary",
+          join(dir, "absent.json"),
+          "--out",
+          join(dir, "x.pdf"),
+        )
+      ).code,
+    ).toBe(1);
+  });
+  it("a zero-duration plan cannot become a video", async () => {
+    const { dir, project } = await fixture((d) => {
+      for (const n of d.paths[0]!.nodes) n.holdMs = 0;
+    });
+    const r = await cli(
+      "export",
+      "video",
+      project,
+      "--itinerary",
+      await itinerary(dir, { pathId: "main", visits: [{ nodeId: "n1" }] }),
+      "--out",
+      join(dir, "v.webm"),
+    );
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("ZERO_DURATION");
+  });
+  it("a missing FFmpeg is an environment error (exit 2), never installed", async () => {
+    const { dir, project } = await fixture();
+    const previous = process.env.SPATIALDECK_FFMPEG;
+    process.env.SPATIALDECK_FFMPEG = join(dir, "no-ffmpeg");
+    try {
+      const r = await cli(
+        "export",
+        "video",
+        project,
+        "--itinerary",
+        await itinerary(dir, { pathId: "main", visits: [{ nodeId: "n1" }] }),
+        "--out",
+        join(dir, "v.webm"),
+      );
+      expect(r.code).toBe(2);
+      expect(r.err).toContain("ffmpeg not found");
+      expect(await readdir(dir)).not.toContain("v.webm");
+    } finally {
+      if (previous === undefined) delete process.env.SPATIALDECK_FFMPEG;
+      else process.env.SPATIALDECK_FFMPEG = previous;
+    }
+  });
+});

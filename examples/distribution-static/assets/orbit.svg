@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Original illustration for SpatialDeck, CC0-1.0. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#e0f2fe"/>
+  <ellipse cx="200" cy="150" rx="150" ry="60" fill="none" stroke="#0f766e" stroke-width="6"/>
+  <ellipse cx="200" cy="150" rx="60" ry="120" fill="none" stroke="#7c3aed" stroke-width="6" transform="rotate(30 200 150)"/>
+  <circle cx="200" cy="150" r="34" fill="#f59e0b"/>
+  <circle cx="350" cy="150" r="14" fill="#0f766e"/>
+  <circle cx="148" cy="48" r="12" fill="#7c3aed"/>
+</svg>

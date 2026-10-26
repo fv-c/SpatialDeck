@@ -39,6 +39,12 @@ export interface ContentRenderer {
   mount(host: HTMLElement, context: ContentContext): void;
   update(context: ContentContext): void;
   destroy(): void;
+  /**
+   * Optional (additive in 0.6, plugin API stays 1.0.0): resolves when the
+   * rendered content is complete, e.g. after an asset loaded or failed.
+   * Capture waits for it; a renderer without it is ready after mount/update.
+   */
+  ready?(): Promise<void>;
 }
 export type RendererFactory = () => ContentRenderer;
 export class RendererRegistry {
@@ -115,6 +121,15 @@ export class ContentMount {
   /** True while a registered renderer owns the host content. */
   get rendered(): boolean {
     return !!this.renderer && !this.disposed;
+  }
+  /** Content complete for capture; failures and placeholders are ready at once. */
+  async ready(): Promise<void> {
+    if (this.disposed || !this.renderer?.ready) return;
+    try {
+      await this.renderer.ready();
+    } catch {
+      /* A failed asset is still a stable, captured placeholder. */
+    }
   }
   update(active: boolean, mediaEnabled: boolean) {
     const key = `${active}:${mediaEnabled}`;

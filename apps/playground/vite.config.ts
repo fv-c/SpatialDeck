@@ -3,6 +3,11 @@ export default defineConfig({
   root: new URL(".", import.meta.url).pathname,
   resolve: {
     alias: {
+      // Listed before the package prefix, which would otherwise match.
+      "@spatialdeck/plugins/style.css": new URL(
+        "../../packages/plugins/src/katex.css",
+        import.meta.url,
+      ).pathname,
       "@spatialdeck/plugins": new URL(
         "../../packages/plugins/src",
         import.meta.url,

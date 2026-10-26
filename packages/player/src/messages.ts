@@ -2,7 +2,7 @@ import type { AssetErrorCode } from "./assets/index.js";
 /**
  * Every user-visible string of the player and of the builtin renderers.
  * Hosts replace any subset through `PlayerOptions.messages`; the defaults are
- * Italian. Functions receive document data as plain text and must return
+ * English (from 0.6) and `italianMessages` is the complete alternative. Functions receive document data as plain text and must return
  * plain text: the player always inserts messages with textContent.
  */
 export interface PlayerMessages {
@@ -53,7 +53,65 @@ export interface PlayerMessages {
   pluginUnavailable(pluginId: string, dataVersion: string): string;
   pluginOffline: string;
 }
+/** English defaults (G0 decision 3, from 0.6). */
 export const defaultMessages: Readonly<PlayerMessages> = Object.freeze({
+  lang: "en",
+  presentation: "SpatialDeck",
+  outline: "Text view",
+  reduceMotion: "Reduce motion",
+  overview: "Overview",
+  camera: "Camera",
+  sceneView: "Scene view",
+  panLeft: "Pan left",
+  panRight: "Pan right",
+  panUp: "Pan up",
+  panDown: "Pan down",
+  zoomIn: "Zoom in",
+  zoomOut: "Zoom out",
+  enableMedia: "Enable media",
+  stage: "Spatial presentation",
+  emptyPath: "No scene in the selected path.",
+  emptyPresentation: "Empty presentation",
+  choices: "Path choices",
+  choicePrompt: "Choose the path",
+  choiceDisabled: (label: string, reason: string) => `${label} — ${reason}`,
+  visitLimit: (limit: number, nodeId: string) =>
+    `Limit of ${limit} visits reached for ${nodeId}`,
+  contentUnavailable: (type: string) => `Content unavailable (${type})`,
+  contentError: (detail: string) => `Content error: ${detail}`,
+  pluginContent: (pluginId: string) => `Plugin: ${pluginId}`,
+  formulaInvalid: (text: string) => `Invalid formula: ${text}`,
+  mediaLoading: "Loading local resource…",
+  mediaPlay: (label: string) => `Play ${label}`,
+  mediaRejected:
+    "Playback refused or codec not supported. Use Play or link a compatible file.",
+  mediaDecodeError:
+    "Media cannot be decoded or the codec is not supported. Link a compatible file.",
+  imageDecodeError: "Image cannot be decoded. Link a compatible file.",
+  assetMissing: (assetId: string) =>
+    `Missing resource: ${assetId}. Link the file in the Resources panel.`,
+  assetInvalid: (assetId: string, reason: "size" | "signature" | "digest") =>
+    `Invalid resource: ${assetId}. ${
+      reason === "size"
+        ? "The size does not match the registry."
+        : reason === "digest"
+          ? "Wrong digest."
+          : "MIME type and signature do not match."
+    } Link a compatible file.`,
+  embedUnauthorized:
+    "Embed disabled: origin not authorised by the host. Not available offline.",
+  embedDisabled: "External web content disabled. Requires network and consent.",
+  embedConsent: (title: string) => `Allow embed: ${title}`,
+  embedOffline: "Embed not available offline.",
+  embedActive: "Isolated embed, scripts disabled. Remove consent to close it.",
+  embedRevoke: "Remove embed consent",
+  embedRevoked: "Embed disabled.",
+  pluginUnavailable: (pluginId: string, dataVersion: string) =>
+    `Plugin missing or incompatible: ${pluginId} (${dataVersion}). Data preserved.`,
+  pluginOffline: "Plugin not available offline; data preserved.",
+});
+/** The Italian set that was the default until 0.5; hosts with an Italian interface pass it as `messages`. */
+export const italianMessages: Readonly<PlayerMessages> = Object.freeze({
   lang: "it",
   presentation: "SpatialDeck",
   outline: "Vista testuale",

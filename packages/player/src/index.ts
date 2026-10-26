@@ -4,6 +4,8 @@ import {
   failure,
   frameMatrix,
   getWorldMatrix,
+  publicDocument,
+  sampleCapture,
   validateDocument,
   viewMatrix,
   isSceneVisible,
@@ -11,6 +13,8 @@ import {
 import type {
   Block,
   CameraPose,
+  CapturePlan,
+  CaptureSample,
   Diagnostic,
   FontId,
   NavigationOptions,
@@ -28,13 +32,18 @@ import { resolveMessages } from "./messages.js";
 import type { PlayerMessages } from "./messages.js";
 export * from "./content/index.js";
 export * from "./assets/index.js";
-export { defaultMessages } from "./messages.js";
+export { defaultMessages, italianMessages } from "./messages.js";
 export type { PlayerMessages } from "./messages.js";
 export interface PlayerClock {
   now(): number;
   request(callback: () => void): number;
   cancel(id: number): void;
 }
+/** User navigation from the player's own controls, handed to a host with `delegate`. */
+export type NavigationRequest =
+  | { kind: "next"; edgeId?: string }
+  | { kind: "prev" }
+  | { kind: "goTo"; nodeId: string };
 export interface PlayerOptions {
   input?: boolean;
   keymap?: Readonly<Record<string, "next" | "prev">>;
@@ -48,8 +57,19 @@ export interface PlayerOptions {
     name: string,
     payload: import("@spatialdeck/core").JsonValue,
   ) => void;
-  /** Replaces any subset of the player and builtin renderer texts; defaults are Italian. */
+  /** Replaces any subset of the player and builtin renderer texts; defaults are English, `italianMessages` is the Italian set. */
   messages?: Partial<PlayerMessages>;
+  /**
+   * `false` omits the access controls and choice buttons so the stage fills
+   * the host: for capture and print pages only, never for an audience.
+   */
+  controls?: boolean;
+  /**
+   * When set, keys, outline and choice buttons do not navigate: the request
+   * goes to the host, which owns navigation (the public window of the
+   * presenter view). API commands still navigate.
+   */
+  delegate?: (request: NavigationRequest) => void;
 }
 export interface Player {
   mount(container: HTMLElement, document: unknown): Promise<Result<void>>;
@@ -64,6 +84,12 @@ export interface Player {
   setPath(pathId: string): Promise<NavigationResult>;
   setView(view: "scene" | "overview"): Result<void>;
   setCamera(pose: CameraPose): Result<void>;
+  /**
+   * Manual clock for capture (0.6): renders the plan at `elapsedMs` with the
+   * core sampler and the same renderers, then resolves once renderers, fonts
+   * and two paints are ready. No visit, cue, media or focus side effect.
+   */
+  renderAt(plan: CapturePlan, elapsedMs: number): Promise<Result<void>>;
   getState(): Readonly<PlayerState>;
   on<K extends keyof PlayerEvents>(
     event: K,
@@ -136,6 +162,9 @@ export function createPlayer(options: PlayerOptions = {}): Player {
     choicesElement: HTMLElement | undefined,
     focusOrigin: Element | null = null;
   let doc: ProjectDocument | undefined,
+    // Renderers and plugins receive this copy: private notes stay out of the public runtime.
+    shared: ProjectDocument | undefined,
+    captured: CaptureSample | null = null,
     clock: PlayerClock | undefined,
     frame: number | undefined,
     destroyed = false,
@@ -276,7 +305,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       blockHost,
       {
         block: contentBlock(block),
-        document: d,
+        document: shared ?? publicDocument(d),
         instanceId: `${instanceId}-${scene.id}-${block.id}`,
         active: false,
         mediaEnabled,
@@ -312,6 +341,16 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       options.registry,
     );
     layout++;
+    // Renderers loaded on demand finish later: outline and activation follow.
+    void mount.ready().then(() => {
+      if (
+        destroyed ||
+        scenes.get(scene.id)?.blocks.get(block.id)?.mount !== mount
+      )
+        return;
+      layout++;
+      render();
+    });
     return {
       key,
       host: blockHost,
@@ -477,7 +516,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         if (!current) {
           current = createBlock(d, scene, block, key);
           view.blocks.set(block.id, current);
-        } else current.mount.refresh(d);
+        } else current.mount.refresh(shared ?? publicDocument(d));
         placeBlock(d, current, block);
         if (before.nextSibling !== current.host)
           view.content.insertBefore(current.host, before.nextSibling);
@@ -570,7 +609,18 @@ export function createPlayer(options: PlayerOptions = {}): Player {
   };
   const render = () => {
     if (!root || !machine || !doc || destroyed || updating) return;
-    const s = machine.peek();
+    const current = machine.peek();
+    // A captured sample replaces visit and camera without touching the machine.
+    const s: Readonly<PlayerState> = captured
+      ? {
+          ...current,
+          view: "scene",
+          status: "idle",
+          nodeId: captured.nodeId,
+          sceneId: captured.sceneId,
+          camera: captured.camera,
+        }
+      : current;
     if (
       focusRequested &&
       focusOrigin &&
@@ -692,7 +742,16 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       frame = undefined;
     }
   };
+  const release = () => {
+    if (!captured) return;
+    captured = null;
+    renderedCamera = null;
+    activationKey = "";
+    liveKey = "";
+    render();
+  };
   const invoke = (command: () => Promise<NavigationResult>) => {
+    release();
     if (host?.ownerDocument.activeElement === host) focusRequested = true;
     return command().then((result) => {
       if (result.status !== "completed" && state().status !== "transitioning")
@@ -723,6 +782,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       };
       oldTabindex = host.getAttribute("tabindex");
       if (oldTabindex === null) host.tabIndex = 0;
+      shared = publicDocument(doc);
       root = element("section", "sd-player");
       root.setAttribute(
         "aria-label",
@@ -783,6 +843,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         });
       inspection.append(tools);
       controls.append(outlineToggle, motionToggle, overview, inspection);
+      controls.hidden = options.controls === false;
       {
         const enable = element("button");
         enable.type = "button";
@@ -817,10 +878,18 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       live.setAttribute("aria-live", "polite");
       live.setAttribute("aria-atomic", "true");
       syncScenes();
-      choicesElement = element("nav", "sd-choices");
-      choicesElement.setAttribute("aria-label", messages.choices);
-      choicesElement.hidden = true;
-      root.append(controls, stage, outline, live, emptyMessage, choicesElement);
+      const choices = element("nav", "sd-choices");
+      choices.setAttribute("aria-label", messages.choices);
+      choices.hidden = true;
+      choicesElement = options.controls === false ? undefined : choices;
+      root.append(
+        controls,
+        stage,
+        outline,
+        live,
+        emptyMessage,
+        ...(choicesElement ? [choices] : []),
+      );
       host.append(root);
       const listen = (
         target: EventTarget,
@@ -908,11 +977,16 @@ export function createPlayer(options: PlayerOptions = {}): Player {
             diagnostic: result.diagnostics[0]!,
           });
       });
-      listen(choicesElement, "click", (event) => {
+      listen(choices, "click", (event) => {
         const button = (event.target as Element).closest<HTMLButtonElement>(
           "button[data-edge-id]",
         );
         if (button?.dataset.edgeId) {
+          if (options.delegate)
+            return options.delegate({
+              kind: "next",
+              edgeId: button.dataset.edgeId,
+            });
           focusRequested = true;
           void player.next({ edgeId: button.dataset.edgeId });
         }
@@ -922,6 +996,11 @@ export function createPlayer(options: PlayerOptions = {}): Player {
           "button[data-node-id]",
         );
         if (button?.dataset.nodeId) {
+          if (options.delegate)
+            return options.delegate({
+              kind: "goTo",
+              nodeId: button.dataset.nodeId,
+            });
           focusRequested = true;
           void player.goTo({ nodeId: button.dataset.nodeId });
         }
@@ -957,6 +1036,7 @@ export function createPlayer(options: PlayerOptions = {}): Player {
           })[key.key];
           if (command) {
             key.preventDefault();
+            if (options.delegate) return options.delegate({ kind: command });
             focusRequested = true;
             void player[command]();
           }
@@ -991,6 +1071,8 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         );
       }
       doc = validated.value;
+      shared = publicDocument(doc);
+      release();
       revision++;
       root?.setAttribute(
         "aria-label",
@@ -1041,6 +1123,8 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       choicesElement = undefined;
       focusOrigin = null;
       doc = undefined;
+      shared = undefined;
+      captured = null;
       media = undefined;
       clock = undefined;
     },
@@ -1053,18 +1137,83 @@ export function createPlayer(options: PlayerOptions = {}): Player {
       machine ? invoke(() => machine!.setPath(pathId)) : unavailable(),
     setView: (view) =>
       machine
-        ? machine.setView(view)
+        ? (release(), machine.setView(view))
         : failure(
             destroyed ? "PLAYER_DESTROYED" : "PLAYER_UNMOUNTED",
             "Player is unavailable",
           ),
     setCamera: (pose) =>
       machine
-        ? machine.setCamera(pose)
+        ? (release(), machine.setCamera(pose))
         : failure(
             destroyed ? "PLAYER_DESTROYED" : "PLAYER_UNMOUNTED",
             "Player is unavailable",
           ),
+    async renderAt(plan, elapsedMs) {
+      if (!machine || !doc || !host || destroyed)
+        return failure(
+          destroyed ? "PLAYER_DESTROYED" : "PLAYER_UNMOUNTED",
+          "Player is unavailable",
+        );
+      const d = doc;
+      if (
+        plan?.documentId !== d.id ||
+        !Array.isArray(plan.visits) ||
+        !d.paths.some((p) => p.id === plan.pathId) ||
+        plan.visits.some((v) => !scenes.has(v?.sceneId))
+      )
+        return failure(
+          "CAPTURE_PLAN_MISMATCH",
+          "The capture plan was made for another document",
+        );
+      if (machine.peek().status === "transitioning")
+        return failure(
+          "CAPTURE_BUSY",
+          "A navigation is in progress; capture players do not navigate",
+        );
+      let sample: CaptureSample;
+      try {
+        sample = sampleCapture(plan, elapsedMs);
+      } catch (error) {
+        return failure("INVALID_CAPTURE_TIME", String(error));
+      }
+      captured = sample;
+      render();
+      const win = host.ownerDocument.defaultView!;
+      const frame = () =>
+        new Promise<void>((resolve) =>
+          typeof win.requestAnimationFrame === "function"
+            ? win.requestAnimationFrame(() => resolve())
+            : win.setTimeout(resolve, 16),
+        );
+      let timer: number | undefined;
+      const timeout = new Promise<"timeout">((resolve) => {
+        timer = win.setTimeout(() => resolve("timeout"), 20000);
+      });
+      const settle = async () => {
+        await Promise.all(
+          [...scenes.values()].flatMap((view) =>
+            [...view.blocks.values()].map((b) => b.mount.ready()),
+          ),
+        );
+        const fonts = host?.ownerDocument.fonts;
+        // Layout first, so the text of this pose has requested its faces.
+        root?.getBoundingClientRect();
+        for (let i = 0; fonts && i < 3; i++) {
+          await fonts.ready;
+          if (fonts.status !== "loading") break;
+        }
+        await frame();
+        await frame();
+      };
+      const outcome = await Promise.race([settle(), timeout]);
+      win.clearTimeout(timer);
+      if (destroyed || captured !== sample)
+        return failure("CAPTURE_CANCELLED", "Capture superseded");
+      return outcome === "timeout"
+        ? failure("CAPTURE_TIMEOUT", "Content did not become ready in 20 s")
+        : { ok: true, value: undefined, diagnostics: [] };
+    },
     getState: state,
     on(event, handler) {
       if (destroyed) return () => {};

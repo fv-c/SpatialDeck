@@ -1,0 +1,47 @@
+/* Public window of the presenter view: the stage fills the screen. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #0f172a;
+  font-family: system-ui, sans-serif;
+}
+#stage {
+  position: fixed;
+  inset: 0;
+}
+.public-bar {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgb(15 23 42 / 0.85);
+  color: #f8fafc;
+  font-size: 14px;
+}
+.public-bar p {
+  margin: 0;
+}
+.public-bar button {
+  min-height: 32px;
+  border: 1px solid #94a3b8;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+}
+.public-bar button:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+:fullscreen .public-bar {
+  opacity: 0;
+}
+:fullscreen .public-bar:focus-within,
+:fullscreen .public-bar:hover {
+  opacity: 1;
+}

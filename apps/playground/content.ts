@@ -1,10 +1,15 @@
-import { createPlayer, createAssetResolver } from "@spatialdeck/player";
+import {
+  createPlayer,
+  createAssetResolver,
+  italianMessages,
+} from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
 import {
   RendererRegistry,
   createAssetResolver as assetResolver,
 } from "@spatialdeck/player";
 import { PluginHost } from "@spatialdeck/plugins";
+import { samplePlugin } from "@spatialdeck/plugins/sample";
 import { registerNavigation } from "@spatialdeck/plugins/navigation";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
 import { readArchive, writeArchive } from "@spatialdeck/plugins/archive";
@@ -28,7 +33,8 @@ export async function contentDemo() {
     );
   }
   let resolver = createAssetResolver(doc.assets, blobs);
-  const builtin = createBuiltinRegistry();
+  // The badge is a demo plugin, approved explicitly by this host.
+  const builtin = createBuiltinRegistry({ plugins: [samplePlugin()] });
   const players: Player[] = [];
   for (let i = 0; i < 2; i++) {
     const section = document.createElement("section");
@@ -41,6 +47,8 @@ export async function contentDemo() {
     const controls = document.createElement("nav");
     controls.setAttribute("aria-label", `Controlli player ${i + 1}`);
     const player = createPlayer({
+      // The playground interface is Italian, like Studio, until 1.0.
+      messages: italianMessages,
       registry: builtin.registry,
       assets: {
         resolve: (id, signal) => resolver.resolve(id, signal),
@@ -125,7 +133,8 @@ export async function contentDemo() {
   document.querySelector("main")?.prepend(io);
   Object.assign(window, {
     demoPlayers: players,
-    createDemoPlayer: createPlayer,
+    createDemoPlayer: (options: Parameters<typeof createPlayer>[0] = {}) =>
+      createPlayer({ messages: italianMessages, ...options }),
     demoDocument: doc,
     contentRegistry: builtin.registry,
     contentBlobs: blobs,

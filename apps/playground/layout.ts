@@ -1,4 +1,8 @@
-import { createPlayer, createAssetResolver } from "@spatialdeck/player";
+import {
+  createPlayer,
+  createAssetResolver,
+  italianMessages,
+} from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
 import { readArchive } from "@spatialdeck/plugins/archive";
@@ -47,6 +51,8 @@ export async function layoutDemo() {
     const controls = document.createElement("nav");
     controls.setAttribute("aria-label", `Controlli player ${i + 1}`);
     const player = createPlayer({
+      // The playground interface is Italian, like Studio, until 1.0.
+      messages: italianMessages,
       registry: builtin.registry,
       assets: {
         resolve: (id, signal) => resolver.resolve(id, signal),
@@ -117,7 +123,8 @@ export async function layoutDemo() {
   document.querySelector("main")?.prepend(io);
   Object.assign(window, {
     demoPlayers: players,
-    createDemoPlayer: createPlayer,
+    createDemoPlayer: (options: Parameters<typeof createPlayer>[0] = {}) =>
+      createPlayer({ messages: italianMessages, ...options }),
     demoDocument: doc,
     layoutRegistry: builtin.registry,
     layoutBlobs: blobs,

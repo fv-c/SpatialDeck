@@ -1,0 +1,14 @@
+{
+  "pathId": "main",
+  "visits": [
+    {
+      "nodeId": "n1"
+    },
+    {
+      "nodeId": "n2"
+    },
+    {
+      "nodeId": "n3"
+    }
+  ]
+}

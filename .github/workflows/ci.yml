@@ -24,7 +24,12 @@ jobs:
       - run: pnpm build
       - run: pnpm check:boundaries
       - run: pnpm check:bundle
+      - run: pnpm check:packages
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      # Export checks inspect real outputs: FFmpeg/ffprobe for the WebM video,
+      # poppler (pdftotext, pdftoppm) for the PDF pages. System tools of the
+      # runner, never installed by the project scripts.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg poppler-utils
       - run: pnpm test:e2e
       - name: Checks leave tracked files unchanged
         run: git diff --exit-code

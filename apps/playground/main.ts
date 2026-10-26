@@ -1,5 +1,7 @@
-import { createPlayer } from "@spatialdeck/player";
+import { createPlayer, italianMessages } from "@spatialdeck/player";
 import "@spatialdeck/player/fonts.css";
+// KaTeX styles with local woff2 fonts, fetched only when a formula uses them.
+import "@spatialdeck/plugins/style.css";
 import legacy from "../../examples/core-three-scenes/project.json";
 import structure from "../../examples/structure-branching/project.json";
 import "./style.css";
@@ -22,7 +24,7 @@ async function legacyDemo() {
     host.id = `player-${index + 1}`;
     const controls = document.createElement("nav");
     controls.setAttribute("aria-label", `Controlli player ${index + 1}`);
-    const player = createPlayer();
+    const player = createPlayer({ messages: italianMessages });
     players.push(player);
     for (const [label, action] of [
       ["Indietro", () => player.prev()],
@@ -56,7 +58,8 @@ async function legacyDemo() {
   // Debug/demo handles; no global state exists in either library.
   Object.assign(window, {
     demoPlayers: players,
-    createDemoPlayer: createPlayer,
+    createDemoPlayer: (options: Parameters<typeof createPlayer>[0] = {}) =>
+      createPlayer({ messages: italianMessages, ...options }),
     demoDocument: project,
   });
 }

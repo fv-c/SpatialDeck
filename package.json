@@ -1,7 +1,7 @@
 {
   "name": "spatialdeck",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "packageManager": "pnpm@12.14.0",
   "engines": {
@@ -15,14 +15,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "pnpm generate && vitest run",
-    "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
-    "test:e2e:webkit:macos14": "pnpm build && node scripts/run-e2e.mjs --webkit-macos14",
+    "test:e2e": "pnpm build && node scripts/check-packages.mjs && node scripts/run-e2e.mjs",
+    "test:e2e:webkit:macos14": "pnpm build && node scripts/check-packages.mjs && node scripts/run-e2e.mjs --webkit-macos14",
     "browsers:install": "node scripts/run-e2e.mjs --install",
-    "build": "pnpm generate && pnpm --filter @spatialdeck/core build && pnpm --filter @spatialdeck/player build && pnpm --filter @spatialdeck/plugins build && pnpm --filter @spatialdeck/editor build && pnpm --filter @spatialdeck/playground build && pnpm --filter @spatialdeck/studio build",
+    "build": "pnpm generate && pnpm --filter @spatialdeck/core build && pnpm --filter @spatialdeck/player build && pnpm --filter @spatialdeck/plugins build && pnpm --filter @spatialdeck/cli build && pnpm --filter @spatialdeck/editor build && pnpm --filter @spatialdeck/playground build && pnpm --filter @spatialdeck/studio build",
     "dev:playground": "vite --config apps/playground/vite.config.ts",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
+    "check:packages": "node scripts/check-packages.mjs",
     "dev:studio": "vite --config apps/studio/vite.config.ts",
+    "spatialdeck": "node packages/cli/dist/cli.js",
     "test:coverage": "pnpm generate && vitest run --coverage"
   },
   "devDependencies": {

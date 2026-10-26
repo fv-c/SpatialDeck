@@ -43,6 +43,24 @@ for (const name of ["core", "player"]) {
   )
     issues.push(`${name}: forbidden bundled code`);
 }
+// CLI (0.6): core validates, player and plugins render in the browser; the
+// editor and React never enter the CLI or the export runtime it embeds.
+const cli = JSON.parse(await readFile("packages/cli/package.json", "utf8"));
+for (const dependency of Object.keys(cli.dependencies ?? {}))
+  if (/react|editor/.test(dependency)) issues.push(`cli: ${dependency}`);
+for (const file of await walk("packages/cli/src"))
+  if (
+    /from ['"](?:react|react-dom|@spatialdeck\/editor)/.test(
+      await readFile(file, "utf8"),
+    )
+  )
+    issues.push(`${file}: forbidden import`);
+if (
+  /react-dom|react\/jsx|__SECRET_INTERNALS|@spatialdeck\/editor|new Function\(|eval\(/.test(
+    await readFile("packages/cli/dist/runtime/spatialdeck-runtime.js", "utf8"),
+  )
+)
+  issues.push("cli: export runtime contains editor, React or dynamic code");
 if (issues.length) throw new Error(issues.join("\n"));
 const editor = JSON.parse(
   await readFile("packages/editor/package.json", "utf8"),
@@ -60,7 +78,7 @@ for (const peer of ["react", "react-dom"])
   if (!editor.peerDependencies?.[peer])
     throw new Error(`Missing editor peer: ${peer}`);
 console.log(
-  "Boundaries: core/player isolated; editor registers optional plugins and React peers",
+  "Boundaries: core/player isolated; CLI and export runtime without editor or React; editor registers optional plugins and React peers",
 );
 const plugins = JSON.parse(
   await readFile("packages/plugins/package.json", "utf8"),

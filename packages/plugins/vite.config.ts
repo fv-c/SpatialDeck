@@ -1,5 +1,12 @@
 import { defineConfig } from "vite";
+import {
+  externalDependencies,
+  noBundledDependencies,
+} from "../../scripts/library.mjs";
+// DOMPurify, marked, KaTeX and fflate stay dependencies; rich and media
+// renderers are separate chunks that builtins import on demand.
 export default defineConfig({
+  plugins: [noBundledDependencies()],
   build: {
     target: ["chrome120", "firefox120", "safari17"],
     lib: {
@@ -14,8 +21,11 @@ export default defineConfig({
       },
       formats: ["es"],
       fileName: (_format, name) => name + ".js",
-      cssFileName: "plugins",
     },
-    rollupOptions: { external: ["@spatialdeck/core", "@spatialdeck/player"] },
+    rollupOptions: {
+      external: externalDependencies(
+        new URL("./package.json", import.meta.url).pathname,
+      ),
+    },
   },
 });

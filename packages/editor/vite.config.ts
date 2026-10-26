@@ -1,7 +1,16 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import {
+  externalDependencies,
+  noBundledDependencies,
+} from "../../scripts/library.mjs";
+// React (peer), core, player and plugins stay external, subpaths included.
+// The player stylesheet is bundled into editor.css, as before 0.6.
+const external = externalDependencies(
+  new URL("./package.json", import.meta.url).pathname,
+);
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), noBundledDependencies()],
   build: {
     target: ["chrome120", "firefox120", "safari17"],
     lib: {
@@ -11,14 +20,7 @@ export default defineConfig({
       cssFileName: "editor",
     },
     rollupOptions: {
-      external: [
-        "react",
-        "react-dom",
-        "react/jsx-runtime",
-        "@spatialdeck/core",
-        "@spatialdeck/player",
-        /^@spatialdeck\/plugins(?:\/.*)?$/,
-      ],
+      external: (id) => id !== "@spatialdeck/player/style.css" && external(id),
     },
   },
 });
