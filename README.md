@@ -77,6 +77,6 @@ pnpm test:e2e
 pnpm test:e2e:webkit:macos14
 ```
 
-La CI Linux è verde sul commit 0.4 ([run 39730492795](https://github.com/fv-c/SpatialDeck/actions/runs/39730492795): 233 unità e 120 E2E sui tre browser). 0.4.1, 0.5 e 0.6 sono verificate in locale; la CI aggiornata (Actions fissate per SHA, coverage estesa, axe, packaging, export) non è ancora stata eseguita perché nulla è stato inviato al remoto. Il runner locale di compatibilità WebKit resta verificato su macOS 14; Safari reale non è stato provato.
+La CI Linux è verde sul commit 0.4 ([run 39730492795](https://github.com/fv-c/SpatialDeck/actions/runs/39730492795): 233 unità e 120 E2E sui tre browser). La CI aggiornata (Actions fissate per SHA, coverage estesa, axe, packaging, export) è verde sul commit 0.6 ([run 40323855783](https://github.com/fv-c/SpatialDeck/actions/runs/40323855783): 458 unità e 246 E2E sui tre browser con Playwright 1.64.1, WebKit 27.2). Il runner locale di compatibilità WebKit resta verificato su macOS 14; Safari reale non è stato provato.
 
 `LICENSE` originale GPL v3 conservata. Identificatore SPDX deciso dal maintainer: `GPL-3.0-or-later` per tutti i pacchetti, player compreso, applicato ai manifest in 0.6; ogni tarball include `LICENSE`, gli artefatti che incorporano codice di terze parti (IIFE del player, runtime degli export, HTML autonomo) includono le note di licenza generate. I manifest restano `private` finché la proprietà dello scope npm `@spatialdeck` non è verificata (blocker della pubblicazione, G0 punto 2).

@@ -1,6 +1,6 @@
 # Verifica SpatialDeck 0.6 Distribuzione
 
-26 ottobre 2026. Schema **1.3.0** invariato; fixture e schemi storici invariati su disco. **458 unità + 246 E2E = 704 test passati**, zero fail/skip/flaky nell’ultima suite completa (82 per motore: Chromium e Firefox con Playwright 1.64.1, WebKit con il runner macOS 14 1.61.1). Nessun commit, push, deploy, publish o tag; 1.0 Stabilizzazione non è avviata. **Blocker esplicito:** la proprietà dello scope npm `@spatialdeck` non è dimostrabile, quindi i pacchetti restano `private` e nessuna preparazione al publish è stata fatta (G0 punto 2).
+26 ottobre 2026. Schema **1.3.0** invariato; fixture e schemi storici invariati su disco. **458 unità + 246 E2E = 704 test passati**, zero fail/skip/flaky nell’ultima suite completa (82 per motore: Chromium e Firefox con Playwright 1.64.1, WebKit con il runner macOS 14 1.61.1). **CI Linux verde** sul commit `5ad6a89` ([run 40323855783](https://github.com/fv-c/SpatialDeck/actions/runs/40323855783)): 458 unità e 246 E2E sui tre browser con Playwright 1.64.1, dettagli sotto. Commit `d25eb44` (fase), `73e8b58` e `5ad6a89` (correzioni emerse in CI) inviati su `main` su richiesta del maintainer; nessun deploy, publish o tag; 1.0 Stabilizzazione non è avviata. **Blocker esplicito:** la proprietà dello scope npm `@spatialdeck` non è dimostrabile, quindi i pacchetti restano `private` e nessuna preparazione al publish è stata fatta (G0 punto 2).
 
 ## Baseline, G0 e perimetro
 
@@ -14,7 +14,7 @@ Baseline 0.5 misurata prima di cambiare codice (log in `.tools/distribution-base
 
 ## Ambiente
 
-[Ambiente](distribution-environment.json): macOS 14.8.7 / Darwin 23.6.0 arm64, Apple M3 Max, 64 GiB; Node **24.22.0** e pnpm **12.14.0** da `.tools` (Node globale 25.8.1). Chromium **156.0.8078.4** e Firefox **157.0** con Playwright 1.64.1; WebKit **26.5** con il runner 1.61.1; il CLI usa `playwright-core` **1.64.1** (stesso Chromium). FFmpeg e ffprobe **8.1** (Homebrew, build GPL locale, non distribuita): encoder WebM disponibili libvpx-vp9, libvpx (VP8) e libsvtav1; il CLI sceglie **libvpx-vp9**. Ispezione PDF con **xpdf-tools 4.05** (`pdftotext`, `pdftopng`). Prove locali: la CI non è stata eseguita perché nulla è stato inviato al remoto.
+[Ambiente](distribution-environment.json): macOS 14.8.7 / Darwin 23.6.0 arm64, Apple M3 Max, 64 GiB; Node **24.22.0** e pnpm **12.14.0** da `.tools` (Node globale 25.8.1). Chromium **156.0.8078.4** e Firefox **157.0** con Playwright 1.64.1; WebKit **26.5** con il runner 1.61.1; il CLI usa `playwright-core` **1.64.1** (stesso Chromium). FFmpeg e ffprobe **8.1** (Homebrew, build GPL locale, non distribuita): encoder WebM disponibili libvpx-vp9, libvpx (VP8) e libsvtav1; il CLI sceglie **libvpx-vp9**. Ispezione PDF con **xpdf-tools 4.05** (`pdftotext`, `pdftopng`). Prove locali sul computer descritto; la CI Linux è nella sezione «CI Linux».
 
 ## Avvio e comandi export
 
@@ -138,6 +138,18 @@ axe-core 4.14.0 (WCAG 2.0/2.1/2.2 A–AA e best practice) negli audit esistenti,
 
 Le esecuzioni intermedie hanno trovato e fatto correggere, prima dell’ultima: un helper di test che non chiudeva le connessioni keep-alive (timeout del consumer realistico in Chromium); due righe vuote finali in PROJECT_SPEC e ROADMAP (`git diff --check`); in WebKit un avviso «nuova versione» mostrato alla prima installazione della shell, che copriva il pannello del tema (riprodotto 1 volta su 6 ripetizioni, trace con «`#shell-update` intercepts pointer events»; ora l’avviso compare solo se la pagina era già controllata da un worker precedente, con un’asserzione dedicata in `pwa.spec.ts`; poi 48/48 su sei ripetizioni).
 
+## CI Linux
+
+Su richiesta del maintainer la fase è stata inviata su `main` e la CI (`.github/workflows/ci.yml`: Ubuntu, Node 24.22.0, pnpm 12.14.0, Playwright 1.64.1 con Chromium, Firefox 157.0 e WebKit 27.2, `ffmpeg` e `poppler-utils` dal sistema) è stata seguita fino al verde:
+
+| Commit               | Run                                                                             | Esito                    | Causa e correzione                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `d25eb44` (fase 0.6) | [40320870597](https://github.com/fv-c/SpatialDeck/actions/runs/40320870597)     | `check:packages` fallito | Sul runner nuovo lo store contiene i pacchetti ma non i metadati del registry, quindi `pnpm install --offline` del consumer non risolveva `react@19.3.1` (`ERR_PNPM_NO_OFFLINE_META`); in locale la cache era già calda. Riprodotto con una `cache-dir` vuota: ora `--prefer-offline` e dipendenze di terze parti fissate alle versioni del lockfile (`73e8b58`).                                                                                                                                                         |
+| `73e8b58`            | [40321984443](https://github.com/fv-c/SpatialDeck/actions/runs/40321984443)     | 245/246 E2E              | Lo stesso test della CSP di `/layout` già fallito in WebKit Linux sul commit `b711803` (run [39928987170](https://github.com/fv-c/SpatialDeck/actions/runs/39928987170), prima di questa fase). La diagnostica aggiunta al test ha nominato il bersaglio: i due `<select>` nativi «Scena player 1/2» della pagina demo, fuori dal player, su cui né la pagina né il player scrivono attributi `style`. Eccezione mirata (WebKit, `SELECT`, fuori da `.sd-player`); zero violazioni richieste ovunque altrove (`5ad6a89`). |
+| `5ad6a89`            | [run 40323855783](https://github.com/fv-c/SpatialDeck/actions/runs/40323855783) | **verde**                | Tutti i passi riusciti: installazione bloccata, typecheck, lint, format, **458 unità**, coverage, build, confini, bundle, `check:packages`, **246 E2E** (82 per browser, fra cui export HTML/PDF/video, relatore e shell offline), nessun file tracciato modificato.                                                                                                                                                                                                                                                      |
+
+Il WebKit 27.2 della CI ha quindi eseguito anche le prove del relatore, della shell offline (con il flag offline sostituito dall’arresto del server) e degli export aperti da `file://` con le sole richieste bloccate.
+
 ## Limiti e debito
 
 - Pubblicazione bloccata dalla proprietà non verificata dello scope npm; `engines.node: ">=24"` provato solo con 24.22.0.
@@ -146,8 +158,9 @@ Le esecuzioni intermedie hanno trovato e fatto correggere, prima dell’ultima: 
 - Nel PDF il testo delle scene viste in prospettiva può essere rasterizzato da Chromium; la pagina della visita resta fedele al player.
 - Il video non ha audio né media dinamici; H.264 non è offerto; l’identità dei pixel vale solo nello stesso ambiente fissato.
 - `readArchive` tiene ancora in memoria l’intero archivio compresso oltre ai Blob; `writeArchive` mantiene i blocchi compressi fino al Blob finale.
-- La soglia del consumer realistico è misurata ma non fissata (prima della 1.0). Nessuna CI eseguita.
+- La soglia del consumer realistico è misurata ma non fissata (prima della 1.0).
+- In CI il WebKit Linux di Playwright 1.64.1 segnala `style-src-attr` per i `<select>` nativi della pagina del playground (fuori dal player): eccezione mirata nel test della CSP, vedi «CI Linux».
 
 ## Handoff per 1.0
 
-Prerequisiti: decisione/azione del maintainer sull’organizzazione npm prima di qualunque publish; soglia del consumer realistico; prima esecuzione della CI aggiornata (installa `ffmpeg` e `poppler-utils`); prove Safari reale e dispositivi; import essenziale impress.js (fuori da questa fase, non avviato); interfaccia di Studio e documentazione pubblica in inglese. Da riusare: `planCapture`/`renderAt` per regressioni visive, `check:packages` per ogni cambio di manifest, `distribution-static` come fixture degli export.
+Prerequisiti: decisione/azione del maintainer sull’organizzazione npm prima di qualunque publish; soglia del consumer realistico; prove Safari reale e dispositivi; import essenziale impress.js (fuori da questa fase, non avviato); interfaccia di Studio e documentazione pubblica in inglese. Da riusare: `planCapture`/`renderAt` per regressioni visive, `check:packages` per ogni cambio di manifest, `distribution-static` come fixture degli export.
