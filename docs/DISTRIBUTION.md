@@ -116,7 +116,7 @@ Only the static profile: text, Markdown, HTML, SVG, LaTeX, images, links as stat
 
 Every manifest has `license: GPL-3.0-or-later`, description, repository, homepage, keywords, `sideEffects`, `engines` and a README; `pnpm pack` adds the repository `LICENSE`. Internal dependencies become the same version in the tarball. A build plugin fails if a library chunk contains a module from `node_modules`; IIFE builds generate their notice file from the bundled modules and fail on a missing or incompatible licence. The packages stay `"private": true`: ownership of the `@spatialdeck` npm scope could not be verified (registry 404 on 26 October 2026), so publishing remains blocked by G0 point 2.
 
-`pnpm check:packages` packs the five packages, installs the tarballs in `test-results/packages/consumer` (own pnpm workspace, offline, no source aliases), type-checks without `skipLibCheck`, builds a minimal and a realistic consumer and measures them; the E2E suite serves that consumer and runs the CLI installed from its tarball.
+`pnpm check:packages` packs the five packages, installs the tarballs in `test-results/packages/consumer` (own pnpm workspace, packages from the local store when present and registry metadata only when missing, third-party runtime dependencies pinned to the repository lockfile versions, no source aliases), type-checks without `skipLibCheck`, builds a minimal and a realistic consumer and measures them; the E2E suite serves that consumer and runs the CLI installed from its tarball.
 
 ## Presenter view (Studio)
 

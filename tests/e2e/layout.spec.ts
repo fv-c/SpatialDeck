@@ -330,9 +330,15 @@ test.describe("player", () => {
   }, info) => {
     await page.addInitScript(() => {
       window.cspViolations = [];
-      document.addEventListener("securitypolicyviolation", (e) =>
-        window.cspViolations.push(`${e.violatedDirective} ${e.blockedURI}`),
-      );
+      // The target element and sample name the source of an inline violation.
+      document.addEventListener("securitypolicyviolation", (e) => {
+        const target = e.target as Element | null;
+        window.cspViolations.push(
+          `${e.violatedDirective} ${e.blockedURI} ${target?.nodeName ?? ""}.${
+            target?.getAttribute?.("class") ?? ""
+          } ${e.sample} ${target?.outerHTML?.slice(0, 160) ?? ""}`,
+        );
+      });
     });
     await page.route(/127\.0\.0\.1:4173\/(?:core|layout)$/, async (route) => {
       const response = await route.fetch();

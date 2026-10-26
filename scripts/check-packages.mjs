@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import {
   copyFile,
   mkdir,
@@ -9,6 +10,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join } from "node:path";
+import { installedPackage } from "./library.mjs";
 import { gzipSync } from "node:zlib";
 // 0.6 packaging gate: the tarballs of `pnpm pack`, installed in a consumer
 // outside the workspace (no source aliases), type-check without skipLibCheck,
@@ -180,11 +182,43 @@ await writeFile(
   ),
 );
 // Its own pnpm-workspace.yaml makes the consumer a separate root (the
-// repository workspace is not inherited) and maps internal dependencies of the
-// tarballs to the other tarballs instead of the registry.
+// repository workspace is not inherited), maps internal dependencies of the
+// tarballs to the other tarballs and pins the third-party runtime dependencies
+// to the versions of the repository lockfile, so the consumer resolves the
+// same code wherever the registry metadata come from.
+const pinned = Object.fromEntries(
+  [
+    ["core", ["gl-matrix", "ajv"]],
+    ["plugins", ["dompurify", "marked", "katex", "fflate"]],
+    ["cli", ["playwright-core", "pdf-lib"]],
+    ["player", ["@fontsource/atkinson-hyperlegible"]],
+  ].flatMap(([pkg, deps]) =>
+    deps.map((dep) => [
+      dep,
+      JSON.parse(
+        readFileSync(
+          join(
+            installedPackage(dep, join(root, "packages", pkg)),
+            "package.json",
+          ),
+          "utf8",
+        ),
+      ).version,
+    ]),
+  ),
+);
+const workspace = await readFile(join(root, "pnpm-workspace.yaml"), "utf8");
+const releaseAge =
+  /minimumReleaseAgeExclude:\n(?:\s+- .+\n?)+/.exec(workspace)?.[0] ?? "";
+report.consumer.pinned = pinned;
 await writeFile(
   join(consumer, "pnpm-workspace.yaml"),
-  `strictPeerDependencies: true\noverrides:\n${names.map((n) => `  "@spatialdeck/${n}": "${tgz(n)}"`).join("\n")}\n`,
+  `strictPeerDependencies: true\n${releaseAge.trimEnd()}\noverrides:\n${[
+    ...names.map((n) => `  "@spatialdeck/${n}": "${tgz(n)}"`),
+    ...Object.entries(pinned).map(
+      ([dep, version]) => `  "${dep}": "${version}"`,
+    ),
+  ].join("\n")}\n`,
 );
 const examples = join(root, "examples");
 await copyFile(
@@ -293,8 +327,9 @@ export default defineConfig({
 });
 `,
 );
-const env = { npm_config_offline: "true" };
-run("pnpm", ["install", "--offline"], consumer, env);
+// Packages come from the local store when present; registry metadata are
+// fetched only if the cache lacks them (a fresh CI runner after a frozen install).
+run("pnpm", ["install", "--prefer-offline"], consumer);
 const bin = (name) => join(consumer, "node_modules", ".bin", name);
 let typecheck = "";
 try {
