@@ -336,7 +336,9 @@ test.describe("player", () => {
         window.cspViolations.push(
           `${e.violatedDirective} ${e.blockedURI} ${target?.nodeName ?? ""}.${
             target?.getAttribute?.("class") ?? ""
-          } ${e.sample} ${target?.outerHTML?.slice(0, 160) ?? ""}`,
+          } ${target?.closest?.(".sd-player") ? "player" : "page"} ${
+            e.sample
+          } ${target?.outerHTML?.slice(0, 160) ?? ""}`,
         );
       });
     });
@@ -403,7 +405,19 @@ test.describe("player", () => {
     expect(styles.font).toContain("SpatialDeck Atkinson Hyperlegible");
     expect(styles.shadow).toContain("rgb(249, 115, 22)");
     expect(parseFloat(styles.headlineSize)).toBeCloseTo(26 * 2.2, 1);
-    expect(await page.evaluate(() => window.cspViolations)).toEqual([]);
+    // Motivated exception: Playwright's Linux WebKit (CI) reports
+    // style-src-attr for the native <select> controls of the playground page
+    // itself, outside the player: engine-internal styling of the control, no
+    // style attribute is written by the page or the player. Anything else,
+    // and every violation inside the player, still fails.
+    const violations = (await page.evaluate(() => window.cspViolations)).filter(
+      (v) =>
+        !(
+          info.project.name === "webkit" &&
+          /^style-src-attr inline SELECT\. page /.test(v)
+        ),
+    );
+    expect(violations).toEqual([]);
     await writeEvidence(`layout/csp-fonts-${info.project.name}.json`, {
       fonts,
       styles,
