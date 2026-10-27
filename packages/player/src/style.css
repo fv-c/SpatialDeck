@@ -28,6 +28,11 @@
   outline: 3px solid #1169d4;
   outline-offset: 3px;
 }
+/* Headings and scenes take focus after navigation only to move the reading
+   point; they are not controls, so the audience never sees a ring on them. */
+.sd-player [tabindex="-1"]:focus-visible {
+  outline: none;
+}
 .sd-stage {
   position: absolute;
   inset: 60px 0 0;

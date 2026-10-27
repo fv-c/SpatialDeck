@@ -145,6 +145,6 @@ test("axe: Studio scene editor, its panels and the theme have no serious or crit
   await page.keyboard.press("Enter");
   await expect(page.locator(".layout-handle")).toHaveCount(9);
   await audit(page, "studio-layout", info);
-  await page.locator("summary", { hasText: "Tema del documento" }).click();
+  await page.getByRole("tab", { name: /^Tema/ }).click();
   await audit(page, "studio-theme", info);
 });

@@ -5,6 +5,7 @@ import { defaultFrame, editScene, randomId } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { TextField } from "./Inspector.js";
 import { Icon, IconButton } from "./icons.js";
+import { blockTypes } from "./blockTypes.js";
 import { sampleInspector } from "@spatialdeck/plugins/sample";
 export function ContentPanel({
   store,
@@ -104,11 +105,14 @@ export function ContentPanel({
       {scene.blocks.map((block, i) => (
         <fieldset key={`${scene.id}-${block.id}`} className="block-editor">
           <legend>
-            {i + 1} · {block.type}
+            <span className="block-index">{i + 1}</span>
+            <Icon name={blockTypes[block.type].icon} />
+            {blockTypes[block.type].label}
           </legend>
           {block.type === "text" ? (
             <TextField
               label={`Testo ${i + 1}`}
+              short=""
               value={block.data.text}
               multiline
               apply={(text) => write(block, "text", { text })}
@@ -119,8 +123,10 @@ export function ContentPanel({
               {"source" in block.data && (
                 <TextField
                   label={`Sorgente ${block.type} ${i + 1}`}
+                  short="Sorgente"
                   value={block.data.source}
                   multiline
+                  code={block.type !== "markdown"}
                   apply={(source) =>
                     write(block, "source", { ...block.data, source })
                   }
@@ -157,8 +163,10 @@ export function ContentPanel({
                 <summary>Dati {block.type}</summary>
                 <TextField
                   label={`Dati ${block.type} ${i + 1}`}
+                  short="JSON del blocco"
                   value={JSON.stringify(block.data, null, 2)}
                   multiline
+                  code
                   apply={(text) => {
                     try {
                       return write(
@@ -231,19 +239,23 @@ export function ContentPanel({
             setError("");
           }}
         >
-          {[
-            "markdown",
-            "html",
-            "svg",
-            "latex",
-            "image",
-            "audio",
-            "video",
-            "link",
-            "embed",
-            "plugin",
-          ].map((t) => (
-            <option key={t}>{t}</option>
+          {(
+            [
+              "markdown",
+              "html",
+              "svg",
+              "latex",
+              "image",
+              "audio",
+              "video",
+              "link",
+              "embed",
+              "plugin",
+            ] as const
+          ).map((t) => (
+            <option key={t} value={t}>
+              {blockTypes[t].label}
+            </option>
           ))}
         </select>
         <button
@@ -262,12 +274,14 @@ export function ContentPanel({
         <summary>Impostazioni plugin documento</summary>
         <TextField
           label="Impostazioni plugin documento"
+          short="JSON"
           value={JSON.stringify(
             store.getSnapshot().document.pluginSettings ?? {},
             null,
             2,
           )}
           multiline
+          code
           apply={(text) => {
             try {
               const data = JSON.parse(text);

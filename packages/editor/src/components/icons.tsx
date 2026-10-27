@@ -145,8 +145,80 @@ const paths = {
       <path d="m2 8 6 3 6-3M2 11l6 3 6-3" />
     </>
   ),
+  "chevron-down": <path d="m4.5 6.5 3.5 3.5 3.5-3.5" />,
+  "chevron-left": <path d="m10 3.5-4.5 4.5 4.5 4.5" />,
+  "chevron-right": <path d="m6 3.5 4.5 4.5L6 12.5" />,
+  "arrow-left": <path d="M13 8H3M7 4 3 8l4 4" />,
+  "arrow-right": <path d="M3 8h10M9 4l4 4-4 4" />,
+  pause: <path d="M5.5 3.5v9M10.5 3.5v9" />,
+  "zoom-out": <path d="M3.5 8h9" />,
+  reset: (
+    <>
+      <path d="M2.5 8a5.5 5.5 0 1 0 1.6-3.9" />
+      <path d="M2 2.5v2.5h2.5" />
+    </>
+  ),
+  link: (
+    <path d="M6.5 9.5 9.5 6.5M7 4.5l1.3-1.3a2.6 2.6 0 0 1 3.7 3.7L10.7 8.2M9 11.5l-1.3 1.3a2.6 2.6 0 0 1-3.7-3.7L5.3 7.8" />
+  ),
+  device: (
+    <>
+      <rect x="2.5" y="3" width="11" height="8" rx="1.5" />
+      <path d="M5.5 13.5h5" />
+    </>
+  ),
+  "type-text": <path d="M3 3.5h10M8 3.5v9" />,
+  "type-markdown": <path d="M2 12V4l3 4 3-4v8M11.5 4v7.5M9.5 9.5l2 2 2-2" />,
+  "type-html": <path d="M5 4 1.5 8 5 12M11 4l3.5 4-3.5 4" />,
+  "type-svg": <path d="M2.5 12.5C5 12.5 4 3.5 8 3.5s3 9 5.5 9" />,
+  "type-latex": <path d="M12 3.5H4l4 4.5-4 4.5h8" />,
+  "type-image": (
+    <>
+      <rect x="2" y="3" width="12" height="10" rx="1.5" />
+      <path d="m2 11 3.5-3.5 3 3 2-2L14 12" />
+      <circle cx="10.5" cy="6" r="1" />
+    </>
+  ),
+  "type-audio": (
+    <path d="M2.5 6.5v3h2.5l3.5 3v-9L5 6.5zM11 5.5a3.5 3.5 0 0 1 0 5M12.8 3.8a6 6 0 0 1 0 8.4" />
+  ),
+  "type-video": (
+    <>
+      <rect x="1.5" y="4.5" width="9" height="7" rx="1.5" />
+      <path d="m10.5 7 4-2v6l-4-2" />
+    </>
+  ),
+  "type-embed": (
+    <>
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" />
+      <path d="M1.5 5.5h13M6 8.5 4.5 10 6 11.5M10 8.5l1.5 1.5-1.5 1.5" />
+    </>
+  ),
+  "type-plugin": (
+    <>
+      <rect x="2.5" y="2.5" width="11" height="11" rx="2.5" />
+      <path d="M8 5.5v5M5.5 8h5" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 export type IconName = keyof typeof paths;
+/** Product mark: three planes in depth, the spatial deck. Decorative. */
+export function BrandMark() {
+  return (
+    <svg
+      className="brand-mark"
+      viewBox="0 0 20 20"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="7" y="2" width="11" height="8" rx="2" opacity=".3" />
+      <rect x="4.5" y="5.5" width="11" height="8" rx="2" opacity=".6" />
+      <rect x="2" y="9" width="11" height="8" rx="2" />
+    </svg>
+  );
+}
 export function Icon({ name }: { name: IconName }) {
   return (
     <svg

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { success } from "@spatialdeck/core";
-import type { ProjectDocument, Result } from "@spatialdeck/core";
+import type { PathEdge, ProjectDocument, Result } from "@spatialdeck/core";
 import {
   createPath,
   deletePath,
@@ -18,6 +18,8 @@ import { CameraTimeline } from "./CameraTimeline.js";
 import type { Capture } from "./CameraTimeline.js";
 import { Numeric, TextField } from "./Inspector.js";
 import { Dialog } from "./Dialog.js";
+import { SceneThumb } from "./SceneThumb.js";
+import { Icon, IconButton } from "./icons.js";
 export interface NavigationSelection {
   pathId: string;
   nodeId: string;
@@ -85,14 +87,19 @@ export function PathPanel({
     if (impact.ok) setDeletion({ edit, description: impact.value.description });
     else setError(impact.diagnostics.map((d) => d.message).join("; "));
   };
+  const sceneOf = (id: string) => document.scenes.find((s) => s.id === id);
+  const position = (id: string) =>
+    (path?.nodes.findIndex((n) => n.id === id) ?? -1) + 1;
+  const condition = (e: PathEdge) =>
+    !e.condition
+      ? "Avanzamento diretto"
+      : e.condition.kind === "manual"
+        ? "Scelta manuale"
+        : `Limite ${e.condition.maxVisits} visite`;
   return (
-    <details className="path-panel">
-      <summary>
-        Percorsi e connessioni <span>{document.paths.length}</span>
-      </summary>
+    <div className="path-panel">
       <div className="structure-content">
-        <label>
-          Percorso
+        <div className="path-head">
           <select
             aria-label="Percorso da modificare"
             value={path?.id ?? ""}
@@ -108,162 +115,224 @@ export function PathPanel({
             {document.paths.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
+                {p.id === document.defaultPathId ? " · principale" : ""}
               </option>
             ))}
           </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            if (run(createPath()).ok)
-              setPathId(store.getSnapshot().document.paths.at(-1)!.id);
-          }}
-        >
-          Nuovo percorso
-        </button>
+          <IconButton
+            icon="plus"
+            label="Nuovo percorso"
+            tip="left"
+            onClick={() => {
+              if (run(createPath()).ok)
+                setPathId(store.getSnapshot().document.paths.at(-1)!.id);
+            }}
+          />
+        </div>
         {path && (
           <>
-            <TextField
-              key={path.id}
-              label="Nome percorso"
-              value={path.name}
-              apply={(name) => run(editPath(path.id, { name }))}
-            />
-            <button
-              type="button"
-              disabled={document.defaultPathId === path.id}
-              onClick={() =>
-                run((doc) => {
-                  doc.defaultPathId = path.id;
-                  return success(doc);
-                })
-              }
-            >
-              Usa come percorso principale
-            </button>
-            <button type="button" onClick={() => remove(deletePath(path.id))}>
-              Elimina percorso
-            </button>
-            <label>
-              Nodo iniziale
-              <select
-                aria-label="Nodo iniziale"
-                value={path.startNodeId ?? ""}
-                onChange={(e) =>
-                  run(
-                    editPath(path.id, { startNodeId: e.target.value || null }),
-                  )
-                }
-              >
-                <option value="">Vuoto</option>
-                {path.nodes.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {document.scenes.find((s) => s.id === n.sceneId)?.title} ·{" "}
-                    {n.id.slice(0, 8)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {path.loopPolicy ? (
-              <>
-                <Numeric
-                  label="Limite visite per nodo"
-                  value={path.loopPolicy.maxVisitsPerNode}
-                  apply={(maxVisitsPerNode) =>
-                    run(editPath(path.id, { loopPolicy: { maxVisitsPerNode } }))
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    run((doc) => {
-                      delete doc.paths.find((p) => p.id === path.id)!
-                        .loopPolicy;
-                      return success(doc);
-                    })
+            <div className="inspector-group path-settings">
+              <TextField
+                key={path.id}
+                label="Nome percorso"
+                short="Nome"
+                value={path.name}
+                apply={(name) => run(editPath(path.id, { name }))}
+              />
+              <label className="kv">
+                <span>Inizio</span>
+                <select
+                  aria-label="Nodo iniziale"
+                  value={path.startNodeId ?? ""}
+                  onChange={(e) =>
+                    run(
+                      editPath(path.id, {
+                        startNodeId: e.target.value || null,
+                      }),
+                    )
                   }
                 >
-                  Rimuovi policy loop
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  run((doc) => {
-                    const p = doc.paths.find((p) => p.id === path.id)!;
-                    p.loopPolicy = { maxVisitsPerNode: 3 };
-                    for (const e of p.edges) e.condition = { kind: "manual" };
-                    return success(doc);
-                  })
-                }
-              >
-                Abilita loop manuale (3 visite)
-              </button>
-            )}
-            <label>
-              Visita da modificare
-              <select
-                aria-label="Visita da modificare"
-                value={node?.id ?? ""}
-                onChange={(e) => {
-                  setNodeId(e.target.value);
-                  setEdgeId(null);
-                  const n = path.nodes.find((n) => n.id === e.target.value);
-                  if (n) store.select(n.sceneId);
-                }}
-              >
-                <option value="" disabled>
-                  Nessun nodo
-                </option>
-                {path.nodes.map((n) => (
-                  <option key={n.id} value={n.id}>
-                    {document.scenes.find((s) => s.id === n.sceneId)?.title} ·{" "}
-                    {n.id.slice(0, 8)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {node && (
-              <>
-                <Numeric
-                  label="Sosta nodo ms"
-                  value={node.holdMs}
-                  apply={(holdMs) =>
-                    run(editNode(path.id, node.id, { holdMs }))
-                  }
-                />
-                <label>
-                  Scena della visita
-                  <select
-                    aria-label="Scena della visita"
-                    value={node.sceneId}
-                    onChange={(e) =>
-                      run(
-                        editNode(path.id, node.id, { sceneId: e.target.value }),
-                      )
+                  <option value="">Vuoto</option>
+                  {path.nodes.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {position(n.id)} · {sceneOf(n.sceneId)?.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {path.loopPolicy ? (
+                <div className="kv">
+                  <span>Loop manuale</span>
+                  <div className="kv-controls">
+                    <Numeric
+                      label="Limite visite per nodo"
+                      short="Visite"
+                      value={path.loopPolicy.maxVisitsPerNode}
+                      apply={(maxVisitsPerNode) =>
+                        run(
+                          editPath(path.id, {
+                            loopPolicy: { maxVisitsPerNode },
+                          }),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      className="tool-button"
+                      onClick={() =>
+                        run((doc) => {
+                          delete doc.paths.find((p) => p.id === path.id)!
+                            .loopPolicy;
+                          return success(doc);
+                        })
+                      }
+                    >
+                      Rimuovi policy loop
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="kv">
+                  <span>Loop manuale</span>
+                  <button
+                    type="button"
+                    tabIndex={0}
+                    className="tool-button"
+                    onClick={() =>
+                      run((doc) => {
+                        const p = doc.paths.find((p) => p.id === path.id)!;
+                        p.loopPolicy = { maxVisitsPerNode: 3 };
+                        for (const e of p.edges)
+                          e.condition = { kind: "manual" };
+                        return success(doc);
+                      })
                     }
                   >
-                    {document.scenes.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    Abilita loop manuale (3 visite)
+                  </button>
+                </div>
+              )}
+              <div className="path-actions">
+                {document.defaultPathId === path.id ? (
+                  <span className="chip">Percorso principale</span>
+                ) : (
+                  <button
+                    type="button"
+                    tabIndex={0}
+                    className="tool-button"
+                    onClick={() =>
+                      run((doc) => {
+                        doc.defaultPathId = path.id;
+                        return success(doc);
+                      })
+                    }
+                  >
+                    Usa come percorso principale
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() =>
-                    remove(removeGraphItem(path.id, node.id, "node"))
-                  }
+                  tabIndex={0}
+                  className="tool-button quiet danger"
+                  onClick={() => remove(deletePath(path.id))}
                 >
-                  Elimina visita
+                  Elimina percorso
                 </button>
-              </>
-            )}
-            <div className="structure-row">
-              <label>
-                Scena da aggiungere
+              </div>
+            </div>
+            <section className="inspector-group" aria-labelledby="path-visits">
+              <h3 id="path-visits">
+                Visite <span className="count">{path.nodes.length}</span>
+              </h3>
+              {path.nodes.length ? (
+                <ol className="graph-list" aria-label="Visite del percorso">
+                  {path.nodes.map((n, i) => {
+                    const scene = sceneOf(n.sceneId),
+                      current = n.id === node?.id;
+                    return (
+                      <li key={n.id} className={current ? "selected" : ""}>
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          className="graph-item"
+                          aria-pressed={current}
+                          onClick={() => {
+                            setNodeId(n.id);
+                            setEdgeId(null);
+                            store.select(n.sceneId);
+                          }}
+                        >
+                          <span className="node-badge">{i + 1}</span>
+                          {scene && (
+                            <SceneThumb document={document} scene={scene} />
+                          )}
+                          <span className="graph-label">
+                            {scene?.title ?? "Scena mancante"}
+                          </span>
+                          {path.startNodeId === n.id && (
+                            <span className="chip">Inizio</span>
+                          )}
+                        </button>
+                        {current && (
+                          <div className="graph-detail">
+                            <label className="kv">
+                              <span>Scena</span>
+                              <select
+                                aria-label="Scena della visita"
+                                value={n.sceneId}
+                                onChange={(e) =>
+                                  run(
+                                    editNode(path.id, n.id, {
+                                      sceneId: e.target.value,
+                                    }),
+                                  )
+                                }
+                              >
+                                {document.scenes.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.title}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <div className="kv">
+                              <span>Sosta</span>
+                              <div className="kv-controls">
+                                <Numeric
+                                  label="Sosta nodo ms"
+                                  short="ms"
+                                  value={n.holdMs}
+                                  apply={(holdMs) =>
+                                    run(editNode(path.id, n.id, { holdMs }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <div className="path-actions">
+                              <button
+                                type="button"
+                                tabIndex={0}
+                                className="tool-button quiet danger"
+                                onClick={() =>
+                                  remove(removeGraphItem(path.id, n.id, "node"))
+                                }
+                              >
+                                Elimina visita
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="panel-note">
+                  Nessuna visita: aggiungi una scena al percorso.
+                </p>
+              )}
+              <div className="add-row">
                 <select
                   aria-label="Scena da aggiungere al percorso"
                   value={sceneId || document.scenes[0]?.id || ""}
@@ -277,60 +346,183 @@ export function PathPanel({
                       </option>
                     ))}
                 </select>
-              </label>
-              <button
-                type="button"
-                disabled={!document.scenes.length}
-                onClick={() => {
-                  if (
-                    run(
-                      createNode(
-                        path.id,
-                        sceneId || document.scenes[0]!.id,
-                        node?.id,
-                      ),
-                    ).ok
-                  )
-                    setNodeId(
-                      store
-                        .getSnapshot()
-                        .document.paths.find((p) => p.id === path.id)!
-                        .nodes.at(-1)!.id,
+                <button
+                  type="button"
+                  tabIndex={0}
+                  className="tool-button"
+                  disabled={!document.scenes.length}
+                  onClick={() => {
+                    if (
+                      run(
+                        createNode(
+                          path.id,
+                          sceneId || document.scenes[0]!.id,
+                          node?.id,
+                        ),
+                      ).ok
+                    )
+                      setNodeId(
+                        store
+                          .getSnapshot()
+                          .document.paths.find((p) => p.id === path.id)!
+                          .nodes.at(-1)!.id,
+                      );
+                  }}
+                >
+                  <Icon name="plus" />
+                  Aggiungi visita
+                </button>
+              </div>
+            </section>
+            <section
+              className="inspector-group"
+              aria-labelledby="path-connections"
+            >
+              <h3 id="path-connections">
+                Connessioni <span className="count">{path.edges.length}</span>
+              </h3>
+              {path.edges.length ? (
+                <ol
+                  className="graph-list"
+                  aria-label="Connessioni del percorso"
+                >
+                  {path.edges.map((e) => {
+                    const current = e.id === edge?.id;
+                    return (
+                      <li key={e.id} className={current ? "selected" : ""}>
+                        <button
+                          type="button"
+                          tabIndex={0}
+                          className="graph-item edge"
+                          aria-pressed={current}
+                          onClick={() => setEdgeId(e.id)}
+                        >
+                          <span className="edge-nodes">
+                            <span className="node-badge">
+                              {position(e.from)}
+                            </span>
+                            <Icon name="arrow-right" />
+                            <span className="visually-hidden"> verso </span>
+                            <span className="node-badge">{position(e.to)}</span>
+                          </span>
+                          <span className="graph-label">
+                            {e.label || condition(e)}
+                          </span>
+                          <span className="graph-meta">
+                            {e.transition.durationMs} ms
+                          </span>
+                        </button>
+                        {current && (
+                          <div className="graph-detail">
+                            <TextField
+                              key={e.id}
+                              label="Etichetta scelta"
+                              short="Etichetta"
+                              value={e.label}
+                              apply={(label) =>
+                                run(editEdge(path.id, e.id, { label }))
+                              }
+                            />
+                            <label className="kv">
+                              <span>Condizione</span>
+                              <select
+                                aria-label="Condizione connessione"
+                                value={e.condition?.kind ?? "always"}
+                                onChange={(event) =>
+                                  run((doc) => {
+                                    const item = doc.paths
+                                      .find((p) => p.id === path.id)!
+                                      .edges.find((x) => x.id === e.id)!;
+                                    if (event.target.value === "always")
+                                      delete item.condition;
+                                    else
+                                      item.condition =
+                                        event.target.value === "manual"
+                                          ? { kind: "manual" }
+                                          : {
+                                              kind: "visit-limit",
+                                              maxVisits: 3,
+                                            };
+                                    return success(doc);
+                                  })
+                                }
+                              >
+                                <option value="always">
+                                  Avanzamento diretto
+                                </option>
+                                <option value="manual">Scelta manuale</option>
+                                <option value="visit-limit">
+                                  Limite visite
+                                </option>
+                              </select>
+                            </label>
+                            {e.condition?.kind === "visit-limit" && (
+                              <div className="kv">
+                                <span>Limite</span>
+                                <Numeric
+                                  label="Limite visite connessione"
+                                  short="Visite"
+                                  value={e.condition.maxVisits}
+                                  apply={(maxVisits) =>
+                                    run(
+                                      editEdge(path.id, e.id, {
+                                        condition: {
+                                          kind: "visit-limit",
+                                          maxVisits,
+                                        },
+                                      }),
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
+                            <div className="path-actions">
+                              <button
+                                type="button"
+                                tabIndex={0}
+                                className="tool-button quiet danger"
+                                onClick={() =>
+                                  remove(removeGraphItem(path.id, e.id, "edge"))
+                                }
+                              >
+                                Elimina connessione
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
                     );
-                }}
-              >
-                Aggiungi visita
-              </button>
-            </div>
-            <fieldset>
-              <legend>Nuova connessione</legend>
-              <div className="structure-row">
+                  })}
+                </ol>
+              ) : (
+                <p className="panel-note">
+                  Nessuna connessione: collega due visite.
+                </p>
+              )}
+              <fieldset className="connect-row">
+                <legend className="visually-hidden">Nuova connessione</legend>
                 {(["from", "to"] as const).map((kind) => (
-                  <label key={kind}>
-                    {kind === "from" ? "Da" : "A"}
-                    <select
-                      aria-label={
-                        kind === "from" ? "Connessione da" : "Connessione a"
-                      }
-                      value={(kind === "from" ? from : to) || node?.id || ""}
-                      onChange={(e) =>
-                        (kind === "from" ? setFrom : setTo)(e.target.value)
-                      }
-                    >
-                      {path.nodes.map((n) => (
-                        <option key={n.id} value={n.id}>
-                          {
-                            document.scenes.find((s) => s.id === n.sceneId)
-                              ?.title
-                          }{" "}
-                          · {n.id.slice(0, 8)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <select
+                    key={kind}
+                    aria-label={
+                      kind === "from" ? "Connessione da" : "Connessione a"
+                    }
+                    value={(kind === "from" ? from : to) || node?.id || ""}
+                    onChange={(e) =>
+                      (kind === "from" ? setFrom : setTo)(e.target.value)
+                    }
+                  >
+                    {path.nodes.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {position(n.id)} · {sceneOf(n.sceneId)?.title}
+                      </option>
+                    ))}
+                  </select>
                 ))}
                 <button
                   type="button"
+                  tabIndex={0}
+                  className="tool-button"
                   disabled={!node}
                   onClick={() => {
                     if (
@@ -346,83 +538,11 @@ export function PathPanel({
                       );
                   }}
                 >
+                  <Icon name="link" />
                   Collega nodi
                 </button>
-              </div>
-            </fieldset>
-            <label>
-              Connessione
-              <select
-                aria-label="Connessione da modificare"
-                value={edge?.id ?? ""}
-                onChange={(e) => setEdgeId(e.target.value)}
-              >
-                <option value="" disabled>
-                  Nessuna connessione
-                </option>
-                {path.edges.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.label || `${e.from.slice(0, 8)} → ${e.to.slice(0, 8)}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {edge && (
-              <>
-                <TextField
-                  key={edge.id}
-                  label="Etichetta scelta"
-                  value={edge.label}
-                  apply={(label) => run(editEdge(path.id, edge.id, { label }))}
-                />
-                <label>
-                  Condizione
-                  <select
-                    aria-label="Condizione connessione"
-                    value={edge.condition?.kind ?? "always"}
-                    onChange={(e) =>
-                      run((doc) => {
-                        const item = doc.paths
-                          .find((p) => p.id === path.id)!
-                          .edges.find((e) => e.id === edge.id)!;
-                        if (e.target.value === "always") delete item.condition;
-                        else
-                          item.condition =
-                            e.target.value === "manual"
-                              ? { kind: "manual" }
-                              : { kind: "visit-limit", maxVisits: 3 };
-                        return success(doc);
-                      })
-                    }
-                  >
-                    <option value="always">Avanzamento diretto</option>
-                    <option value="manual">Scelta manuale</option>
-                    <option value="visit-limit">Limite visite</option>
-                  </select>
-                </label>
-                {edge.condition?.kind === "visit-limit" && (
-                  <Numeric
-                    label="Limite visite connessione"
-                    value={edge.condition.maxVisits}
-                    apply={(maxVisits) =>
-                      run(
-                        editEdge(path.id, edge.id, {
-                          condition: { kind: "visit-limit", maxVisits },
-                        }),
-                      )
-                    }
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={() =>
-                    remove(removeGraphItem(path.id, edge.id, "edge"))
-                  }
-                >
-                  Elimina connessione
-                </button>
-              </>
-            )}
+              </fieldset>
+            </section>
             <CameraTimeline
               store={store}
               document={document}
@@ -453,6 +573,6 @@ export function PathPanel({
           <p>{deletion.description}</p>
         </Dialog>
       )}
-    </details>
+    </div>
   );
 }

@@ -225,7 +225,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
           .document.scenes.find((s) => s.id === "B")!.parentId,
     ),
   ).toBe("A");
-  await page.getByText("Percorsi e connessioni", { exact: false }).click();
+  await page.getByRole("tab", { name: /^Percorsi/ }).click();
   await page
     .getByRole("button", { name: "Nuovo percorso", exact: true })
     .click();
@@ -292,8 +292,11 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   page,
 }, info) => {
   await studio(page);
-  await page.getByText("Percorsi e connessioni", { exact: false }).click();
-  await page.getByLabel("Connessione da modificare").selectOption("AB");
+  await page.getByRole("tab", { name: /^Percorsi/ }).click();
+  await page
+    .getByRole("list", { name: "Connessioni del percorso" })
+    .getByRole("button", { name: /Esplora B/ })
+    .click();
   const updated = page.evaluate(
     () =>
       new Promise<void>((resolve) => {
@@ -444,7 +447,7 @@ test("overview, pan, zoom and direct goTo keep history and mobile controls usabl
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(studioURL);
   await upload(page);
-  await page.getByText("Percorsi e connessioni", { exact: false }).click();
+  await page.getByRole("tab", { name: /^Percorsi/ }).click();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -455,7 +458,7 @@ test("Studio creates a real camera track, node pose and declarative cue through 
   page,
 }) => {
   await studio(page);
-  await page.getByText("Percorsi e connessioni", { exact: false }).click();
+  await page.getByRole("tab", { name: /^Percorsi/ }).click();
   await page.getByLabel("Percorso da modificare").selectOption("alternate");
   await page
     .getByRole("button", { name: "Camera indipendente", exact: true })
@@ -500,7 +503,7 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   page,
 }) => {
   await studio(page);
-  await page.getByText("Percorsi e connessioni", { exact: false }).click();
+  await page.getByRole("tab", { name: /^Percorsi/ }).click();
   await page.getByLabel("Percorso da modificare").selectOption("alternate");
   await page
     .getByRole("button", {

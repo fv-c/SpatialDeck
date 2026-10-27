@@ -29,6 +29,7 @@ import { Numeric } from "./Inspector.js";
 import { blockElement, measureFlowFrames } from "./LayoutEditor.js";
 import { Icon, IconButton } from "./icons.js";
 import type { IconName } from "./icons.js";
+import { blockTypes } from "./blockTypes.js";
 
 /** Italian text for the layout diagnostics a field can produce. */
 function layoutResult(result: Result<void>): Result<void> {
@@ -394,12 +395,12 @@ export function LayoutPanel({
             Disposizione <span>{selectionText}</span>
           </h3>
           {single?.frame && (
-            <div className="prop-grid layout-numbers">
+            <div className="prop-grid layout-numbers inline-fields">
               {frameField("x", "X frame", "X")}
               {frameField("y", "Y frame", "Y")}
-              {frameField("rotation", "Rotazione frame", "Rot.")}
-              {frameField("width", "Larghezza frame", "Largh.")}
-              {frameField("height", "Altezza frame", "Alt.")}
+              {frameField("rotation", "Rotazione frame", "R")}
+              {frameField("width", "Larghezza frame", "L")}
+              {frameField("height", "Altezza frame", "A")}
               {frameField("z", "Livello z", "Z")}
             </div>
           )}
@@ -624,7 +625,9 @@ export function LayoutPanel({
                 }}
               >
                 <span className="order-index">{i + 1}</span>
-                <span className="order-type">{block.type}</span>
+                <span className="order-type">
+                  {blockTypes[block.type].label}
+                </span>
                 <span className="order-text">{excerpt(block)}</span>
                 {block.frame && (
                   <span

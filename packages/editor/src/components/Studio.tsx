@@ -8,7 +8,11 @@ import {
 import type { Player } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
 import type { PluginDefinition } from "@spatialdeck/plugins";
-import { serializeDocument, validateDocument } from "@spatialdeck/core";
+import {
+  contrastIssues,
+  serializeDocument,
+  validateDocument,
+} from "@spatialdeck/core";
 import type { Result, ProjectDocument } from "@spatialdeck/core";
 import {
   convertToFlow,
@@ -41,7 +45,8 @@ import { AssetPanel } from "./AssetPanel.js";
 import { LayoutEditor } from "./LayoutEditor.js";
 import { LayoutPanel } from "./LayoutPanel.js";
 import { ThemePanel } from "./ThemePanel.js";
-import { Icon, IconButton } from "./icons.js";
+import { SceneThumb } from "./SceneThumb.js";
+import { BrandMark, Icon, IconButton } from "./icons.js";
 import {
   PRESENTER_SESSION_KEY,
   PresenterView,
@@ -50,6 +55,12 @@ import {
 } from "./PresenterView.js";
 import { randomToken } from "@spatialdeck/player/presenter";
 const noPlugins: readonly PluginDefinition[] = [];
+const inspectorTabs = [
+  ["scene", "Scena"],
+  ["paths", "Percorsi"],
+  ["theme", "Tema"],
+] as const;
+type InspectorTab = (typeof inspectorTabs)[number][0];
 export interface StudioProps {
   store?: EditorStore;
   repository?: RecoveryRepository;
@@ -101,6 +112,12 @@ export function Studio({
       }
     }),
     [preview, setPreview] = useState(true);
+  // Inspector tab and presentation chrome: UI state only, never part of the document.
+  const [tab, setTab] = useState<InspectorTab>("scene"),
+    [idle, setIdle] = useState(false),
+    [presentedTitle, setPresentedTitle] = useState("");
+  const presenting = useRef<Player | null>(null),
+    presentingUnsubscribe = useRef<(() => void) | null>(null);
   const [dialog, setDialog] = useState<{
       title: string;
       body: string;
@@ -138,6 +155,10 @@ export function Studio({
     (s) => s.id === session.selection,
   );
   const layoutScene = layoutMode && preview ? selected : undefined;
+  const themeIssues = useMemo(
+    () => contrastIssues(session.document).length,
+    [session.document],
+  );
   // Block selection belongs to one scene and drops blocks that no longer exist.
   useEffect(() => setBlockSelection([]), [session.selection, layoutMode]);
   useEffect(() => {
@@ -155,6 +176,23 @@ export function Studio({
     previewUnsubscribe.current = player
       ? player.on("documentchange", () => setPreviewRevision((n) => n + 1))
       : null;
+  }
+  function presentationPlayer(player: Player | null) {
+    presenting.current = player;
+    presentingUnsubscribe.current?.();
+    presentingUnsubscribe.current = null;
+    if (!player) return;
+    const sync = () =>
+      setPresentedTitle(
+        store
+          .getSnapshot()
+          .document.scenes.find((s) => s.id === player.getState().sceneId)
+          ?.title ?? "",
+      );
+    const off = [player.on("ready", sync), player.on("scenechange", sync)];
+    presentingUnsubscribe.current = () => off.forEach((f) => f());
+    // The first scene may already be active when the player is handed over.
+    sync();
   }
   function report(result: Result<unknown>) {
     setError(
@@ -220,6 +258,26 @@ export function Studio({
       presentButton.current?.focus({ preventScroll: true });
       if (document.fullscreenElement) void document.exitFullscreen?.();
     }
+  }, [present]);
+  // The presentation controls fade after the pointer rests; focus keeps them visible.
+  useEffect(() => {
+    if (!present) return;
+    const node = presentation.current;
+    let timer = 0;
+    const wake = () => {
+      setIdle(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setIdle(true), 2500);
+    };
+    wake();
+    node?.addEventListener("pointermove", wake);
+    node?.addEventListener("pointerdown", wake);
+    return () => {
+      window.clearTimeout(timer);
+      node?.removeEventListener("pointermove", wake);
+      node?.removeEventListener("pointerdown", wake);
+      setIdle(false);
+    };
   }, [present]);
   // The browser consumes Escape to leave fullscreen: leaving fullscreen ends
   // the presentation too, so one Escape always returns to the editor.
@@ -481,12 +539,10 @@ export function Studio({
     >
       <header className="toolbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            S↗
-          </span>
+          <BrandMark />
           <h1 className="brand-name">SpatialDeck</h1>
-          <span className="brand-version">Studio 0.5</span>
         </div>
+        <span className="toolbar-divider" aria-hidden="true" />
         <label className="title-field">
           <span className="visually-hidden">Titolo progetto</span>
           <input
@@ -522,17 +578,12 @@ export function Studio({
             ref={openButton}
             onClick={() => file.current?.click()}
           />
-          <button
-            type="button"
-            tabIndex={0}
-            className="tool-button"
-            aria-label="Salva JSON"
-            data-tip="Salva JSON · ⌘S"
+          <IconButton
+            icon="save"
+            label="Salva JSON"
+            shortcut="⌘S"
             onClick={save}
-          >
-            <Icon name="save" />
-            Salva
-          </button>
+          />
           <IconButton
             icon="archive"
             label="Salva archivio"
@@ -575,13 +626,19 @@ export function Studio({
             pressed={preview}
             onClick={() => setPreview(!preview)}
           />
-          <IconButton
-            icon="presenter"
-            label="Relatore"
-            shortcut="note, anteprime e finestra pubblica"
+          <span className="toolbar-divider" aria-hidden="true" />
+          <button
+            type="button"
+            tabIndex={0}
+            className="tool-button quiet"
+            data-tip="Note, anteprime e finestra pubblica"
+            data-tip-side="left"
             onClick={startPresenter}
             disabled={!session.document.scenes.length}
-          />
+          >
+            <Icon name="presenter" />
+            Relatore
+          </button>
           <button
             type="button"
             tabIndex={0}
@@ -702,14 +759,16 @@ export function Studio({
                     setCapture(null);
                   }}
                 >
-                  <span className="scene-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
+                  <span className="scene-number">{index + 1}</span>
+                  <SceneThumb document={session.document} scene={scene} />
                   <span className="scene-label">
                     {scene.title || "Senza titolo"}
                     <small>
                       {scene.layout === "canvas" ? "Canvas" : "Flow"} ·{" "}
-                      {scene.position.map(Math.round).join(" / ")}
+                      {scene.blocks.length === 1
+                        ? "1 contenuto"
+                        : `${scene.blocks.length} contenuti`}
+                      {!scene.visible && " · nascosta"}
                     </small>
                   </span>
                 </button>
@@ -724,11 +783,13 @@ export function Studio({
             onBlobs={loadBlobs}
           />
           <p className="local-note">
-            Locale, sul tuo dispositivo. Salva un file per conservare il lavoro.
+            <Icon name="device" />
+            Solo su questo dispositivo: salva un file per conservarlo.
           </p>
         </details>
-        <div className={`center-column ${layoutScene ? "is-layout" : ""}`}>
-          <MapView store={store} session={session} />
+        <div
+          className={`center-column ${layoutScene ? "is-layout" : ""} ${preview ? "" : "no-preview"}`}
+        >
           {preview && (
             <section
               className={`preview-panel ${layoutScene ? "is-layout" : ""}`}
@@ -750,6 +811,8 @@ export function Studio({
                     store.endDrag();
                     setNavigation(null);
                     setCapture(null);
+                    // The scene editor's panel lives in the Scena tab.
+                    if (!layoutMode) setTab("scene");
                     setLayoutMode(!layoutMode);
                     setAnnouncement(
                       layoutMode
@@ -790,54 +853,118 @@ export function Studio({
               </div>
             </section>
           )}
+          <MapView store={store} session={session} />
         </div>
-        <details open className="inspector-panel">
-          <summary>
-            Inspector <span>{selected ? "SCENA" : "VUOTO"}</span>
-          </summary>
-          {layoutScene && (
-            <LayoutPanel
+        <section className="inspector-panel" aria-label="Inspector">
+          <div
+            className="inspector-tabs"
+            role="tablist"
+            aria-label="Sezioni dell’inspector"
+            onKeyDown={(event) => {
+              const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+              if (!step) return;
+              event.preventDefault();
+              const i = inspectorTabs.findIndex(([id]) => id === tab),
+                next = inspectorTabs.at((i + step) % inspectorTabs.length)![0];
+              setTab(next);
+              document
+                .getElementById(`inspector-tab-${next}`)
+                ?.focus({ preventScroll: true });
+            }}
+          >
+            {inspectorTabs.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`inspector-tab-${id}`}
+                aria-selected={tab === id}
+                aria-controls={`inspector-panel-${id}`}
+                tabIndex={tab === id ? 0 : -1}
+                className="inspector-tab"
+                onClick={() => setTab(id)}
+              >
+                {label}
+                {id === "paths" && (
+                  <span className="count">{session.document.paths.length}</span>
+                )}
+                {id === "theme" && themeIssues > 0 && (
+                  <span className="count has-issues">
+                    <span className="visually-hidden">avvisi: </span>
+                    {themeIssues}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          {/* Every tab stays mounted: the paths panel drives the preview's navigation. */}
+          <div
+            role="tabpanel"
+            id="inspector-panel-scene"
+            aria-labelledby="inspector-tab-scene"
+            className="inspector-tabpanel"
+            hidden={tab !== "scene"}
+          >
+            {layoutScene && (
+              <LayoutPanel
+                store={store}
+                document={session.document}
+                scene={layoutScene}
+                host={previewHost}
+                revision={previewRevision}
+                selection={blockSelection}
+                onSelect={setBlockSelection}
+                grid={grid}
+                onGrid={setGrid}
+                announcement={announcement}
+                announce={setAnnouncement}
+                onFlow={() =>
+                  setDialog({
+                    title: "Tornare a flow?",
+                    body: `Le posizioni, le dimensioni, le rotazioni e i livelli di ${layoutScene.blocks.length} contenuti di “${layoutScene.title}” andranno persi; i contenuti tornano impilati nell’ordine di lettura. Annulla li ripristina.`,
+                    confirm: "Torna a flow",
+                    action: () => {
+                      const result = store.execute(
+                        convertToFlow(layoutScene.id),
+                      );
+                      report(result);
+                      if (result.ok)
+                        setAnnouncement("Scena tornata a flow: frame rimossi.");
+                    },
+                  })
+                }
+              />
+            )}
+            <Inspector store={store} scene={selected} />
+          </div>
+          <div
+            role="tabpanel"
+            id="inspector-panel-paths"
+            aria-labelledby="inspector-tab-paths"
+            className="inspector-tabpanel"
+            hidden={tab !== "paths"}
+          >
+            <PathPanel
               store={store}
               document={session.document}
-              scene={layoutScene}
-              host={previewHost}
-              revision={previewRevision}
-              selection={blockSelection}
-              onSelect={setBlockSelection}
-              grid={grid}
-              onGrid={setGrid}
-              announcement={announcement}
-              announce={setAnnouncement}
-              onFlow={() =>
-                setDialog({
-                  title: "Tornare a flow?",
-                  body: `Le posizioni, le dimensioni, le rotazioni e i livelli di ${layoutScene.blocks.length} contenuti di “${layoutScene.title}” andranno persi; i contenuti tornano impilati nell’ordine di lettura. Annulla li ripristina.`,
-                  confirm: "Torna a flow",
-                  action: () => {
-                    const result = store.execute(convertToFlow(layoutScene.id));
-                    report(result);
-                    if (result.ok)
-                      setAnnouncement("Scena tornata a flow: frame rimossi.");
-                  },
-                })
-              }
+              onNavigation={setNavigation}
+              onCapture={setCapture}
             />
-          )}
-          <Inspector store={store} scene={selected} />
-          <PathPanel
-            store={store}
-            document={session.document}
-            onNavigation={setNavigation}
-            onCapture={setCapture}
-          />
-          <ThemePanel store={store} document={session.document} />
-        </details>
+          </div>
+          <div
+            role="tabpanel"
+            id="inspector-panel-theme"
+            aria-labelledby="inspector-tab-theme"
+            className="inspector-tabpanel"
+            hidden={tab !== "theme"}
+          >
+            <ThemePanel store={store} document={session.document} />
+          </div>
+        </section>
       </div>
       <footer className="statusbar">
-        <span>
-          {session.dirty
-            ? "● Modifiche da salvare in JSON"
-            : "○ Documento salvato"}
+        <span className={`save-state ${session.dirty ? "is-dirty" : ""}`}>
+          {session.dirty ? "Modifiche da salvare in JSON" : "Documento salvato"}
         </span>
         <span>
           schema {session.document.schemaVersion} ·{" "}
@@ -897,17 +1024,40 @@ export function Studio({
       )}
       {present && (
         <div
-          className="presentation"
+          className={`presentation ${idle ? "is-idle" : ""}`}
           ref={presentation}
           tabIndex={-1}
           role="region"
           aria-label="Modalità presentazione"
         >
           <div className="present-controls">
-            <button tabIndex={0} onClick={() => setPresent(false)}>
+            <button
+              type="button"
+              tabIndex={0}
+              className="present-exit"
+              onClick={() => setPresent(false)}
+            >
+              <Icon name="arrow-left" />
               Torna all’editor
             </button>
-            <span>Frecce per navigare · Escape per tornare</span>
+            <span className="present-divider" aria-hidden="true" />
+            <IconButton
+              icon="chevron-left"
+              label="Scena precedente"
+              tip="top"
+              onClick={() => void presenting.current?.prev()}
+            />
+            <span className="present-title">{presentedTitle}</span>
+            <IconButton
+              icon="chevron-right"
+              label="Scena successiva"
+              tip="top"
+              onClick={() => void presenting.current?.next()}
+            />
+            <span className="present-divider" aria-hidden="true" />
+            <span className="present-hint">
+              Frecce per navigare · Esc per uscire
+            </span>
           </div>
           <PlayerSurface
             document={session.document}
@@ -915,7 +1065,10 @@ export function Studio({
             present
             blobs={blobs}
             plugins={plugins}
-            {...(onPlayer ? { onPlayer } : {})}
+            onPlayer={(player, isPresent) => {
+              onPlayer?.(player, isPresent);
+              presentationPlayer(player);
+            }}
           />
         </div>
       )}

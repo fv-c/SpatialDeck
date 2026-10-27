@@ -1,7 +1,11 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { getWorldMatrix, isSceneVisible } from "@spatialdeck/core";
 import type { EditorSession, EditorStore } from "../store/index.js";
+import { Icon } from "./icons.js";
+/** Text that fits a width measured in average characters, with an ellipsis. */
+const fit = (text: string, chars: number) =>
+  chars < 3 ? "" : text.length > chars ? `${text.slice(0, chars - 1)}…` : text;
 export function MapView({
   store,
   session,
@@ -18,6 +22,21 @@ export function MapView({
     scene: boolean;
   } | null>(null);
   const { map, document } = session;
+  // Screen pixels per map unit of the fixed viewBox: labels keep a constant
+  // on-screen size whatever the panel's size and the zoom.
+  const svg = useRef<SVGSVGElement>(null),
+    [unit, setUnit] = useState(1);
+  useEffect(() => {
+    const element = svg.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const { width, height } = element.getBoundingClientRect();
+      if (width && height) setUnit(Math.min(width / 1200, height / 800));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const label = 11 / (unit * map.zoom);
   function down(event: ReactPointerEvent<SVGSVGElement>) {
     if (event.button !== 0 || gesture.current) return;
     const id = (event.target as Element)
@@ -54,26 +73,32 @@ export function MapView({
         </h2>
         <div className="map-tools">
           <button
+            type="button"
             tabIndex={0}
+            className="icon-button"
             aria-label="Riduci zoom"
             onClick={() =>
               store.setMap({ ...map, zoom: Math.max(0.02, map.zoom / 1.25) })
             }
           >
-            −
+            <Icon name="zoom-out" />
           </button>
           <output aria-label="Zoom mappa">{Math.round(map.zoom * 100)}%</output>
           <button
+            type="button"
             tabIndex={0}
+            className="icon-button"
             aria-label="Aumenta zoom"
             onClick={() =>
               store.setMap({ ...map, zoom: Math.min(2, map.zoom * 1.25) })
             }
           >
-            +
+            <Icon name="plus" />
           </button>
           <button
+            type="button"
             tabIndex={0}
+            className="tool-button quiet"
             onClick={() => store.setMap({ x: 0, y: 0, zoom: 0.25 })}
           >
             Centra
@@ -81,6 +106,7 @@ export function MapView({
         </div>
       </div>
       <svg
+        ref={svg}
         role="application"
         aria-label="Mappa XY: trascina le scene; trascina lo sfondo per spostare la mappa. Escape annulla."
         tabIndex={0}
@@ -145,32 +171,33 @@ export function MapView({
         <defs>
           <pattern
             id="map-grid"
-            width="50"
-            height="50"
+            width="40"
+            height="40"
             patternUnits="userSpaceOnUse"
           >
-            <path
-              d="M 50 0 L 0 0 0 50"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth=".6"
-            />
+            <circle cx="20" cy="20" r="1.6" fill="currentColor" />
           </pattern>
         </defs>
+        {/* Beyond the viewBox too: the grid fills panels of any proportion. */}
         <rect
-          x="-600"
-          y="-400"
-          width="1200"
-          height="800"
+          x="-12000"
+          y="-8000"
+          width="24000"
+          height="16000"
           fill="url(#map-grid)"
           className="map-grid"
         />
         <g transform={`translate(${map.x} ${map.y}) scale(${map.zoom})`}>
-          <path d="M -2400 0 H 2400 M 0 -1600 V 1600" className="map-axis" />
+          <path
+            d="M -1000000 0 H 1000000 M 0 -1000000 V 1000000"
+            className="map-axis"
+          />
           {document.scenes.map((scene, index) => {
             const world = getWorldMatrix(document, scene.id);
             if (!world.ok) return null;
             const m = world.value;
+            // Label size in the scene's own units, after its world scale.
+            const size = label / (Math.hypot(m[0]!, m[1]!) || 1);
             return (
               <g
                 key={scene.id}
@@ -187,14 +214,15 @@ export function MapView({
                   rx="12"
                 />
                 <text
-                  x={-scene.size[0] / 2 + 30}
-                  y={-scene.size[1] / 2 + 24 / map.zoom}
-                  fontSize={19 / map.zoom}
+                  x={-scene.size[0] / 2 + size * 0.7}
+                  y={-scene.size[1] / 2 + size * 1.5}
+                  fontSize={size}
                 >
-                  {String(index + 1).padStart(2, "0")} ·{" "}
-                  {scene.title.slice(0, 30)}
+                  {fit(
+                    `${index + 1} · ${scene.title}`,
+                    scene.size[0] / (size * 0.56) - 2,
+                  )}
                 </text>
-                <circle r="9" />
                 <title>
                   {scene.title} · X {scene.position[0]}, Y {scene.position[1]},
                   Z {scene.position[2]}
@@ -204,14 +232,19 @@ export function MapView({
           })}
         </g>
         {!document.scenes.length && (
-          <text x="0" y="0" textAnchor="middle" className="map-empty">
+          <text
+            x="0"
+            y="0"
+            textAnchor="middle"
+            fontSize={13 / unit}
+            className="map-empty"
+          >
             Crea una scena per iniziare.
           </text>
         )}
       </svg>
-      <p className="map-help">
-        Trascina per spostare · Rotella per zoom · Escape per annullare ·
-        Coordinate precise nell’inspector
+      <p className="map-help" aria-hidden="true">
+        Trascina per spostare · Rotella per zoom · Esc annulla
       </p>
     </section>
   );

@@ -50,13 +50,7 @@ export function ThemePanel({
   };
   const issues = contrastIssues(document);
   return (
-    <details className="theme-panel inspector-details">
-      <summary>
-        Tema del documento{" "}
-        <span className={issues.length ? "count has-issues" : "count"}>
-          {issues.length ? `${issues.length} avvisi` : "OK"}
-        </span>
-      </summary>
+    <div className="theme-panel">
       <div className="theme-content">
         {error && (
           <p className="field-error" role="alert">
@@ -244,6 +238,6 @@ export function ThemePanel({
           )}
         </section>
       </div>
-    </details>
+    </div>
   );
 }

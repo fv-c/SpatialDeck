@@ -638,27 +638,34 @@ async function previewMatches(page: Page, sceneId: string, blockId: string) {
     )
     .toBeLessThanOrEqual(0.01);
 }
+/**
+ * Entering the scene editor resizes the preview: the overlay is compared once
+ * the player has refitted its viewport (one resize notification later). A
+ * lasting offset still fails when the poll times out.
+ */
 async function overlayAligned(page: Page, sceneId: string) {
-  const offsets = await page.evaluate((sceneId) => {
-    return [
-      ...document.querySelectorAll<HTMLElement>("[data-layout-block]"),
-    ].map((f) => {
-      const b = document.querySelector(
-        `.preview-player .sd-scene[data-scene-id="${sceneId}"] [data-block-id="${f.dataset.layoutBlock}"]`,
-      )!;
-      const r1 = f.getBoundingClientRect(),
-        r2 = b.getBoundingClientRect();
+  const offsets = () =>
+    page.evaluate((sceneId) => {
       return [
-        r1.x - r2.x,
-        r1.y - r2.y,
-        r1.width - r2.width,
-        r1.height - r2.height,
-      ];
-    });
-  }, sceneId);
-  expect(offsets.length).toBeGreaterThan(0);
-  for (const o of offsets)
-    for (const n of o) expect(Math.abs(n)).toBeLessThanOrEqual(1);
+        ...document.querySelectorAll<HTMLElement>("[data-layout-block]"),
+      ].map((f) => {
+        const b = document.querySelector(
+          `.preview-player .sd-scene[data-scene-id="${sceneId}"] [data-block-id="${f.dataset.layoutBlock}"]`,
+        )!;
+        const r1 = f.getBoundingClientRect(),
+          r2 = b.getBoundingClientRect();
+        return [
+          r1.x - r2.x,
+          r1.y - r2.y,
+          r1.width - r2.width,
+          r1.height - r2.height,
+        ];
+      });
+    }, sceneId);
+  expect((await offsets()).length).toBeGreaterThan(0);
+  await expect
+    .poll(async () => Math.max(...(await offsets()).flat().map(Math.abs)))
+    .toBeLessThanOrEqual(1);
 }
 test.describe("Studio scene editor", () => {
   test.beforeEach(async ({ page }) => {
@@ -934,7 +941,7 @@ test.describe("Studio scene editor", () => {
   }, info) => {
     await openStudio(page);
     await impagina(page);
-    await page.locator("summary", { hasText: "Tema del documento" }).click();
+    await page.getByRole("tab", { name: /^Tema/ }).click();
     await page
       .getByRole("combobox", { name: "Font del testo" })
       .selectOption("system-serif");
@@ -958,7 +965,8 @@ test.describe("Studio scene editor", () => {
       "testo del tema sullo sfondo",
     );
     await page.getByRole("button", { name: "Annulla", exact: true }).click();
-    // Appearance of the scene.
+    // Appearance of the scene, in the scene tab with the scene editor.
+    await page.getByRole("tab", { name: /^Scena/ }).click();
     await page
       .getByRole("combobox", { name: "Variante della scena" })
       .selectOption("plain");

@@ -6,6 +6,15 @@ import type { AssetBlobs } from "@spatialdeck/player";
 import type { EditorStore } from "../store/index.js";
 import { randomId } from "../commands/index.js";
 import { Icon } from "./icons.js";
+import type { IconName } from "./icons.js";
+const assetIcon = (mime: string): IconName =>
+  mime.startsWith("image/")
+    ? "type-image"
+    : mime.startsWith("audio/")
+      ? "type-audio"
+      : mime.startsWith("video/")
+        ? "type-video"
+        : "new";
 export function AssetPanel({
   store,
   document,
@@ -88,6 +97,9 @@ export function AssetPanel({
       <ul className="asset-list">
         {document.assets.map((a) => (
           <li key={a.id}>
+            <span className="asset-icon" aria-hidden="true">
+              <Icon name={assetIcon(a.mime)} />
+            </span>
             <span className="asset-name">{a.path.split("/").at(-1)}</span>
             <small>
               {a.mime} · {Math.max(1, Math.round(a.byteLength / 1024))} KB
@@ -113,9 +125,12 @@ export function AssetPanel({
           </li>
         ))}
       </ul>
-      <p className="panel-note">
-        Il JSON conserva i riferimenti; l’archivio .spatialdeck include i file.
-      </p>
+      {!document.assets.length && (
+        <p className="panel-note">
+          Il JSON conserva i riferimenti; l’archivio .spatialdeck include i
+          file.
+        </p>
+      )}
       {error && <p role="alert">{error}</p>}
     </details>
   );

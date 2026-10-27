@@ -20,6 +20,7 @@ import type {
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
 import type { PluginDefinition } from "@spatialdeck/plugins";
 import { publicDocument } from "@spatialdeck/core";
+import { Icon, IconButton } from "./icons.js";
 import type { Choice, ProjectDocument } from "@spatialdeck/core";
 
 export const PRESENTER_SESSION_KEY = "spatialdeck-presenter-session";
@@ -229,6 +230,19 @@ export function PresenterView({
     .find((n) => n.id === nodeId);
   const scene = document.scenes.find((s) => s.id === node?.sceneId);
   const eligible = choices.filter((c) => !c.disabledReason);
+  const following =
+    eligible.length === 1
+      ? document.paths
+          .flatMap((p) => p.edges.map((e) => ({ edge: e, path: p })))
+          .find(({ edge }) => edge.id === eligible[0]!.edgeId)
+      : undefined;
+  const nextScene = following
+    ? document.scenes.find(
+        (s) =>
+          s.id ===
+          following.path.nodes.find((n) => n.id === following.edge.to)?.sceneId,
+      )
+    : undefined;
   return (
     <div
       className="presenter"
@@ -252,26 +266,38 @@ export function PresenterView({
       }}
     >
       <header className="presenter-bar">
-        <h2>Vista relatore</h2>
-        <p role="status" className={connected ? "is-connected" : ""}>
-          {connected
-            ? "Finestra pubblica collegata"
-            : blocked
-              ? "Finestra pubblica non aperta"
-              : "In attesa della finestra pubblica…"}
-        </p>
+        <div className="presenter-identity">
+          <h2>Vista relatore</h2>
+          <p
+            role="status"
+            className={`presenter-link ${connected ? "is-connected" : blocked ? "is-blocked" : ""}`}
+          >
+            {connected
+              ? "Finestra pubblica collegata"
+              : blocked
+                ? "Finestra pubblica non aperta"
+                : "In attesa della finestra pubblica…"}
+          </p>
+        </div>
         <div className="presenter-timer">
           <output aria-label="Tempo trascorso">{clock(elapsed)}</output>
-          <button type="button" tabIndex={0} onClick={toggleTimer}>
-            {running ? "Pausa" : "Avvia"}
-          </button>
-          <button type="button" tabIndex={0} onClick={resetTimer}>
-            Azzera
+          <IconButton
+            icon={running ? "pause" : "play"}
+            label={running ? "Pausa" : "Avvia"}
+            onClick={toggleTimer}
+          />
+          <IconButton icon="reset" label="Azzera" onClick={resetTimer} />
+        </div>
+        <div className="presenter-end">
+          <button
+            type="button"
+            tabIndex={0}
+            className="tool-button danger"
+            onClick={end}
+          >
+            Termina
           </button>
         </div>
-        <button type="button" tabIndex={0} onClick={end}>
-          Termina
-        </button>
       </header>
       {blocked && (
         <div className="presenter-blocked" role="alert">
@@ -290,56 +316,72 @@ export function PresenterView({
       )}
       <div className="presenter-grid">
         <section aria-label="Scena corrente" className="presenter-current">
-          <h3>{scene?.title ?? "—"}</h3>
+          <h3>
+            <span className="presenter-kicker">Ora</span>
+            {scene?.title ?? "—"}
+          </h3>
           <div ref={currentHost} className="presenter-player" />
+          <nav className="presenter-nav" aria-label="Navigazione relatore">
+            <button
+              type="button"
+              tabIndex={0}
+              onClick={() => run.current({ kind: "prev" })}
+            >
+              <Icon name="arrow-left" />
+              Indietro
+            </button>
+            <button
+              type="button"
+              tabIndex={0}
+              className="primary"
+              onClick={() => run.current({ kind: "next" })}
+            >
+              Avanti
+              <Icon name="arrow-right" />
+            </button>
+            <span className="presenter-keys">
+              Frecce, Pagina su/giù o Spazio
+            </span>
+          </nav>
         </section>
-        <section aria-label="Successiva" className="presenter-next">
-          <h3>Successiva</h3>
-          <div
-            ref={nextHost}
-            className="presenter-player"
-            hidden={eligible.length !== 1}
-          />
-          {eligible.length > 1 && (
-            <ul className="presenter-choices" aria-label="Scelte del ramo">
-              {eligible.map((c) => (
-                <li key={c.edgeId}>
-                  <button
-                    type="button"
-                    tabIndex={0}
-                    onClick={() =>
-                      run.current({ kind: "next", edgeId: c.edgeId })
-                    }
-                  >
-                    {c.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {eligible.length === 0 && <p>Fine del percorso.</p>}
-        </section>
-        <section aria-label="Note del relatore" className="presenter-notes">
-          <h3>Note</h3>
-          <p>{scene?.notes || "Nessuna nota per questa scena."}</p>
-        </section>
+        <div className="presenter-side">
+          <section aria-label="Successiva" className="presenter-next">
+            <h3>
+              <span className="presenter-kicker">Successiva</span>
+              {nextScene?.title}
+            </h3>
+            <div
+              ref={nextHost}
+              className="presenter-player"
+              hidden={eligible.length !== 1}
+            />
+            {eligible.length > 1 && (
+              <ul className="presenter-choices" aria-label="Scelte del ramo">
+                {eligible.map((c) => (
+                  <li key={c.edgeId}>
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        run.current({ kind: "next", edgeId: c.edgeId })
+                      }
+                    >
+                      {c.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {eligible.length === 0 && (
+              <p className="presenter-end-note">Fine del percorso.</p>
+            )}
+          </section>
+          <section aria-label="Note del relatore" className="presenter-notes">
+            <h3>Note</h3>
+            <p>{scene?.notes || "Nessuna nota per questa scena."}</p>
+          </section>
+        </div>
       </div>
-      <nav className="presenter-nav" aria-label="Navigazione relatore">
-        <button
-          type="button"
-          tabIndex={0}
-          onClick={() => run.current({ kind: "prev" })}
-        >
-          Indietro
-        </button>
-        <button
-          type="button"
-          tabIndex={0}
-          onClick={() => run.current({ kind: "next" })}
-        >
-          Avanti
-        </button>
-      </nav>
     </div>
   );
 }

@@ -20,6 +20,7 @@ export function HierarchyTree({
         <li key={s.id}>
           <button
             type="button"
+            tabIndex={0}
             aria-pressed={session.selection === s.id}
             onClick={() => store.select(s.id)}
           >
@@ -71,7 +72,7 @@ export function HierarchyTree({
           </select>
         </label>
       )}
-      <p>
+      <p className="panel-note">
         Il cambio parent conserva la posizione nel mondo. Coordinate e rotazioni
         nell’inspector sono locali.
       </p>

@@ -68,12 +68,18 @@ export function TextField({
   value,
   apply,
   multiline = false,
+  code = false,
+  short,
   onEnd,
 }: {
   label: string;
   value: string;
   apply: (value: string) => Result<void>;
   multiline?: boolean;
+  /** Source or JSON: monospaced. Prose stays in the interface font. */
+  code?: boolean;
+  /** Visible label; the accessible name stays the full label. */
+  short?: string;
   /** Called when the editing session ends (blur), after the last commit. */
   onEnd?: () => void;
 }) {
@@ -109,8 +115,8 @@ export function TextField({
     "aria-describedby": error ? `${fieldId}-error` : undefined,
   };
   return (
-    <label className="text-field">
-      {label}
+    <label className={`text-field ${code ? "code" : ""}`}>
+      {short ?? label}
       {multiline ? <textarea {...props} rows={4} /> : <input {...props} />}{" "}
       {error && (
         <span className="field-error" id={`${fieldId}-error`}>
@@ -118,6 +124,24 @@ export function TextField({
         </span>
       )}
     </label>
+  );
+}
+/** One labelled row of compact fields (X Y Z): the row label names the group. */
+export function PropRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div className="prop-row" role="group" aria-labelledby={id}>
+      <span className="row-label" id={id}>
+        {label}
+      </span>
+      {children}
+    </div>
   );
 }
 export function Inspector({
@@ -144,18 +168,27 @@ export function Inspector({
   const end = () => store.endCoalesce();
   return (
     <div className="inspector-content">
-      <TextField
-        key={`title-${scene.id}`}
-        label="Titolo scena"
-        value={scene.title}
-        apply={text("title")}
-        onEnd={end}
-      />
-      <fieldset>
+      <div className="inspector-group">
+        <h3>
+          Scena{" "}
+          <span className="chip">
+            {scene.layout === "canvas" ? "Canvas" : "Flow"}
+          </span>
+        </h3>
+        <TextField
+          key={`title-${scene.id}`}
+          label="Titolo scena"
+          short="Titolo"
+          value={scene.title}
+          apply={text("title")}
+          onEnd={end}
+        />
+      </div>
+      <fieldset className="inline-fields">
         <legend>
-          Posizione <span>px</span>
+          Trasformazione <span>px · ° Rz Ry Rx</span>
         </legend>
-        <div className="numeric-row">
+        <PropRow label="Posizione">
           {["X", "Y", "Z"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-p${i}`}
@@ -168,13 +201,8 @@ export function Inspector({
               }}
             />
           ))}
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>
-          Rotazione <span>° · Rz Ry Rx</span>
-        </legend>
-        <div className="numeric-row">
+        </PropRow>
+        <PropRow label="Rotazione">
           {["Rotazione X", "Rotazione Y", "Rotazione Z"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-r${i}`}
@@ -188,22 +216,13 @@ export function Inspector({
               }}
             />
           ))}
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>Dimensioni e scala</legend>
-        <div className="numeric-row">
-          <Numeric
-            key={`${scene.id}-scale`}
-            label="Scala"
-            value={scene.scale}
-            apply={(scale) => edit({ scale })}
-          />
+        </PropRow>
+        <PropRow label="Dimensioni">
           {["Larghezza", "Altezza"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-s${i}`}
               label={axis}
-              short={i ? "Alt." : "Largh."}
+              short={i ? "A" : "L"}
               value={scene.size[i]!}
               apply={(value) => {
                 const size: [number, number] = [...scene.size];
@@ -212,7 +231,14 @@ export function Inspector({
               }}
             />
           ))}
-        </div>
+          <Numeric
+            key={`${scene.id}-scale`}
+            label="Scala"
+            short="×"
+            value={scene.scale}
+            apply={(scale) => edit({ scale })}
+          />
+        </PropRow>
       </fieldset>
       <ContentPanel store={store} scene={scene} />
       <TextField

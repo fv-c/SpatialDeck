@@ -19,6 +19,7 @@ import { randomId } from "../commands/index.js";
 import type { DocumentEdit } from "../commands/index.js";
 import type { EditorStore } from "../store/index.js";
 import { Numeric, TextField } from "./Inspector.js";
+import { Icon } from "./icons.js";
 export interface Capture {
   plan: TransitionPlan;
   elapsedMs: number;
@@ -80,6 +81,7 @@ export function CameraTimeline({
     edge = path.edges.find((e) => e.id === edgeId),
     node = path.nodes.find((n) => n.id === nodeId);
   const track = document.cameraTracks.find((t) => t.id === edge?.cameraTrackId);
+  const position = (id: string) => path.nodes.findIndex((n) => n.id === id) + 1;
   const editTrack = (patch: Partial<CameraTrack>) =>
     run((doc) => {
       Object.assign(
@@ -135,6 +137,8 @@ export function CameraTimeline({
           <legend>Camera del nodo</legend>
           <button
             type="button"
+            tabIndex={0}
+            className="tool-button"
             onClick={() =>
               run((doc) => {
                 const n = doc.paths
@@ -166,39 +170,44 @@ export function CameraTimeline({
       )}
       {edge ? (
         <>
-          <p>Transizione: {edge.label || edge.id}</p>
-          <Numeric
-            label="Durata transizione ms"
-            value={edge.transition.durationMs}
-            apply={(durationMs) =>
-              run((doc) => {
-                doc.paths
-                  .find((p) => p.id === pathId)!
-                  .edges.find((e) => e.id === edgeId)!.transition.durationMs =
-                  durationMs;
-                return success(doc);
-              })
-            }
-          />
-          <label>
-            Easing transizione
-            <select
-              aria-label="Easing transizione"
-              value={edge.transition.easing}
-              onChange={(e) =>
+          <p className="panel-note">
+            Transizione {position(edge.from)} → {position(edge.to)}
+            {edge.label && ` · ${edge.label}`}
+          </p>
+          <div className="prop-grid two">
+            <Numeric
+              label="Durata transizione ms"
+              value={edge.transition.durationMs}
+              apply={(durationMs) =>
                 run((doc) => {
                   doc.paths
                     .find((p) => p.id === pathId)!
-                    .edges.find((e) => e.id === edgeId)!.transition.easing = e
-                    .target.value as "linear" | "ease-in-out";
+                    .edges.find((e) => e.id === edgeId)!.transition.durationMs =
+                    durationMs;
                   return success(doc);
                 })
               }
-            >
-              <option value="linear">Lineare</option>
-              <option value="ease-in-out">Ease in/out</option>
-            </select>
-          </label>
+            />
+            <label>
+              Easing transizione
+              <select
+                aria-label="Easing transizione"
+                value={edge.transition.easing}
+                onChange={(e) =>
+                  run((doc) => {
+                    doc.paths
+                      .find((p) => p.id === pathId)!
+                      .edges.find((e) => e.id === edgeId)!.transition.easing = e
+                      .target.value as "linear" | "ease-in-out";
+                    return success(doc);
+                  })
+                }
+              >
+                <option value="linear">Lineare</option>
+                <option value="ease-in-out">Ease in/out</option>
+              </select>
+            </label>
+          </div>
           <label>
             Track camera
             <select
@@ -223,7 +232,13 @@ export function CameraTimeline({
               ))}
             </select>
           </label>
-          <button type="button" onClick={addTrack}>
+          <button
+            type="button"
+            tabIndex={0}
+            className="tool-button"
+            onClick={addTrack}
+          >
+            <Icon name="plus" />
             Crea track a tre keyframe
           </button>
           {track && (
@@ -292,6 +307,8 @@ export function CameraTimeline({
                       {index > 0 && index < track.keyframes.length - 1 && (
                         <button
                           type="button"
+                          tabIndex={0}
+                          className="tool-button quiet danger"
                           onClick={() =>
                             editTrack({
                               keyframes: track.keyframes.filter(
@@ -309,6 +326,8 @@ export function CameraTimeline({
               </ol>
               <button
                 type="button"
+                tabIndex={0}
+                className="tool-button"
                 disabled={track.keyframes.length >= 200}
                 onClick={() => {
                   const keys = structuredClone(track.keyframes);
@@ -366,7 +385,12 @@ export function CameraTimeline({
               }}
             />
           </label>
-          <button type="button" onClick={() => onCapture(null)}>
+          <button
+            type="button"
+            tabIndex={0}
+            className="tool-button"
+            onClick={() => onCapture(null)}
+          >
             Termina ispezione camera
           </button>
           {warnings.map((message) => (
@@ -380,7 +404,7 @@ export function CameraTimeline({
                 {d.message}
               </p>
             ))}
-          <p>
+          <p className="panel-note">
             Lo scrub modifica soltanto la camera della preview, senza visite o
             cue. Keyframe iniziale risolto dalla posa di partenza; endpoint
             conservato.
@@ -413,6 +437,7 @@ export function CameraTimeline({
                   />
                   <TextField
                     label={`Payload cue ${c.id}`}
+                    code
                     value={JSON.stringify(c.payload)}
                     apply={(text) => {
                       try {
@@ -439,6 +464,8 @@ export function CameraTimeline({
                   />
                   <button
                     type="button"
+                    tabIndex={0}
+                    className="tool-button quiet danger"
                     onClick={() =>
                       run((doc) => {
                         doc.cues = doc.cues.filter((cue) => cue.id !== c.id);
@@ -452,6 +479,8 @@ export function CameraTimeline({
               ))}
             <button
               type="button"
+              tabIndex={0}
+              className="tool-button"
               onClick={() =>
                 run((doc) => {
                   doc.cues.push({
@@ -465,12 +494,15 @@ export function CameraTimeline({
                 })
               }
             >
+              <Icon name="plus" />
               Aggiungi cue
             </button>
           </fieldset>
         </>
       ) : (
-        <p>Seleziona una connessione per modificarne durata, track e cue.</p>
+        <p className="panel-note">
+          Seleziona una connessione per modificarne durata, track e cue.
+        </p>
       )}
     </details>
   );
