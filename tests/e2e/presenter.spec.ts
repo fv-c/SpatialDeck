@@ -133,6 +133,76 @@ test("presenter and public window: synced navigation and branches, private notes
   ).toHaveCount(0);
 });
 
+test("a single manual exit is offered as a choice, not previewed as the next visit", async ({
+  page,
+}) => {
+  // The fixture as authored: B has one exit, B→D, and it is manual.
+  const document = deck();
+  const edge = document.paths[0]!.edges.find((e) => e.id === "BD")!;
+  edge.condition = { kind: "manual" };
+  await openStudio(page, document);
+  const { popup, console } = await startPresenter(page);
+  const choices = console
+    .getByRole("list", { name: "Scelte del ramo" })
+    .getByRole("button");
+  await choices.filter({ hasText: "Esplora B" }).click();
+  await expect.poll(() => publicNode(popup)).toBe("B");
+  // `next` would ask for a choice: the console asks too, with no stale preview.
+  await expect(choices).toHaveText(["Conclusione da B"]);
+  const following = console.getByRole("region", { name: "Successiva" });
+  await expect(following.locator(".presenter-player")).toBeHidden();
+  await expect(following.locator(":scope > h3")).toHaveText("Successiva");
+  await choices.click();
+  await expect.poll(() => publicNode(popup)).toBe("D");
+});
+
+test("paths that reuse node IDs: the console shows the scene and notes of the presented path", async ({
+  page,
+}) => {
+  // Node IDs are unique per path: the default path, listed after the branching
+  // one, reuses A and B for other scenes.
+  const document = deck();
+  document.paths.push({
+    id: "reuse",
+    name: "Stessi ID",
+    startNodeId: "A",
+    nodes: [
+      { id: "A", sceneId: "C", holdMs: 0 },
+      { id: "B", sceneId: "D", holdMs: 0 },
+    ],
+    edges: [
+      {
+        id: "reuse-AB",
+        from: "A",
+        to: "B",
+        label: "",
+        transition: { durationMs: 300, easing: "linear" },
+      },
+    ],
+  });
+  document.defaultPathId = "reuse";
+  await openStudio(page, document);
+  const { popup, console } = await startPresenter(page);
+  const notes = console.getByRole("region", { name: "Note del relatore" });
+  expect(
+    await popup.evaluate(() => window.publicPlayer!.getState().sceneId),
+  ).toBe("C");
+  await expect(notes).toContainText("PRIVATE-NOTE C");
+  await expect(
+    console
+      .getByRole("region", { name: "Scena corrente" })
+      .locator(":scope > h3"),
+  ).toContainText("C · Alternativa");
+  await expect(
+    console.getByRole("region", { name: "Successiva" }).locator(":scope > h3"),
+  ).toContainText("D · Conclusione");
+  await console.getByRole("button", { name: "Avanti" }).click();
+  await expect
+    .poll(() => popup.evaluate(() => window.publicPlayer!.getState().sceneId))
+    .toBe("D");
+  await expect(notes).toContainText("PRIVATE-NOTE D");
+});
+
 test("reloads resynchronise from a snapshot: public window and presenter tab", async ({
   page,
 }) => {

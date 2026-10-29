@@ -79,7 +79,11 @@ export function PresenterView({
   const controller = useRef<Player | null>(null),
     session = useRef<PresenterSession | null>(null),
     run = useRef<(request: NavigationRequest) => void>(() => {});
-  const [nodeId, setNodeId] = useState<string | null>(null),
+  // Node and edge IDs are unique only within their path.
+  const [at, setAt] = useState<{
+      pathId: string | null;
+      nodeId: string | null;
+    }>({ pathId: null, nodeId: null }),
     [choices, setChoices] = useState<Choice[]>([]),
     [connected, setConnected] = useState(false),
     [blocked, setBlocked] = useState(popup === null),
@@ -116,7 +120,7 @@ export function PresenterView({
     let disposed = false;
     const refresh = () => {
       const state = current.getState();
-      setNodeId(state.nodeId);
+      setAt({ pathId: state.pathId, nodeId: state.nodeId });
       const options = state.choices.filter((c) => !c.disabledReason);
       setChoices(state.choices);
       const path = doc.paths.find((p) => p.id === state.pathId);
@@ -225,22 +229,21 @@ export function PresenterView({
       setBlocked(false);
     }
   };
-  const node = document.paths
-    .flatMap((p) => p.nodes)
-    .find((n) => n.id === nodeId);
+  const path = document.paths.find((p) => p.id === at.pathId);
+  const node = path?.nodes.find((n) => n.id === at.nodeId);
   const scene = document.scenes.find((s) => s.id === node?.sceneId);
   const eligible = choices.filter((c) => !c.disabledReason);
-  const following =
+  const single =
     eligible.length === 1
-      ? document.paths
-          .flatMap((p) => p.edges.map((e) => ({ edge: e, path: p })))
-          .find(({ edge }) => edge.id === eligible[0]!.edgeId)
+      ? path?.edges.find((e) => e.id === eligible[0]!.edgeId)
       : undefined;
+  // A manual edge needs an explicit choice even when it is the only exit, as
+  // `next` would: it is offered as a choice, never previewed as «Successiva».
+  const asChoice = eligible.length > 1 || single?.condition?.kind === "manual";
+  const following = asChoice ? undefined : single;
   const nextScene = following
     ? document.scenes.find(
-        (s) =>
-          s.id ===
-          following.path.nodes.find((n) => n.id === following.edge.to)?.sceneId,
+        (s) => s.id === path?.nodes.find((n) => n.id === following.to)?.sceneId,
       )
     : undefined;
   return (
@@ -353,9 +356,9 @@ export function PresenterView({
             <div
               ref={nextHost}
               className="presenter-player"
-              hidden={eligible.length !== 1}
+              hidden={!following}
             />
-            {eligible.length > 1 && (
+            {asChoice && (
               <ul className="presenter-choices" aria-label="Scelte del ramo">
                 {eligible.map((c) => (
                   <li key={c.edgeId}>
