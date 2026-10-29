@@ -474,7 +474,8 @@ describe("messages, language and outline", () => {
     choices: "Path choices",
     choicePrompt: "Choose the path",
     choiceDisabled: (label, reason) => `${label} (${reason})`,
-    visitLimit: (limit) => `limit of ${limit} visits reached`,
+    visitLimit: (limit, target) =>
+      `limit of ${limit} visits reached for ${target}`,
     contentUnavailable: (type) => `Content unavailable (${type})`,
     contentError: (detail) => `Content error: ${detail}`,
     pluginContent: (id) => `Plugin ${id}`,
@@ -557,7 +558,10 @@ describe("messages, language and outline", () => {
     const { host } = await mounted(doc, { messages: english });
     const choices = host.querySelector(".sd-choices")!;
     expect(choices.textContent).toContain("Choose the path");
-    expect(choices.textContent).toContain("Again (limit of 1 visits reached)");
+    // The destination is named by its scene title, not its node ID.
+    expect(choices.textContent).toContain(
+      "Again (limit of 1 visits reached for TEXT)",
+    );
     expect(choices.textContent).not.toContain("Limite");
   });
   it("outline shows derived text, never Markdown or HTML source", async () => {
@@ -602,12 +606,18 @@ describe("message defaults and overrides", () => {
     expect(defaultMessages.visitLimit(3, "n")).toBe(
       "Limit of 3 visits reached for n",
     );
+    expect(defaultMessages.visitLimit(1, "Intro")).toBe(
+      "Limit of 1 visit reached for Intro",
+    );
     expect(italianMessages.lang).toBe("it");
     expect(italianMessages.outline).toBe("Vista testuale");
     expect(italianMessages.assetInvalid("x", "size")).toContain("dimensione");
     expect(italianMessages.assetInvalid("x", "digest")).toContain("Digest");
     expect(italianMessages.visitLimit(3, "n")).toBe(
       "Limite di 3 visite raggiunto per n",
+    );
+    expect(italianMessages.visitLimit(1, "Intro")).toBe(
+      "Limite di 1 visita raggiunto per Intro",
     );
   });
   it("ignores unknown keys, prototype keys and values of the wrong type", async () => {

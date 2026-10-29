@@ -603,9 +603,11 @@ export function createPlayer(options: PlayerOptions = {}): Player {
         ? edge.condition.maxVisits
         : Infinity,
     );
-    return edge && Number.isFinite(limit)
-      ? messages.visitLimit(limit, edge.to)
-      : fallback;
+    if (!edge || !Number.isFinite(limit)) return fallback;
+    // The audience reads scene titles, never node IDs.
+    const sceneId = path?.nodes.find((n) => n.id === edge.to)?.sceneId;
+    const title = doc?.scenes.find((s) => s.id === sceneId)?.title.trim();
+    return messages.visitLimit(limit, title || edge.to);
   };
   const render = () => {
     if (!root || !machine || !doc || destroyed || updating) return;

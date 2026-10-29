@@ -28,7 +28,8 @@ export interface PlayerMessages {
   choices: string;
   choicePrompt: string;
   choiceDisabled(label: string, reason: string): string;
-  visitLimit(limit: number, nodeId: string): string;
+  /** `target` is the title of the destination scene (its node ID when untitled). */
+  visitLimit(limit: number, target: string): string;
   contentUnavailable(type: string): string;
   contentError(detail: string): string;
   pluginContent(pluginId: string): string;
@@ -75,8 +76,8 @@ export const defaultMessages: Readonly<PlayerMessages> = Object.freeze({
   choices: "Path choices",
   choicePrompt: "Choose the path",
   choiceDisabled: (label: string, reason: string) => `${label} — ${reason}`,
-  visitLimit: (limit: number, nodeId: string) =>
-    `Limit of ${limit} visits reached for ${nodeId}`,
+  visitLimit: (limit: number, target: string) =>
+    `Limit of ${limit} ${limit === 1 ? "visit" : "visits"} reached for ${target}`,
   contentUnavailable: (type: string) => `Content unavailable (${type})`,
   contentError: (detail: string) => `Content error: ${detail}`,
   pluginContent: (pluginId: string) => `Plugin: ${pluginId}`,
@@ -132,8 +133,8 @@ export const italianMessages: Readonly<PlayerMessages> = Object.freeze({
   choices: "Scelte del percorso",
   choicePrompt: "Scegli il percorso",
   choiceDisabled: (label: string, reason: string) => `${label} — ${reason}`,
-  visitLimit: (limit: number, nodeId: string) =>
-    `Limite di ${limit} visite raggiunto per ${nodeId}`,
+  visitLimit: (limit: number, target: string) =>
+    `Limite di ${limit} ${limit === 1 ? "visita" : "visite"} raggiunto per ${target}`,
   contentUnavailable: (type: string) => `Contenuto non disponibile (${type})`,
   contentError: (detail: string) => `Errore contenuto: ${detail}`,
   pluginContent: (pluginId: string) => `Plugin: ${pluginId}`,
