@@ -10,7 +10,9 @@ import {
   StorageConflict,
   assetKey,
   mergeBlobs,
+  downloadName,
   pendingRecovery,
+  revisionTime,
   projectBlobs,
 } from "../src/storage/index.js";
 import { emptyProject } from "../src/commands/index.js";
@@ -346,5 +348,22 @@ describe("editor Blob library", () => {
     });
     expect(assetKey(noDigest.assets[0]!)).toBe("b:assets/b/b.txt:1");
     expect(projectBlobs(noDigest, next).size).toBe(0);
+  });
+});
+
+describe("names shown and written by Studio", () => {
+  it("download names keep one underscore per run of other characters", () => {
+    expect(
+      downloadName("Temporal System — stress-test (modificato)", "json"),
+    ).toBe("Temporal_System_stress-test_modificato.json");
+    expect(downloadName("Città: «prova»", "spatialdeck")).toBe(
+      "Città_prova.spatialdeck",
+    );
+    expect(downloadName(" — ", "json")).toBe("spatialdeck.json");
+  });
+  it("revision times use the Italian interface, not the browser locale", () => {
+    const time = revisionTime(Date.UTC(2026, 9, 29, 10, 11, 22));
+    expect(time).toMatch(/^\d{2}\/\d{2}\/\d{2},? \d{2}:\d{2}:\d{2}$/);
+    expect(time).not.toMatch(/AM|PM/);
   });
 });

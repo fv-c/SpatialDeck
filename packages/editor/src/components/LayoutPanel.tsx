@@ -47,7 +47,10 @@ function layoutResult(result: Result<void>): Result<void> {
 }
 const interactive =
   'a[href],button,input,select,textarea,iframe,audio[controls],video[controls],[tabindex]:not([tabindex="-1"])';
-/** Contrast from the core; clipped text and covered controls measured on the shared preview. */
+/**
+ * Contrast from the core; clipped text, a title over frames, an overflowing
+ * flow scene and covered controls measured on the shared preview.
+ */
 export function layoutDiagnostics(
   document: ProjectDocument,
   scene: Scene,
@@ -82,6 +85,38 @@ export function layoutDiagnostics(
         `Contenuto tagliato: il blocco ${i + 1} eccede il proprio frame.`,
       );
   });
+  const content = host?.querySelector<HTMLElement>(
+    `.sd-scene[data-scene-id="${scene.id}"] .sd-content`,
+  );
+  // A visible canvas title is laid out above the frames; a long one wraps into them.
+  const title = content?.querySelector<HTMLElement>(
+    ":scope > h2:not(.sd-title-hidden)",
+  );
+  if (scene.layout === "canvas" && title) {
+    const band = {
+      x: title.offsetLeft,
+      y: title.offsetTop,
+      width: title.offsetWidth,
+      height: title.offsetHeight,
+      rotation: 0,
+      z: 0,
+    };
+    scene.blocks.forEach((block, i) => {
+      if (block.frame && framesIntersect(band, block.frame))
+        warnings.push(
+          `Titolo: il blocco ${i + 1} occupa la fascia del titolo visibile.`,
+        );
+    });
+  }
+  // A flow scene does not grow: what exceeds it scrolls live and is cut in PDF and video.
+  if (
+    scene.layout === "flow" &&
+    content &&
+    content.scrollHeight > content.clientHeight + 1
+  )
+    warnings.push(
+      `Contenuto oltre la scena: ${content.scrollHeight - content.clientHeight} px restano fuori dalla vista spaziale e vengono tagliati in PDF e video.`,
+    );
   scene.blocks.forEach((below, i) => {
     if (
       !below.frame ||

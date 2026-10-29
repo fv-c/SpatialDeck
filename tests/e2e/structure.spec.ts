@@ -523,6 +523,15 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   );
   expect(loop.loopPolicy!.maxVisitsPerNode).toBe(3);
   expect(loop.edges.every((e) => e.condition?.kind === "manual")).toBe(true);
+  // The limit field shows its whole value next to «Rimuovi policy loop».
+  const limit = page.getByLabel("Limite visite per nodo", { exact: true });
+  await expect(limit).toHaveValue("3");
+  const field = await limit.evaluate((input: HTMLInputElement) => ({
+    width: input.clientWidth,
+    clipped: input.scrollWidth > input.clientWidth,
+  }));
+  expect(field.width).toBeGreaterThanOrEqual(48);
+  expect(field.clipped).toBe(false);
   await page.getByLabel("Percorso da modificare").selectOption("branch");
   const before = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,

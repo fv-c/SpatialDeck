@@ -47,6 +47,18 @@ export function openLimitError(file: {
     ? `L’archivio .spatialdeck supera ${mib} MiB.`
     : `Il file JSON supera ${mib} MiB.`;
 }
+/** Download name from the project title: one underscore per run of other characters. */
+export function downloadName(title: string, extension: string): string {
+  const base = title.replace(/[^\p{L}\p{N}_-]+/gu, "_").replace(/^_+|_+$/g, "");
+  return `${base || "spatialdeck"}.${extension}`;
+}
+/** Revision times in the language of the Studio interface, not the browser's. */
+export function revisionTime(updatedAt: number): string {
+  return new Date(updatedAt).toLocaleString("it-IT", {
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+}
 /** Heads that differ from the last file save: the only ones proposed at startup. */
 export function pendingRecovery(heads: readonly Revision[]): Revision[] {
   return heads.filter((head) => !head.saved);

@@ -1482,16 +1482,22 @@ body {
 }
 .kv-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
+/* The field never shrinks below its value; the button wraps instead. */
 .kv-controls .numeric {
   display: flex;
+  flex: none;
   flex-direction: row-reverse;
   align-items: center;
-  width: 108px;
   gap: 6px;
+}
+.studio .kv-controls .numeric input {
+  flex: none;
+  width: 64px;
 }
 .kv .numeric {
   display: flex;

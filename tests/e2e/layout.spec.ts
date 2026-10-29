@@ -1025,6 +1025,42 @@ test.describe("Studio scene editor", () => {
         fullPage: true,
       });
   });
+  test("a canvas title wrapping over frames and a flow scene taller than itself are diagnosed", async ({
+    page,
+  }) => {
+    const d = doc();
+    // Four lines of title: the visible title band reaches the columns at y 150.
+    scene(d, "details").title = Array(4)
+      .fill("Colonne e collegamenti")
+      .join(" · ");
+    scene(d, "context").blocks.push({
+      id: "long",
+      type: "text",
+      data: { text: "Una riga di testo che non entra.\n".repeat(40) },
+    });
+    await openStudio(page, {
+      name: "project.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(d)),
+    });
+    const scenes = page.getByRole("list", { name: "Elenco scene" });
+    await scenes
+      .getByRole("button", { name: /Colonne e collegamenti/ })
+      .click();
+    await impagina(page);
+    await expect(page.locator(".layout-diagnostics")).toContainText(
+      "Titolo: il blocco 1 occupa la fascia del titolo visibile.",
+    );
+    await scenes.getByRole("button", { name: /Flusso con aspetto/ }).click();
+    await expect(page.locator(".layout-diagnostics")).toContainText(
+      /Contenuto oltre la scena: \d+ px restano fuori/,
+    );
+    // A hidden title takes no band, whatever the frames.
+    await scenes.getByRole("button", { name: /Spazi che si leggono/ }).click();
+    await expect(page.locator(".layout-diagnostics")).not.toContainText(
+      "Titolo:",
+    );
+  });
   test("saved JSON and archive reopen in a new session, recover after reload and present in the vanilla player with the same model and landmarks", async ({
     page,
     browser,

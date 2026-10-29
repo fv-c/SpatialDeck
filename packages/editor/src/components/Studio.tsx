@@ -25,8 +25,10 @@ import { EditorStore } from "../store/index.js";
 import {
   Autosave,
   RecoveryRepository,
+  downloadName,
   openLimitError,
   pendingRecovery,
+  revisionTime,
   readArchive,
   writeArchive,
   projectBlobs,
@@ -376,7 +378,7 @@ export function Studio({
     );
     const link = window.document.createElement("a");
     link.href = url;
-    link.download = `${document.metadata.title.replace(/[^\p{L}\p{N}_-]/gu, "_") || "spatialdeck"}.json`;
+    link.download = downloadName(document.metadata.title, "json");
     window.document.body.append(link);
     link.click();
     link.remove();
@@ -398,7 +400,7 @@ export function Studio({
       const url = URL.createObjectURL(blob),
         link = window.document.createElement("a");
       link.href = url;
-      link.download = `${doc.metadata.title.replace(/[^\p{L}\p{N}_-]/gu, "_") || "spatialdeck"}.spatialdeck`;
+      link.download = downloadName(doc.metadata.title, "spatialdeck");
       window.document.body.append(link);
       link.click();
       link.remove();
@@ -1109,8 +1111,7 @@ export function Studio({
               {revisions.map((r, index) => (
                 <option key={`${r.projectId}-${r.revision}`} value={index}>
                   {r.document.metadata.title} · rev. {r.revision} ·{" "}
-                  {new Date(r.updatedAt).toLocaleString()} ·{" "}
-                  {r.document.scenes.length} scene
+                  {revisionTime(r.updatedAt)} · {r.document.scenes.length} scene
                 </option>
               ))}
             </select>
