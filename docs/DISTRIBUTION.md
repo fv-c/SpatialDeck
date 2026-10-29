@@ -55,6 +55,8 @@ Exports are **strict** by default. A blocking finding fails with exit 1 and writ
 
 Private scene notes are removed from every output (`publicDocument`); the manifest says `"privateNotes": "excluded"`. The authored project keeps them.
 
+PDF and video fail with exit 3 on any error of the capture page and on any Content Security Policy violation, with one exception: Chromium reports the inline `style` and `on*` attributes of HTML or Markdown (typically pasted from an editor) while the sanitizer parses the source, before it removes them. They never reach the output, so they are counted in the warning `CSP_ATTRIBUTE_BLOCKED` (severity `warning`; the status does not change). Violations are read from the standard `securitypolicyviolation` event, not from console text.
+
 ## Standalone HTML
 
 One file with the export runtime (a classic IIFE script built from the published player and plugins ESM), the player and KaTeX stylesheets with their woff2 fonts as `data:` URLs (one format, only the stylesheets the document needs), the public project JSON and the verified assets as base64 data blocks turned into `Blob` URLs at run time. A `<noscript>` outline lists the titles and accessible texts of the default path. Third-party licences are embedded in `<template id="spatialdeck-notices">`; the header comment states the GPL-3.0-or-later licence of the runtime and the source repository.

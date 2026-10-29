@@ -478,6 +478,50 @@ test("strict export refuses iframe, plugin and remote font; --allow-partial writ
   expect(await page.evaluate(() => window.cspViolations)).toEqual([]);
 });
 
+test("PDF of pasted HTML with style and on* attributes: blocked by the CSP, counted as a warning, never fatal", async ({
+  browserName,
+}) => {
+  // Chromium reports the attributes while the sanitizer parses the source it
+  // then strips; before the fix the capture failed with exit 3.
+  const dir = await outDir("pasted-html", browserName);
+  await mkdir(join(dir, "assets"));
+  await copyFile(
+    join(fixtureDir, "assets/orbit.svg"),
+    join(dir, "assets/orbit.svg"),
+  );
+  const d = JSON.parse(await readFile(project, "utf8"));
+  d.scenes[1].blocks.push({
+    id: "pasted",
+    type: "html",
+    data: {
+      source:
+        '<p style="color:#b91c1c" onclick="window.pwned=1">Pasted <span style="font-weight:bold">paragraph</span></p>',
+    },
+  });
+  const input = join(dir, "project.json");
+  await writeFile(input, JSON.stringify(d));
+  const out = join(dir, "pasted.pdf");
+  const r = await spatialdeck([
+    "export",
+    "pdf",
+    input,
+    "--itinerary",
+    join(fixtureDir, "itinerary.json"),
+    "--out",
+    out,
+  ]);
+  expect(r.code, r.stderr).toBe(0);
+  expect(r.stderr).toContain("CSP_ATTRIBUTE_BLOCKED");
+  const manifest = JSON.parse(await readFile(`${out}.manifest.json`, "utf8"));
+  expect(manifest.status).toBe("complete");
+  expect(manifest.verification.pageCount).toBe(3);
+  expect(
+    manifest.warnings.find(
+      (w: { code: string }) => w.code === "CSP_ATTRIBUTE_BLOCKED",
+    ),
+  ).toMatchObject({ severity: "warning" });
+});
+
 test("static build from the packaged CLI serves runtime, JSON and verified assets over HTTP without notes", async ({
   page,
   browserName,

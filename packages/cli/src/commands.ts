@@ -11,6 +11,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
+  diagnostic,
   frameSchedule,
   frameTime,
   planCapture,
@@ -35,6 +36,8 @@ import {
 } from "./assemble.js";
 import type { EmbeddedFont } from "./assemble.js";
 import {
+  captureViolations,
+  classifyViolations,
   findEncoder,
   launchChromium,
   openCapturePage,
@@ -507,6 +510,7 @@ async function withCapture<T>(
   capture: CaptureInput,
   format: "pdf" | "video",
   lang: "en" | "it" | undefined,
+  report: Report,
   task: (
     session: Awaited<ReturnType<typeof openCapturePage>>,
     chromium: Chromium,
@@ -540,11 +544,24 @@ async function withCapture<T>(
   try {
     const session = await openCapturePage(chromium, document, page.html, dir);
     const result = await task(session, chromium, dir);
-    if (session.errors.length)
+    const csp = classifyViolations(await captureViolations(session.page));
+    const errors = [...session.errors, ...csp.errors];
+    if (errors.length)
       throw new CliError(
         EXIT.output,
-        `Errors in the capture page: ${session.errors.join("; ")}`,
+        `Errors in the capture page: ${errors.join("; ")}`,
       );
+    if (csp.blockedAttributes) {
+      const warning: Diagnostic = {
+        ...diagnostic(
+          "CSP_ATTRIBUTE_BLOCKED",
+          `${csp.blockedAttributes} inline style or event attributes in the content markup were blocked by the CSP; the sanitizer removes them, so the output is unaffected`,
+        ),
+        severity: "warning",
+      };
+      analysis.warnings.push(warning);
+      report.warn(`warning ${warning.code} ${warning.message}`);
+    }
     return { result, fonts, runtime, needed };
   } finally {
     await chromium.browser.close().catch(() => undefined);
@@ -624,6 +641,7 @@ export async function exportPdf(
     capture,
     "pdf",
     options.lang,
+    report,
     async (session, chromium) => {
       let poseError = 0;
       // Chromium paginates 3D-transformed content incorrectly when a document
@@ -836,6 +854,7 @@ export async function exportVideo(
     capture,
     "video",
     options.lang,
+    report,
     async (session, chromium, dir) => {
       let poseError = 0;
       const samples = [];

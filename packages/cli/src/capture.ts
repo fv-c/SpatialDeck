@@ -49,6 +49,40 @@ export interface CaptureSession {
   page: Page;
   errors: string[];
 }
+/** A `securitypolicyviolation` event recorded by the capture page. */
+export interface Violation {
+  directive: string;
+  blockedURI: string;
+}
+/**
+ * Inline `style` and `on*` attributes blocked by the CSP are expected: Chromium
+ * reports them while the sanitizer parses untrusted markup that it then strips,
+ * so they never reach the output. Any other violation fails the capture.
+ */
+export function classifyViolations(violations: readonly Violation[]): {
+  blockedAttributes: number;
+  errors: string[];
+} {
+  const attribute = (v: Violation) =>
+    v.directive === "script-src-attr" || v.directive === "style-src-attr";
+  return {
+    blockedAttributes: violations.filter(attribute).length,
+    errors: violations
+      .filter((v) => !attribute(v))
+      .map(
+        (v) =>
+          `Content Security Policy blocked ${v.blockedURI || "inline content"} (${v.directive})`,
+      ),
+  };
+}
+/** Violations recorded by the capture page since it opened. */
+export async function captureViolations(page: Page): Promise<Violation[]> {
+  return page.evaluate(
+    () =>
+      (window as unknown as { spatialdeckViolations?: Violation[] })
+        .spatialdeckViolations ?? [],
+  );
+}
 /**
  * Opens the capture page from an owned temporary directory with the network
  * off: the page is self-contained and any other request is aborted.
@@ -71,9 +105,24 @@ export async function openCapturePage(
   await context.route(/^(https?|wss?):/, (route) => route.abort());
   const page = await context.newPage();
   const errors: string[] = [];
+  // CSP violations are judged from the standard event, not from console text.
+  await page.addInitScript(() => {
+    const seen: Violation[] = [];
+    Object.assign(window, { spatialdeckViolations: seen });
+    document.addEventListener("securitypolicyviolation", (event) =>
+      seen.push({
+        directive: event.effectiveDirective,
+        blockedURI: event.blockedURI,
+      }),
+    );
+  });
   page.on("pageerror", (error) => errors.push(String(error)));
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (
+      message.type() === "error" &&
+      !message.text().includes("Content Security Policy")
+    )
+      errors.push(message.text());
   });
   const file = join(directory, "capture.html");
   await writeFile(file, html);
@@ -86,11 +135,13 @@ export async function openCapturePage(
   const state = await page.evaluate(
     () => document.documentElement.dataset.spatialdeck,
   );
-  if (state !== "ready")
+  if (state !== "ready") {
+    const blocked = classifyViolations(await captureViolations(page)).errors;
     throw new CliError(
       EXIT.output,
-      `The capture page did not start: ${errors.join("; ") || state}`,
+      `The capture page did not start: ${[...errors, ...blocked].join("; ") || state}`,
     );
+  }
   return { context, page, errors };
 }
 

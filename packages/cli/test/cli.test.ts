@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { classifyViolations } from "../src/capture.js";
 import { run } from "../src/index.js";
 
 const root = new URL("../../../examples/", import.meta.url).pathname;
@@ -512,5 +513,29 @@ describe("profiles and capture inputs (before any browser starts)", () => {
       if (previous === undefined) delete process.env.SPATIALDECK_FFMPEG;
       else process.env.SPATIALDECK_FFMPEG = previous;
     }
+  });
+});
+
+describe("CSP violations in the capture page", () => {
+  it("blocked inline attributes only count; any other violation is an error", () => {
+    // Chromium reports a style or on* attribute while the sanitizer parses
+    // pasted markup, before stripping it: the output never contains it.
+    expect(
+      classifyViolations([
+        { directive: "style-src-attr", blockedURI: "inline" },
+        { directive: "script-src-attr", blockedURI: "inline" },
+        { directive: "style-src-attr", blockedURI: "inline" },
+      ]),
+    ).toEqual({ blockedAttributes: 3, errors: [] });
+    const other = classifyViolations([
+      { directive: "style-src-attr", blockedURI: "inline" },
+      { directive: "script-src-elem", blockedURI: "inline" },
+      { directive: "img-src", blockedURI: "https://example.org/x.png" },
+    ]);
+    expect(other.blockedAttributes).toBe(1);
+    expect(other.errors).toEqual([
+      "Content Security Policy blocked inline (script-src-elem)",
+      "Content Security Policy blocked https://example.org/x.png (img-src)",
+    ]);
   });
 });
