@@ -99,12 +99,55 @@ export const profiles: Record<
 const remote = [
   /\b(?:src|srcset|poster|data|xlink:href)\s*=\s*["']?\s*(?:https?:)?\/\//i,
   /<link\b/i,
-  /@import\b/i,
-  /url\(\s*["']?\s*(?:https?:)?\/\//i,
   /<(?:iframe|object|embed|script)\b/i,
   /!\[[^\]]*\]\(\s*<?(?:https?:)?\/\//i,
 ];
+// CSS loads only from a <style> element or a style attribute.
+const styles =
+  /<style\b[^>]*>([\s\S]*?)(?:<\/style>|$)|\bstyle\s*=\s*("[^"]*"|'[^']*')/gi;
+const cssRemote = /@import\b|url\(\s*["']?\s*(?:https?:)?\/\//i;
 const svgRemote = /\bhref\s*=\s*["']?\s*(?:https?:)?\/\//i;
+
+/**
+ * Markdown without fenced code blocks and code spans: there a tag or an
+ * `@import` is text shown to the reader, never markup.
+ */
+export function withoutMarkdownCode(source: string): string {
+  const kept: string[] = [];
+  let fence: string | undefined;
+  for (const line of source.split("\n")) {
+    if (fence) {
+      const close = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(line);
+      if (
+        close &&
+        close[1]![0] === fence[0] &&
+        close[1]!.length >= fence.length
+      )
+        fence = undefined;
+      continue;
+    }
+    const open = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    // A backtick fence's info string cannot contain a backtick.
+    if (open && !(open[1]![0] === "`" && open[2]!.includes("`"))) {
+      fence = open[1];
+      continue;
+    }
+    kept.push(line);
+  }
+  return kept.join("\n").replace(/(`+)(?!`)[\s\S]*?[^`]\1(?!`)/g, "");
+}
+
+export function referencesRemote(
+  type: "markdown" | "html" | "svg",
+  source: string,
+): boolean {
+  const markup = type === "markdown" ? withoutMarkdownCode(source) : source;
+  if (remote.some((r) => r.test(markup))) return true;
+  if (type === "svg" && svgRemote.test(markup)) return true;
+  for (const [, element, attribute] of markup.matchAll(styles))
+    if (cssRemote.test(element ?? attribute ?? "")) return true;
+  return false;
+}
 
 export function analyze(
   document: ProjectDocument,
@@ -202,11 +245,7 @@ export function analyze(
         case "markdown":
         case "html":
         case "svg": {
-          const source = item.data.source;
-          if (
-            remote.some((r) => r.test(source)) ||
-            (item.type === "svg" && svgRemote.test(source))
-          )
+          if (referencesRemote(item.type, item.data.source)) {
             blocking.push(
               diagnostic(
                 "REMOTE_RESOURCE",
@@ -214,6 +253,9 @@ export function analyze(
                 `${pointer}/data/source`,
               ),
             );
+            // The block is kept; only the remote part is missing from the output.
+            unsupported.push(entry("remote resource removed by the sanitizer"));
+          }
           break;
         }
       }

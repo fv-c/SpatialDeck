@@ -13,8 +13,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { isAnimatedImage } from "../src/animation.js";
 import { classifyViolations } from "../src/capture.js";
 import { run } from "../src/index.js";
+import { referencesRemote } from "../src/profile.js";
 
 const root = new URL("../../../examples/", import.meta.url).pathname;
 const dirs: string[] = [];
@@ -200,6 +202,27 @@ describe("validate", () => {
     );
     expect((await cli("validate", under)).err).toContain("CAPABILITY_REQUIRED");
     expect((await cli("validate", join(dir, "missing.json"))).code).toBe(1);
+  });
+  it("--json reports rejected documents on stdout too", async () => {
+    const { project } = await fixture((d) => void (d.schemaVersion = "1.4.0"));
+    const r = await cli("validate", project, "--json");
+    expect(r.code).toBe(1);
+    expect(r.err).toBe("");
+    const report = JSON.parse(r.out);
+    expect(report).toMatchObject({
+      ok: false,
+      error: "The project is not a valid SpatialDeck document",
+      resources: [],
+    });
+    expect(report.diagnostics[0].code).toBe("UNSUPPORTED_VERSION");
+    const dir = await temp();
+    const bad = join(dir, "bad.json");
+    await writeFile(bad, "{ not json");
+    const unreadable = JSON.parse((await cli("validate", bad, "--json")).out);
+    expect(unreadable.ok).toBe(false);
+    expect(
+      unreadable.diagnostics.length + unreadable.error.length,
+    ).toBeGreaterThan(0);
   });
   it("confines assets to the project root: traversal, encoded, absolute and symlinked paths fail", async () => {
     for (const path of [
@@ -537,5 +560,70 @@ describe("CSP violations in the capture page", () => {
       "Content Security Policy blocked inline (script-src-elem)",
       "Content Security Policy blocked https://example.org/x.png (img-src)",
     ]);
+  });
+});
+
+describe("remote references in markup", () => {
+  it("code in Markdown and CSS words in prose are text, not remote resources", () => {
+    // A deck about web or notation formats names tags and CSS in its code.
+    expect(
+      referencesRemote(
+        "markdown",
+        "Avoid `@import` and `<script>`; `<link rel=stylesheet href=//x>`.\n\n" +
+          '```html\n<link rel="stylesheet" href="https://e/f.css">\n<iframe src="https://e"></iframe>\n```\n\n' +
+          "~~~~\n![remote](https://e/a.png)\n~~~~\n\n``a `<script>` b``",
+      ),
+    ).toBe(false);
+    expect(
+      referencesRemote(
+        "html",
+        "<p>Use @import or url(https://e/f.css) only in a stylesheet.</p>",
+      ),
+    ).toBe(false);
+    // Still remote: markup outside code, CSS inside a style element or attribute.
+    for (const [type, source] of [
+      ["markdown", "Text\n\n![remote](https://e/a.png)"],
+      ["markdown", '`code` then <iframe src="https://e"></iframe>'],
+      ["markdown", '<span style="background:url(https://e/a.png)">x</span>'],
+      ["html", '<link rel="stylesheet" href="https://e/f.css">'],
+      ["html", "<style>@font-face{src:url(https://e/a.woff2)}</style>"],
+      ["html", "<style>@import 'theme.css';</style>"],
+      ["html", "<p style=\"background:url('//e/a.png')\">x</p>"],
+      ["svg", '<svg><image href="https://e/a.png"/></svg>'],
+    ] as const)
+      expect(referencesRemote(type, source), source).toBe(true);
+  });
+});
+
+describe("animated images in a capture", () => {
+  it("recognises GIF with several frames, APNG and animated WebP, not their still forms", async () => {
+    const b64 = (text: string) => new Uint8Array(Buffer.from(text, "base64"));
+    // Two-frame 2×2 images and their single-frame forms (Pillow).
+    const gif = b64(
+      "R0lGODdhAgACAIEAAP8AAAAAAAAAAAAAACwAAAAAAgACAAAIBgABCAQQEAA7",
+    );
+    const animatedGif = b64(
+      "R0lGODlhAgACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAAAgACAAAIBgABCAQQEAAh+QQBCgABACwAAAAAAgACAIEAAP8AAAAAAAAAAAAIBgABCAQQEAA7",
+    );
+    const apng = b64(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAACGFjVEwAAAACAAAAAPONk3AAAAAaZmNUTAAAAAAAAAACAAAAAgAAAAAAAAAAAGQD6AAAAVWPHQAAABZJREFUeJxj/M/AwMDAwMTAwMDAwAAADR0BA2rCm+kAAAAaZmNUTAAAAAEAAAACAAAAAgAAAAAAAAAAAGQD6AAAmiZlyQAAABpmZEFUAAAAAnicY2Rg+M/AwMDEwMDAwMAAAAsfAQM5oA0PAAAAAElFTkSuQmCC",
+    );
+    const animatedWebp = b64(
+      "UklGRoQAAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAAJWUDhMDwAAAC8BQAAABxD9j/4HIqL/AQBBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAABWUDhMDwAAAC8BQAAABxDR//4HIqL/AQA=",
+    );
+    const png = b64(
+      "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==",
+    );
+    // Extended WebP (VP8X) with alpha only: the animation flag is clear.
+    const webp = b64(
+      "UklGRlwAAABXRUJQVlA4WAoAAAAQAAAAAQAAAQAAQUxQSAUAAAAAgICAgABWUDggMAAAANABAJ0BKgIAAgABQCYloAJ0ugH4AAOwAP7y63/82BXNc+/3/9Lg/S4P0uD/0pAAAA==",
+    );
+    expect(isAnimatedImage(animatedGif, "image/gif")).toBe(true);
+    expect(isAnimatedImage(apng, "image/png")).toBe(true);
+    expect(isAnimatedImage(animatedWebp, "image/webp")).toBe(true);
+    expect(isAnimatedImage(gif, "image/gif")).toBe(false);
+    expect(isAnimatedImage(png, "image/png")).toBe(false);
+    expect(isAnimatedImage(webp, "image/webp")).toBe(false);
+    expect(isAnimatedImage(apng, "image/jpeg")).toBe(false);
   });
 });

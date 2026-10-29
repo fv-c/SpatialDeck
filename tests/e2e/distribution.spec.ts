@@ -455,9 +455,18 @@ test("strict export refuses iframe, plugin and remote font; --allow-partial writ
       "REMOTE_RESOURCE",
     ]),
   );
+  // Every block the output changes is listed, the kept remote-font block too;
+  // in a written output the findings are warnings.
   expect(
     manifest.unsupported.map((u: { blockId: string }) => u.blockId).sort(),
-  ).toEqual(["badge", "web"]);
+  ).toEqual(["badge", "font", "web"]);
+  expect(
+    manifest.unsupported.find((u: { blockId: string }) => u.blockId === "font")
+      .reason,
+  ).toBe("remote resource removed by the sanitizer");
+  expect(
+    new Set(manifest.warnings.map((w: { severity: string }) => w.severity)),
+  ).toEqual(new Set(["warning"]));
   await offline(page, browserName);
   const network = await guard(page);
   await page.goto(pathToFileURL(out).href);
@@ -520,6 +529,122 @@ test("PDF of pasted HTML with style and on* attributes: blocked by the CSP, coun
       (w: { code: string }) => w.code === "CSP_ATTRIBUTE_BLOCKED",
     ),
   ).toMatchObject({ severity: "warning" });
+});
+
+test("PDF of a flow scene taller than itself: the cut is reported as CONTENT_OVERFLOW", async ({
+  browserName,
+}) => {
+  const dir = await outDir("overflow", browserName);
+  await mkdir(join(dir, "assets"));
+  await copyFile(
+    join(fixtureDir, "assets/orbit.svg"),
+    join(dir, "assets/orbit.svg"),
+  );
+  const d = JSON.parse(await readFile(project, "utf8"));
+  d.scenes[1].blocks.push({
+    id: "long",
+    type: "text",
+    data: { text: "A line of text that does not fit.\n".repeat(40) },
+  });
+  const input = join(dir, "project.json");
+  await writeFile(input, JSON.stringify(d));
+  const out = join(dir, "overflow.pdf");
+  const r = await spatialdeck([
+    "export",
+    "pdf",
+    input,
+    "--itinerary",
+    join(fixtureDir, "itinerary.json"),
+    "--out",
+    out,
+  ]);
+  expect(r.code, r.stderr).toBe(0);
+  const manifest = JSON.parse(await readFile(`${out}.manifest.json`, "utf8"));
+  const overflow = manifest.warnings.filter(
+    (w: { code: string }) => w.code === "CONTENT_OVERFLOW",
+  );
+  // Only the flow scene that was made too long; the other two visits fit.
+  expect(overflow).toHaveLength(1);
+  expect(overflow[0]).toMatchObject({
+    severity: "warning",
+    pointer: "/scenes/1",
+  });
+});
+
+test("video with an animated GIF: captured as its first frame, the same frames on every run", async ({
+  browserName,
+}) => {
+  test.setTimeout(240000);
+  const dir = await outDir("animated", browserName);
+  await mkdir(join(dir, "assets"));
+  await copyFile(
+    join(fixtureDir, "assets/orbit.svg"),
+    join(dir, "assets/orbit.svg"),
+  );
+  // Red and blue 2×2 frames of 100 ms, looping: on the wall clock each run
+  // would catch other frames.
+  const bytes = Buffer.from(
+    "R0lGODlhAgACAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQACgAAACwAAAAAAgACAAAIBgABCAQQEAAh+QQBCgABACwAAAAAAgACAIEAAP8AAAAAAAAAAAAIBgABCAQQEAA7",
+    "base64",
+  );
+  await writeFile(join(dir, "assets/pulse.gif"), bytes);
+  const d = JSON.parse(await readFile(project, "utf8"));
+  d.assets.push({
+    id: "pulse",
+    path: "assets/pulse.gif",
+    mime: "image/gif",
+    byteLength: bytes.length,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  });
+  d.scenes[1].blocks.push({
+    id: "pulse",
+    type: "image",
+    data: {
+      assetId: "pulse",
+      alt: "Square turning red and blue",
+      fit: "contain",
+    },
+  });
+  const input = join(dir, "project.json");
+  await writeFile(input, JSON.stringify(d));
+  const runs: string[][] = [];
+  for (const run of ["first", "second"]) {
+    const frames = join(dir, `frames-${run}`);
+    await mkdir(frames);
+    const out = join(dir, `${run}.webm`);
+    const r = await spatialdeck([
+      "export",
+      "video",
+      input,
+      "--itinerary",
+      join(fixtureDir, "itinerary.json"),
+      "--fps",
+      "10",
+      "--out",
+      out,
+      "--frames",
+      frames,
+    ]);
+    expect(r.code, r.stderr).toBe(0);
+    const manifest = JSON.parse(await readFile(`${out}.manifest.json`, "utf8"));
+    expect(
+      manifest.warnings.find(
+        (w: { code: string }) => w.code === "ANIMATION_FROZEN",
+      ),
+    ).toMatchObject({ severity: "warning", pointer: "/assets/1" });
+    const names = (await readdir(frames)).sort();
+    runs.push(
+      await Promise.all(
+        names.map(async (name) =>
+          createHash("sha256")
+            .update(await readFile(join(frames, name)))
+            .digest("hex"),
+        ),
+      ),
+    );
+  }
+  expect(runs[0]!.length).toBe(48);
+  expect(runs[1]).toEqual(runs[0]);
 });
 
 test("static build from the packaged CLI serves runtime, JSON and verified assets over HTTP without notes", async ({

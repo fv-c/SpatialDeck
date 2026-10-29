@@ -155,7 +155,32 @@ export async function run(argv: string[], io: Io): Promise<number> {
       case "validate": {
         only(p, ["--json"]);
         const input = one(rest);
-        const { project, diagnostics, ok } = await validate(input);
+        let checked: Awaited<ReturnType<typeof validate>>;
+        try {
+          checked = await validate(input);
+        } catch (error) {
+          // A rejected document still gets a machine-readable report.
+          if (
+            !p.flags.has("--json") ||
+            !(error instanceof CliError) ||
+            error.exitCode !== EXIT.data
+          )
+            throw error;
+          io.out(
+            JSON.stringify(
+              {
+                ok: false,
+                error: error.message,
+                diagnostics: error.diagnostics,
+                resources: [],
+              },
+              null,
+              2,
+            ),
+          );
+          return EXIT.data;
+        }
+        const { project, diagnostics, ok } = checked;
         if (p.flags.has("--json"))
           io.out(
             JSON.stringify(

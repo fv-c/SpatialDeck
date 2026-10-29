@@ -19,6 +19,7 @@ import type {
 import { validateDocument } from "@spatialdeck/core";
 import type { CapturePlan, ProjectDocument } from "@spatialdeck/core";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
+import { isAnimatedImage } from "../animation.js";
 import type { RuntimeConfig } from "../config.js";
 
 const read = (id: string): unknown => {
@@ -77,6 +78,34 @@ function placeholder(kind: "excluded" | "poster"): RendererFactory {
   };
 }
 
+/**
+ * Capture renders single instants: an animated image becomes its first frame
+ * (the default image of createImageBitmap), so frames do not depend on the
+ * wall clock. The record follows the still so the resolver verifies it.
+ */
+async function freezeAnimations(
+  project: ProjectDocument,
+  blobs: Map<string, Blob>,
+) {
+  for (const asset of project.assets) {
+    const blob = blobs.get(asset.id);
+    if (
+      !blob ||
+      !isAnimatedImage(new Uint8Array(await blob.arrayBuffer()), asset.mime)
+    )
+      continue;
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    const still = await canvas.convertToBlob({ type: "image/png" });
+    blobs.set(asset.id, still);
+    asset.mime = "image/png";
+    asset.byteLength = still.size;
+    delete asset.sha256;
+  }
+}
+
 async function start() {
   const config = read("spatialdeck-config") as RuntimeConfig;
   const stage = document.getElementById("spatialdeck-stage")!;
@@ -112,6 +141,8 @@ async function start() {
     input = checked.value;
   }
   const project = input as ProjectDocument;
+  const capture = config.mode === "capture";
+  if (capture) await freezeAnimations(project, blobs);
   const builtins = createBuiltinRegistry({
     replace: Object.fromEntries(
       Object.entries(config.placeholders).map(([type, kind]) => [
@@ -121,7 +152,6 @@ async function start() {
     ),
   });
   const assets: AssetResolver = createAssetResolver(project.assets, blobs);
-  const capture = config.mode === "capture";
   const player: Player = createPlayer({
     registry: builtins.registry,
     assets,

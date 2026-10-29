@@ -35,6 +35,7 @@ import {
   toolVersion,
 } from "./assemble.js";
 import type { EmbeddedFont } from "./assemble.js";
+import { isAnimatedImage } from "./animation.js";
 import {
   captureViolations,
   classifyViolations,
@@ -120,6 +121,13 @@ function messagesFor(document: ProjectDocument, lang?: "en" | "it") {
     lang ??
     (document.metadata.language.toLowerCase().startsWith("it") ? "it" : "en")
   );
+}
+/** What the output records: blocking findings became placeholders, so every entry is a warning. */
+function manifestWarnings(analysis: Analysis): Diagnostic[] {
+  return [...analysis.blocking, ...analysis.warnings].map((d) => ({
+    ...d,
+    severity: "warning",
+  }));
 }
 function environment(extra: Record<string, unknown> = {}) {
   return {
@@ -278,7 +286,7 @@ export async function exportHtml(
     assets: await base64Assets(project, (id) => needed.has(id)),
   });
   const bytes = Buffer.from(page.html, "utf8");
-  const warnings = [...analysis.blocking, ...analysis.warnings];
+  const warnings = manifestWarnings(analysis);
   if (bytes.length > HTML_TARGET)
     warnings.push({
       code: "HTML_SIZE",
@@ -457,7 +465,7 @@ export async function build(
         },
       ],
       licenses: await licensesOf(runtime.notices, fontsUsed(document)),
-      warnings: [...analysis.blocking, ...analysis.warnings],
+      warnings: manifestWarnings(analysis),
       unsupported: analysis.unsupported,
       environment: environment(),
       verification: { files: written.length, digests: written },
@@ -497,6 +505,34 @@ async function prepareCapture(
   });
   if (!plan.ok)
     throw new CliError(EXIT.data, "Invalid itinerary", plan.diagnostics);
+  // The capture runtime shows animated images as their first frame.
+  const images = new Set(
+    project.document.scenes.flatMap((s) =>
+      s.blocks.flatMap((b) =>
+        b.type === "image"
+          ? [b.data.assetId]
+          : b.type === "video" && b.data.posterAssetId
+            ? [b.data.posterAssetId]
+            : [],
+      ),
+    ),
+  );
+  for (const [i, asset] of project.document.assets.entries()) {
+    const blob = project.blobs.get(asset.id);
+    if (
+      images.has(asset.id) &&
+      blob &&
+      isAnimatedImage(new Uint8Array(await blob.arrayBuffer()), asset.mime)
+    )
+      analysis.warnings.push({
+        ...diagnostic(
+          "ANIMATION_FROZEN",
+          `Animated image ${asset.id} is captured as its first frame`,
+          `/assets/${i}`,
+        ),
+        severity: "warning",
+      });
+  }
   gate(analysis, options, report);
   return {
     project,
@@ -649,12 +685,21 @@ export async function exportPdf(
       // the pages are joined afterwards without re-rendering (vector content kept).
       const book = await PDFDocument.create({ updateMetadata: false });
       const singles: number[] = [];
+      const overflow = new Map<string, number>();
       for (const visit of plan.visits) {
         // Final, deterministic pose of each visit: its arrival, track endpoints included.
         poseError = Math.max(
           poseError,
           await renderAt(session, plan, visit.arrivalMs),
         );
+        // A flow scene does not grow: what it cannot show is not on the page.
+        const hidden = await session.page.evaluate((id) => {
+          const content = window.document.querySelector<HTMLElement>(
+            `.sd-scene[data-scene-id="${CSS.escape(id)}"] .sd-content`,
+          );
+          return content ? content.scrollHeight - content.clientHeight : 0;
+        }, visit.sceneId);
+        if (hidden > 1) overflow.set(visit.sceneId, hidden);
         const single = await session.page.pdf({
           width: `${width}px`,
           height: `${height}px`,
@@ -680,11 +725,26 @@ export async function exportPdf(
         pdf,
         poseError,
         singles,
+        overflow,
         chromium: chromium.version,
         playwright: chromium.playwright,
       };
     },
   );
+  for (const [sceneId, hidden] of result.overflow) {
+    const warning: Diagnostic = {
+      ...diagnostic(
+        "CONTENT_OVERFLOW",
+        `The content of scene ${sceneId} exceeds the scene by ${hidden} px; the page shows only what fits`,
+        `/scenes/${document.scenes.findIndex((s) => s.id === sceneId)}`,
+      ),
+      severity: "warning",
+    };
+    capture.analysis.warnings.push(warning);
+    report.warn(
+      `warning ${warning.code} ${warning.pointer} ${warning.message}`,
+    );
+  }
   const pages = pdfPages(result.pdf);
   const expectedBox = [width * 0.75, height * 0.75];
   const verification = {
@@ -795,7 +855,7 @@ function captureManifest(
               (p.name === "@fontsource/atkinson-hyperlegible" && used.theme),
           )
         : [],
-    warnings: [...analysis.blocking, ...analysis.warnings],
+    warnings: manifestWarnings(analysis),
     unsupported: analysis.unsupported,
     environment: environment(env),
     verification,
