@@ -348,6 +348,38 @@ describe("hierarchy geometry", () => {
     expect(validateDocument(d).ok).toBe(false);
     expect(getWorldMatrix(d, "s32").ok).toBe(false);
   });
+  it("explains a deep scene that cannot be framed: nested scales exhaust the zoom range", () => {
+    const d = structure();
+    d.cameraTracks = [];
+    d.cues = [];
+    d.scenes = Array.from({ length: 16 }, (_, i) => ({
+      ...structuredClone(d.scenes[0]!),
+      id: `s${i}`,
+      parentId: i ? `s${i - 1}` : null,
+      scale: i ? 0.5 : 1,
+    }));
+    d.paths = [
+      {
+        id: "deep",
+        name: "Deep",
+        startNodeId: "n15",
+        nodes: [{ id: "n15", sceneId: "s15", holdMs: 0 }],
+        edges: [],
+      },
+    ];
+    d.defaultPathId = "deep";
+    const r = validateDocument(d);
+    expect(r.ok).toBe(false);
+    const camera = r.diagnostics.find(
+      (x) => x.code === "INVALID_WORLD_CAMERA",
+    )!;
+    expect(camera.pointer).toBe("/paths/0/nodes/0");
+    // 0.5^15 world scale: the fit zoom is far beyond 10000.
+    expect(camera.message).toMatch(
+      /needs zoom [\d.e+]+, outside 0\.0001–10000/,
+    );
+    expect(camera.message).toContain("world scale is 0.0000305");
+  });
   it("fits world orientation and scale; inverse mapping keeps world drag on XY plane", () => {
     const d = structure();
     const m = value(getWorldMatrix(d, "B")),

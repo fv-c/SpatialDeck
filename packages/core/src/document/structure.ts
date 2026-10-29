@@ -8,7 +8,33 @@ import {
   resolveSceneCamera,
   validCamera,
 } from "../math/index.js";
+import type { CameraPose } from "../math/index.js";
 import { resolveCameraTrack, trackWithinRange } from "../timing/index.js";
+/**
+ * Which limit a camera breaks. A scene fit needs a zoom inversely
+ * proportional to the world scale, and nested scales multiply: a deep
+ * hierarchy runs out of zoom long before the 32-level limit.
+ */
+function cameraRangeHint(
+  pose: CameraPose,
+  fit: boolean,
+  doc: ProjectDocument,
+  sceneId: string,
+): string {
+  const number = (x: number) => Number(x.toPrecision(3)).toString();
+  if (Number.isFinite(pose.zoom) && (pose.zoom < 0.0001 || pose.zoom > 10000)) {
+    const m = getWorldMatrix(doc, sceneId);
+    const scale = m.ok
+      ? Math.hypot(m.value[0]!, m.value[1]!, m.value[2]!)
+      : NaN;
+    return fit && Number.isFinite(scale)
+      ? `: framing the scene needs zoom ${number(pose.zoom)}, outside 0.0001–10000, because its world scale is ${number(scale)} (parent scales multiply); change the scene's scale or size, or nest it less deeply`
+      : `: zoom ${number(pose.zoom)} is outside 0.0001–10000`;
+  }
+  if (pose.position.some((v) => Math.abs(v) > 1000000))
+    return ": the camera position is beyond ±1000000";
+  return "";
+}
 /** Iterative SCCs keep even a 5,000-node imported path off the call stack. */
 export function graphComponents(path: ScenePath): Map<string, number> {
   const outgoing = new Map(path.nodes.map((n) => [n.id, [] as string[]]));
@@ -157,7 +183,11 @@ export function validateStructure(doc: ProjectDocument): Diagnostic[] {
         if (!pose.ok || !validCamera(pose.value))
           add(
             "INVALID_WORLD_CAMERA",
-            "Target world camera exceeds finite pose ranges",
+            `Target world camera exceeds finite pose ranges${
+              pose.ok
+                ? cameraRangeHint(pose.value, !n.camera, doc, n.sceneId)
+                : ""
+            }`,
             `${base}/nodes/${j}`,
           );
       }
