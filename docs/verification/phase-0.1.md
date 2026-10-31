@@ -1,24 +1,24 @@
-# Verifica SpatialDeck 0.1 Core
+# SpatialDeck 0.1 Core verification
 
-Data: 21 ottobre 2026. Codice 0.1 implementato; **WebKit locale sbloccato con il runner dedicato 1.61.1 per macOS 14**. La suite completa passa sui tre motori senza skip. Il runner principale e la CI Linux mantengono Playwright 1.64.1; la [CI remota è passata](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) con 85 unità e 30 E2E, zero skip. Safari reale non è stato eseguito. Nessuna fase 0.2 avviata.
+Date: 21 October 2026. 0.1 code implemented; **local WebKit unblocked with the dedicated 1.61.1 runner for macOS 14**. The complete suite passes on all three engines without skips. The main runner and Linux CI keep Playwright 1.64.1; [remote CI passed](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) with 85 unit and 30 E2E tests, zero skipped. Real Safari was not run. No 0.2 phase started.
 
-## Stato iniziale e perimetro
+## Initial state and scope
 
-Checkout iniziale: LICENSE, PROJECT_SPEC e ROADMAP tracciati; `prompts/` già presente e non tracciato. Nessun sorgente applicativo. Nessun AGENTS su disco nei percorsi applicabili; applicate le istruzioni AGENTS fornite nella chat. Specifica e roadmap lette prima dei sorgenti; LICENSE e prompt preservati. Tutti i path proposti per 0.1 sono ora reali. Differenze additive: entrypoint `player/src/browser.ts` per raccogliere CSS in build senza import CSS nelle dichiarazioni pubbliche; generatori e controlli nella directory `scripts`; prove riproducibili e artefatti sotto `docs/verification`.
+Initial checkout: LICENSE, PROJECT_SPEC and ROADMAP tracked; `prompts/` already present and untracked. No application sources. No AGENTS file on disk in the applicable paths; the AGENTS instructions provided in the chat were applied. Specification and roadmap read before the sources; LICENSE and prompts preserved. Every path proposed for 0.1 is now real. Additive differences: the `player/src/browser.ts` entry point to collect CSS at build time without CSS imports in the public declarations; generators and checks in the `scripts` directory; reproducible tests and artefacts under `docs/verification`.
 
-Implementati i pacchetti applicativi core, player e playground e il solo workspace di tooling privato `tools/webkit-macos14`. Nessun editor/React, parent/grafo/timeline, blocco oltre text, media/plugin concreto, CLI/import/export o servizio remoto. Manifest privati: SPDX GPL-only/or-later non inventato dal solo testo della licenza. Commit e push successivamente autorizzati ed eseguiti sul commit `07916cc`; nessun tag, deploy o publish.
+Implemented the core, player and playground application packages and only the private tooling workspace `tools/webkit-macos14`. No editor or React, parents, graphs or timeline, blocks beyond text, concrete media or plugins, CLI, import or export, or remote services. Private manifests: GPL-only/or-later SPDX not invented from the licence text alone. Commit and push later authorized and performed on commit `07916cc`; no tag, deploy or publish.
 
-## Ambiente riproducibile
+## Reproducible environment
 
-Apple M3 Max, 16 CPU logiche, 64 GiB RAM, macOS 14.8.7 (Darwin 23.6.0), arm64. Node locale 24.22.0, pnpm 12.14.0. La macchina inizialmente esponeva Node 25.8.1 e pnpm 11.25.0: installati i pin nella directory ignorata `.tools`, senza cambiare installazioni globali.
+Apple M3 Max, 16 logical CPUs, 64 GiB RAM, macOS 14.8.7 (Darwin 23.6.0), arm64. Local Node 24.22.0, pnpm 12.14.0. The machine initially exposed Node 25.8.1 and pnpm 11.25.0: the pins were installed in the ignored `.tools` directory, without changing global installations.
 
-[environment.json](environment.json) registra tutti i pin, engines/peer dal registry npm (HTTP 200), hash SHA256 del lockfile e versioni browser effettive. Il pin principale 1.64.1 è invariato; è aggiunta la sola eccezione autorizzata 1.61.1 per WebKit su macOS 14, con workspace e lockfile dedicati. Nessun peer forzato. Il JSON conserva anche l'hash del lockfile iniziale. pnpm ha registrato la sola eccezione release-age `vite@8.3.5`. Installazione frozen riuscita.
+[environment.json](environment.json) records every pin, engines and peers from the npm registry (HTTP 200), the SHA256 hash of the lockfile and the actual browser versions. The main pin 1.64.1 is unchanged; only the authorized 1.61.1 exception for WebKit on macOS 14 is added, with a dedicated workspace and lockfile entry. No forced peers. The JSON also keeps the hash of the initial lockfile. pnpm recorded only the `vite@8.3.5` release-age exception. The frozen installation succeeded.
 
-Browser effettivi: Chromium 156.0.8078.4 e Firefox 157.0 con runner 1.64.1; WebKit riporta 26.5 con runner 1.61.1. Il precedente valore WebKit 27.2 proveniva dai metadati del runner 1.64.1 che non arrivava a newPage: non era una prova runtime. Il campo `compatibility` di [environment.json](environment.json) registra runner, versione riportata, user agent, hash della suite condivisa e 10 pass/0 fail/0 skip.
+Actual browsers: Chromium 156.0.8078.4 and Firefox 157.0 with runner 1.64.1; WebKit reports 26.5 with runner 1.61.1. The earlier WebKit value 27.2 came from the metadata of runner 1.64.1, which never reached newPage: it was not a runtime test. The `compatibility` field of [environment.json](environment.json) records the runner, the reported version, the user agent, the hash of the shared suite and 10 passed/0 failed/0 skipped.
 
-Il problema `Unknown setting: PushAPIEnabled` è documentato nella [issue Playwright #42964](https://github.com/microsoft/playwright/issues/42964). La configurazione approvata mantiene la 1.64.1 per il prodotto e la CI Linux, usando la 1.61.1 soltanto per il WebKit congelato di macOS 14. La prima installazione aveva richiesto fallback CDN per errori DNS del mirror Microsoft; l'installazione ora selezionata dal launcher passa con i browser presenti. Il log storico e la risoluzione sono in [webkit-blocker.txt](webkit-blocker.txt).
+The `Unknown setting: PushAPIEnabled` problem is documented in [Playwright issue #42964](https://github.com/microsoft/playwright/issues/42964). The approved configuration keeps 1.64.1 for the product and Linux CI, using 1.61.1 only for the frozen WebKit of macOS 14. The first installation needed CDN fallbacks because of DNS errors on the Microsoft mirror; the installation now selected by the launcher passes with the browsers present. The historical log and the resolution are in [webkit-blocker.txt](webkit-blocker.txt).
 
-## Installazione, avvio e API
+## Installation, startup and API
 
 ```sh
 npm install --prefix .tools --no-package-lock --no-save node@24.22.0 pnpm@12.14.0
@@ -28,96 +28,96 @@ pnpm browsers:install
 pnpm dev:playground
 ```
 
-Aprire `/core`. Avvio Vite vanilla verificato; la prima suite browser è stata eseguita sul dev server. Le suite finali avviano `vite preview` sulla build production. Il consumer base non richiede rete esterna a runtime; provato anche con CSP senza unsafe-eval.
+Open `/core`. Vanilla Vite startup verified; the first browser suite ran on the dev server. The final suites start `vite preview` on the production build. The base consumer needs no external network at runtime; also tested with a CSP without unsafe-eval.
 
-[README](../../README.md) e [DEVELOPMENT](../DEVELOPMENT.md) documentano l'uso vanilla, CSS pubblico, Result/NavigationResult, opzioni, eventi, clock, lifecycle e confini. `pnpm test:e2e` include la build prima del browser. `pnpm browsers:install` installa i browser dal runner appropriato al sistema, senza dipendere dalla prova temporanea sotto `.tools`.
+The [README](../../README.md) and [DEVELOPMENT](../DEVELOPMENT.md) document vanilla usage, public CSS, Result/NavigationResult, options, events, clock, lifecycle and boundaries. `pnpm test:e2e` includes the build before the browsers. `pnpm browsers:install` installs the browsers from the runner suited to the system, without depending on the temporary test under `.tools`.
 
-## Runner dedicato e CI Linux
+## Dedicated runner and Linux CI
 
-- Root: `@playwright/test@1.64.1`, configurazione `playwright.config.ts`.
-- Compatibilità: `tools/webkit-macos14/package.json` fissa `@playwright/test@1.61.1`, configurazione WebKit dedicata. Il comando rifiuta sistemi diversi da macOS 14.
-- Suite unica: `tests/e2e/core.spec.ts` carica test/expect tramite l'adapter che verifica il pin selezionato; nessuna copia dei test, nessuno skip.
-- `pnpm test:e2e` su questo Mac esegue Chromium/Firefox con 1.64.1 e WebKit con 1.61.1. `pnpm test:e2e:webkit:macos14` esegue soltanto i 10 WebKit; `--project=webkit` è disponibile anche sul comando generale.
-- In Linux il launcher sceglie unicamente la 1.64.1 per Chromium/Firefox/WebKit. Il workflow installa tutti e tre e avvia `pnpm test:e2e`; 12 test di instradamento verificano anche questa scelta; il successivo run remoto ha confermato 30 E2E passati su Linux.
-- JSON/trace isolati in `test-results/current/` e `test-results/webkit-macos14/`; riepilogo della singola invocazione in `test-results/e2e-summary.json`. L'ultimo comando dedicato può sovrascrivere il riepilogo locale, mentre l'evidenza permanente sotto conserva la precedente suite completa.
+- Root: `@playwright/test@1.64.1`, configuration `playwright.config.ts`.
+- Compatibility: `tools/webkit-macos14/package.json` pins `@playwright/test@1.61.1`, with a dedicated WebKit configuration. The command refuses systems other than macOS 14.
+- Single suite: `tests/e2e/core.spec.ts` loads test and expect through the adapter that checks the selected pin; no copied tests, no skips.
+- `pnpm test:e2e` on this Mac runs Chromium and Firefox with 1.64.1 and WebKit with 1.61.1. `pnpm test:e2e:webkit:macos14` runs only the 10 WebKit tests; `--project=webkit` is also available on the general command.
+- On Linux the launcher picks only 1.64.1 for Chromium, Firefox and WebKit. The workflow installs all three and starts `pnpm test:e2e`; 12 routing tests also verify this choice; the following remote run confirmed 30 E2E passed on Linux.
+- JSON and traces isolated in `test-results/current/` and `test-results/webkit-macos14/`; the summary of each invocation in `test-results/e2e-summary.json`. The last dedicated command may overwrite the local summary, while the permanent evidence below keeps the previous complete suite.
 
-La baseline applicativa e il bundle core/player sono invariati; gli screenshot locali restano conservati. Non sono state modificate dipendenze di produzione o installazioni globali.
+The application baseline and the core/player bundle are unchanged; the local screenshots are kept. No production dependencies or global installations were changed.
 
-## Comandi ed esiti finali
+## Final commands and outcomes
 
-I comandi sono stati eseguiti con il PATH locale sopra indicato. Gli esiti correnti non contano gli skip del tentativo storico come test passati.
+The commands were run with the local PATH shown above. The current outcomes do not count the skips of the historical attempt as passed tests.
 
-| Comando                                                               | Exit | Evidenza                                                                                          |
-| --------------------------------------------------------------------- | ---: | ------------------------------------------------------------------------------------------------- |
-| `pnpm install`                                                        |    0 | 5 workspace; nuovo runner 1.61.1 fissato nel lockfile, peer strict                                |
-| `pnpm install --frozen-lockfile`                                      |    0 | Nessuna modifica del lockfile dopo l'installazione                                                |
-| `pnpm typecheck`                                                      |    0 | Include anche configurazioni e adapter dei due runner                                             |
-| `pnpm lint`                                                           |    0 | ESLint 10 + typescript-eslint                                                                     |
-| `pnpm format:check`                                                   |    0 | Nuovi file formattati; prompt e documenti normativi storici esclusi dalle riscritture automatiche |
-| `pnpm test`                                                           |    0 | **85 passed, 0 failed, 0 skipped**: 73 core + 12 instradamento runner, 4 file Vitest              |
-| `pnpm build`                                                          |    0 | ESM/dichiarazioni e playground production; eseguita anche dai due comandi E2E                     |
-| `pnpm check:boundaries`                                               |    0 | 2 pacchetti runtime; tooling escluso dal prodotto                                                 |
-| `pnpm check:bundle`                                                   |    0 | JS/CSS identici alla misura precedente                                                            |
-| `pnpm browsers:install`                                               |    0 | Su macOS 14 seleziona Chromium/Firefox 1.64.1 e WebKit 1.61.1                                     |
-| `pnpm exec playwright --version`                                      |    0 | Runner root 1.64.1                                                                                |
-| `pnpm --filter @spatialdeck/webkit-macos14 exec playwright --version` |    0 | Runner isolato 1.61.1                                                                             |
-| `pnpm test:e2e`                                                       |    0 | **30 passed, 0 failed, 0 skipped**: Chromium 10 + Firefox 10 (1.64.1), WebKit 10 (1.61.1)         |
-| `pnpm test:e2e:webkit:macos14`                                        |    0 | **10 passed, 0 failed, 0 skipped**; ripetizione mirata, non sommata al totale                     |
-| `git diff --check`                                                    |    0 | Whitespace dei file tracciati modificati                                                          |
+| Command                                                               | Exit | Evidence                                                                                         |
+| --------------------------------------------------------------------- | ---: | ------------------------------------------------------------------------------------------------ |
+| `pnpm install`                                                        |    0 | 5 workspaces; new 1.61.1 runner pinned in the lockfile, strict peers                             |
+| `pnpm install --frozen-lockfile`                                      |    0 | No lockfile change after installation                                                            |
+| `pnpm typecheck`                                                      |    0 | Also includes the configurations and adapters of both runners                                    |
+| `pnpm lint`                                                           |    0 | ESLint 10 + typescript-eslint                                                                    |
+| `pnpm format:check`                                                   |    0 | New files formatted; prompts and historical normative documents excluded from automatic rewrites |
+| `pnpm test`                                                           |    0 | **85 passed, 0 failed, 0 skipped**: 73 core + 12 runner routing, 4 Vitest files                  |
+| `pnpm build`                                                          |    0 | ESM, declarations and production playground; also run by both E2E commands                       |
+| `pnpm check:boundaries`                                               |    0 | 2 runtime packages; tooling excluded from the product                                            |
+| `pnpm check:bundle`                                                   |    0 | JS and CSS identical to the previous measurement                                                 |
+| `pnpm browsers:install`                                               |    0 | On macOS 14 selects Chromium/Firefox 1.64.1 and WebKit 1.61.1                                    |
+| `pnpm exec playwright --version`                                      |    0 | Root runner 1.64.1                                                                               |
+| `pnpm --filter @spatialdeck/webkit-macos14 exec playwright --version` |    0 | Isolated runner 1.61.1                                                                           |
+| `pnpm test:e2e`                                                       |    0 | **30 passed, 0 failed, 0 skipped**: Chromium 10 + Firefox 10 (1.64.1), WebKit 10 (1.61.1)        |
+| `pnpm test:e2e:webkit:macos14`                                        |    0 | **10 passed, 0 failed, 0 skipped**; a targeted repetition, not added to the total                |
+| `git diff --check`                                                    |    0 | Whitespace of the modified tracked files                                                         |
 
-Totale corrente: **115 test passati**, zero fail/skip (85 unità + 30 E2E). [e2e-results.json](e2e-results.json) conserva esiti, versione e profilo per ogni test della suite completa. Le misure precedenti di 93 pass/10 skip e il primo fallimento WebKit sono storiche; il runner dedicato ora dimostra anche le 10 prove WebKit sul prodotto reale.
+Current total: **115 tests passed**, zero failed or skipped (85 unit + 30 E2E). [e2e-results.json](e2e-results.json) keeps the outcome, version and profile of every test of the complete suite. The earlier measurements of 93 passed/10 skipped and the first WebKit failure are historical; the dedicated runner now also demonstrates the 10 WebKit tests on the real product.
 
-## Verifica remota Linux dopo commit e push
+## Remote Linux verification after commit and push
 
-Implementazione pubblicata su `origin/main` con commit `07916ccaf27cf7e6d210ac5d1f4ef8cc8d1e2901`. Il workflow [Core, run 39596586324](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) è concluso con **success** su Ubuntu 26.04.1, Node 24.22.0, pnpm 12.14.0 e Playwright **1.64.1**.
+Implementation published on `origin/main` with commit `07916ccaf27cf7e6d210ac5d1f4ef8cc8d1e2901`. The [Core workflow, run 39596586324](https://github.com/fv-c/SpatialDeck/actions/runs/39596586324) completed with **success** on Ubuntu 26.04.1, Node 24.22.0, pnpm 12.14.0 and Playwright **1.64.1**.
 
-Tutti gli step sono passati: frozen install, typecheck, lint, format, 85 unità, build, confini/bundle, installazione dei tre browser e suite E2E production. Risultato browser: **Chromium 10/10, Firefox 10/10, WebKit 10/10; zero fail, skip o flaky**. Il riepilogo scaricato dall'artefatto conferma `platform: linux`, un solo profilo `current`, versione `1.64.1` e tre progetti. Le 85 unità più i 30 E2E costituiscono **115 test passati in CI**, distinti dai 115 pass locali.
+Every step passed: frozen install, typecheck, lint, format, 85 unit tests, build, boundaries and bundle, installation of the three browsers and the production E2E suite. Browser result: **Chromium 10/10, Firefox 10/10, WebKit 10/10; zero failed, skipped or flaky**. The summary downloaded from the artefact confirms `platform: linux`, a single `current` profile, version `1.64.1` and three projects. The 85 unit plus 30 E2E tests make **115 tests passed in CI**, distinct from the 115 local passes.
 
-Evidenza permanente: [ci-linux.json](ci-linux.json), con SHA, run/job/artifact ID, digest dell'archivio, riepilogo originale e ogni test E2E. L'artefatto `verification` è stato scaricato tramite il connettore GitHub e controllato; non è una deduzione dal solo badge verde. I report locali in `e2e-results.json` restano separati. Il bundle Linux coincide con quello locale: 17 823 byte JS e 662 byte CSS gzip.
+Permanent evidence: [ci-linux.json](ci-linux.json), with SHA, run, job and artefact IDs, the archive digest, the original summary and every E2E test. The `verification` artefact was downloaded through the GitHub connector and checked; it is not inferred from the green badge alone. The local reports in `e2e-results.json` stay separate. The Linux bundle matches the local one: 17 823 bytes of JS and 662 bytes of CSS gzip.
 
-L'hook locale `.git/hooks/pre-commit` mantiene `prompts/` fuori dai commit e visibile nel checkout: i sei prompt locali sono rimasti intatti e non pubblicati. `.tools`, dipendenze e output di build restano ignorati. Il successivo commit di documentazione registra questa verifica dell'implementazione `07916cc`; non cambia il codice già provato.
+The local hook `.git/hooks/pre-commit` keeps `prompts/` out of commits and visible in the checkout: the six local prompts stayed intact and unpublished. `.tools`, dependencies and build output stay ignored. The following documentation commit records this verification of implementation `07916cc`; it does not change the code already tested.
 
-Errori riscontrati e corretti prima del risultato finale: dichiarazioni ES-only delle API standard nel core; lint del controllo caratteri asset; import CSS nelle dichiarazioni pubbliche; misura CSS del consumer minimo; annullamento rientrante da handler; focus nel passaggio tra due titoli e durante la modifica di un input. Il primo tentativo WebKit era stato interrotto (130) dopo tre errori identici; lo skip provvisorio è ora rimosso. È stato corretto anche il tipo del parametro `args` nel nuovo helper JS durante il typecheck, prima degli esiti finali. Il runner dedicato risolve il blocco locale senza modificare Playwright o le prove applicative.
+Errors found and fixed before the final result: ES-only declarations of the standard APIs in the core; lint of the asset character check; CSS imports in the public declarations; CSS measurement of the minimal consumer; re-entrant cancellation from a handler; focus when moving between two titles and while editing an input. The first WebKit attempt had been interrupted (130) after three identical errors; the provisional skip is now removed. The type of the `args` parameter in the new JS helper was also fixed during the typecheck, before the final outcomes. The dedicated runner resolves the local block without modifying Playwright or the application tests.
 
-## Funzionalità dimostrate
+## Demonstrated features
 
-Schema normativo 2020-12 materializzato e schema/tipi derivati da un'unica fonte. JSON malformato, versioni future, capacità/campi non supportati, ID duplicati, riferimenti mancanti, target invisibili, branching/cicli/disconnessioni, scale invalide e numeri non finiti sono rifiutati senza mutazioni. Limiti byte/profondità e asset sicuri verificati, inclusi percent encoding ripetuto, backslash, traversal, totale cumulativo, accessor e input non JSON. Serializer deterministico e roundtrip delle estensioni opache. Documento/path vuoto e assenza di default validi.
+The normative 2020-12 schema is materialized, with schema and types derived from a single source. Malformed JSON, future versions, unsupported capabilities and fields, duplicate IDs, missing references, invisible targets, branching, cycles and disconnections, invalid scales and non-finite numbers are rejected without mutations. Byte and depth limits and safe assets verified, including repeated percent encoding, backslashes, traversal, the cumulative total, accessors and non-JSON input. Deterministic serializer and roundtrip of opaque extensions. Empty documents and paths and the absence of a default are valid.
 
-Geometria: colonne column-major, pixel CSS, X destra/Y basso/Z osservatore, pivot centrale, `M=T*Rz*Ry*Rx*S`; camera piano di riferimento `V=S(zoom)*inverse(C)`. Prospettiva una sola volta nel viewport; contain esterno. Fit `0.9 * min(vw/w,vh/h)/scale`. Rotazione via quaternion normalizzato, slerp arco breve compreso q/-q, zoom in log-spazio, easing smoothstep una sola volta. Matrici identità/traslazione/tre assi/scala/ordine e inversione hanno attesi indipendenti. Proiezione browser di tre landmark per ciascuna scena verificata entro 1 CSS px su tutti e tre i motori locali, con i due runner dichiarati.
+Geometry: column-major columns, CSS pixels, X right, Y down, Z towards the viewer, central pivot, `M=T*Rz*Ry*Rx*S`; the camera is a reference plane `V=S(zoom)*inverse(C)`. Perspective applied once in the viewport; outer contain. Fit `0.9 * min(vw/w,vh/h)/scale`. Rotation through a normalized quaternion, short-arc slerp including q/-q, zoom in log space, smoothstep easing applied once. Identity, translation, three-axis, scale, order and inversion matrices have independent expectations. The browser projection of three landmarks per scene is verified within 1 CSS px on all three local engines, with both declared runners.
 
-Navigazione latest-wins, dieci richieste ravvicinate, abort, comandi invalidi e noop non distruttivi, setPath valido/vuoto/assente, cambio percorso e prev sulla history effettiva. Commit solo all'arrivo, niente history fantasma, Promise/eventi esattamente una volta, durata zero e ordine eventi. Tempo hidden congelato con clock controllato; cambio prefers-reduced-motion verificato anche in browser. Handler che lanciano non interrompono il player; callback rientranti non lasciano Promise sospese.
+Latest-wins navigation, ten rapid requests, abort, invalid commands and non-destructive noops, valid, empty and missing setPath, path changes and prev on the actual history. Commit only on arrival, no phantom history, Promises and events exactly once, zero duration and event order. Hidden time frozen with a controlled clock; the prefers-reduced-motion change also verified in browsers. Throwing handlers do not interrupt the player; re-entrant callbacks leave no pending Promises.
 
-Due istanze indipendenti, tastiera locale, campi di testo e focus verificati. Focus non rubato dal mount o durante la scrittura. Outline ordinato e leggibile, navigazione immediata, contenuti spaziali duplicati esclusi dall'accessibilità; fallback funzionante senza CSS 3D. Testo ostile reso letteralmente, nessun elemento HTML eseguito. CSP senza unsafe-eval e nessuna richiesta remota obbligatoria.
+Two independent instances, local keyboard, text fields and focus verified. Focus is not stolen by mount or while typing. Ordered, readable outline, immediate navigation, duplicated spatial content excluded from accessibility; working fallback without CSS 3D. Hostile text rendered literally, no HTML element executed. CSP without unsafe-eval and no mandatory remote request.
 
-Teardown strumentato in ciascun browser disponibile: **50 cicli mount/destroy, 50 pending cancelled, 50 eventi destroy; 0 listener, 0 RAF, 0 ResizeObserver posseduti residui**. Destroy ripetuto e comandi successivi non ricreano risorse; nodi host e tabindex preesistente preservati. Nessun Blob URL o media è creato da questa fase.
+Instrumented teardown in each available browser: **50 mount/destroy cycles, 50 pending cancelled, 50 destroy events; 0 owned listeners, 0 rAF, 0 ResizeObserver left over**. Repeated destroy and later commands do not recreate resources; host nodes and pre-existing tabindex preserved. No Blob URL or media is created by this phase.
 
-## Screenshot ispezionati
+## Inspected screenshots
 
-Screenshot reali Chromium della build production con preset Desktop Chrome (viewport 1280×720), ritaglio del primo player. Ispezione visiva eseguita: scene centrate, bordi entro il viewport, testo leggibile e nessun clipping del contenuto target; outline senza sovrapposizioni. Le scene non attive possono restare visibili ai margini dello spazio (nella conclusione), coerentemente con il rendering spaziale; restano inert/aria-hidden. Le catture agli estremi non sostituiscono le prove numeriche e di interruzione.
+Real Chromium screenshots of the production build with the Desktop Chrome preset (1280×720 viewport), cropped to the first player. Visual inspection done: centred scenes, borders within the viewport, readable text and no clipping of the target content; outline without overlaps. Inactive scenes may stay visible at the edges of space (in the conclusion), consistently with spatial rendering; they stay inert and aria-hidden. Captures at the extremes do not replace the numeric and interruption tests.
 
-- [Introduzione](scene-intro.png)
-- [Dettaglio](scene-detail.png)
-- [Conclusione](scene-end.png)
+- [Introduction](scene-intro.png)
+- [Detail](scene-detail.png)
+- [Conclusion](scene-end.png)
 - [Outline](outline.png)
 
 ## Bundle
 
-[Misura riproducibile](bundle.json), gzip livello 9, consumer minimo di `createPlayer` e CSS pubblico dagli artefatti dist: **17 823 byte JS (17,41 KiB)** e **662 byte CSS (0,65 KiB)**; gate 102 400 / 20 480 byte. Include il core raggiungibile dal player, validatore standalone e helper matematici. Esclude demo, JSON, test, editor/plugin e sorgenti del compilatore Ajv. Confini e scansione output non rilevano React/editor, eval o new Function. I pesi JS non compressi delle singole librerie non sono il gate gzip del consumer.
+[Reproducible measurement](bundle.json), gzip level 9, a minimal `createPlayer` consumer and the public CSS from the dist artefacts: **17 823 bytes of JS (17.41 KiB)** and **662 bytes of CSS (0.65 KiB)**; gates 102 400 / 20 480 bytes. It includes the core reachable from the player, the standalone validator and the math helpers. It excludes demos, JSON, tests, editor and plugins and the Ajv compiler sources. Boundaries and output scan detect no React or editor, eval or new Function. The uncompressed JS weights of the individual libraries are not the consumer's gzip gate.
 
-## Gate e limiti aperti
+## Gates and open limits
 
-| Criterio 0.1                                       | Stato                                                                        |
-| -------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Installazione/strict/lint/format/build/CI iniziale | Verificato localmente e nel run Linux sopra collegato                        |
-| Schema 1.0.0, semantica, diagnostica, roundtrip    | Verificato                                                                   |
-| Tre scene vanilla, API, tastiera e due istanze     | Dimostrato su Chromium/Firefox 1.64.1 e WebKit 1.61.1                        |
-| History/cancel/clock/reduced motion/eventi         | Verificato                                                                   |
-| Destroy/outline/focus                              | Verificato sui tre motori locali; 50 cicli e zero risorse residue per motore |
-| Budget core+player e confini                       | Verificato; bundle invariato                                                 |
-| Runner WebKit macOS 14                             | **10 pass, nessuno skip**, pin 1.61.1 isolato e riproducibile                |
-| Selezione runner e pin CI                          | 12 unità passate; Linux sceglie soltanto 1.64.1 per i tre browser            |
-| E2E Linux con 1.64.1                               | **30 pass (10 per motore), zero skip**, esecuzione remota verificata         |
+| 0.1 criterion                                         | Status                                                                                |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Installation, strict, lint, format, build, initial CI | Verified locally and in the Linux run linked above                                    |
+| Schema 1.0.0, semantics, diagnostics, roundtrip       | Verified                                                                              |
+| Three vanilla scenes, API, keyboard and two instances | Demonstrated on Chromium/Firefox 1.64.1 and WebKit 1.61.1                             |
+| History, cancel, clock, reduced motion, events        | Verified                                                                              |
+| Destroy, outline, focus                               | Verified on the three local engines; 50 cycles and zero leftover resources per engine |
+| Core+player budget and boundaries                     | Verified; bundle unchanged                                                            |
+| WebKit macOS 14 runner                                | **10 passed, no skips**, isolated and reproducible 1.61.1 pin                         |
+| Runner selection and CI pin                           | 12 unit tests passed; Linux picks only 1.64.1 for the three browsers                  |
+| Linux E2E with 1.64.1                                 | **30 passed (10 per engine), zero skipped**, remote run verified                      |
 
-Non eseguiti Safari/Chrome/Edge installati, mobile fisico o screen reader: nessuna compatibilità o certificazione dichiarata; verifiche estese previste prima di 1.0. Heap dopo GC e benchmark 100 scene/p95 non misurati; il teardown dimostra i contatori di risorse, non un profilo heap o FPS garantiti. Spazio numericamente limitato dalla specifica.
+Not run: installed Safari, Chrome or Edge, physical mobile devices or screen readers: no compatibility or certification claimed; extended checks planned before 1.0. Heap after GC and 100-scene/p95 benchmarks not measured; the teardown demonstrates resource counters, not a heap profile or guaranteed FPS. Space is numerically bounded by the specification.
 
-La verifica locale macOS 14 e la matrice Linux del runner corrente sono passate. Restano le prove di Safari reale e le verifiche di stabilizzazione già indicate. Per 0.2 conservare schema/fixture 1.0.0, aggiungere updateDocument atomico al player condiviso e verificare le regressioni prima della UI; nessun lavoro 0.2 svolto qui.
+The local macOS 14 verification and the Linux matrix of the current runner passed. Real Safari tests and the stabilization checks already listed remain. For 0.2, keep the 1.0.0 schema and fixtures, add an atomic updateDocument to the shared player and verify the regressions before the UI; no 0.2 work was done here.

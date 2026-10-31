@@ -1,78 +1,78 @@
-# Verifica SpatialDeck 0.2 Editor
+# SpatialDeck 0.2 Editor verification
 
-21 ottobre 2026. Studio 0.2 implementato, documento **schema 1.0.0 invariato**. Verifica locale su macOS 14; la CI remota della fase 0.2 non è stata eseguita. Nessun commit, push, deploy, tag o publish.
+21 October 2026. Studio 0.2 implemented, document **schema 1.0.0 unchanged**. Local verification on macOS 14; remote CI for phase 0.2 has not been run. No commit, push, deploy, tag or publish.
 
-## Baseline e perimetro
+## Baseline and scope
 
-Letture iniziali: istruzioni AGENTS fornite nella chat, README, PROJECT_SPEC, ROADMAP, DEVELOPMENT, rapporto 0.1, manifest e API pubbliche core/player prima dei relativi sorgenti. Stato Git iniziale: solo `?? prompts/`, preservato. Il motore precedente era realmente utilizzabile: **85 unità e 30 E2E passati, zero fail/skip**, prima di modificare il player. Log locali in `.tools/baseline-unit.log` e `.tools/baseline-e2e.log`.
+Initial reading: the AGENTS instructions provided in the chat, README, PROJECT_SPEC, ROADMAP, DEVELOPMENT, the 0.1 report, manifests and the public core/player APIs before their sources. Initial Git state: only `?? prompts/`, preserved. The previous engine was genuinely usable: **85 unit and 30 E2E tests passed, zero failed or skipped**, before modifying the player. Local logs in `.tools/baseline-unit.log` and `.tools/baseline-e2e.log`.
 
-Aggiunti `packages/editor` e `apps/studio`, fixture `examples/editor-roundtrip/project.json`, unità store/storage/update, suite browser editor e guida autore. Estesi API/eventi/core navigation e player per updateDocument; aggiornati manifest, lockfile, TS/React lint, build, confini e server E2E. README, DEVELOPMENT, PROJECT_SPEC e ROADMAP descrivono le decisioni effettive. LICENSE, schema, fixture storica, prompt e implementazione vanilla preservati.
+Added `packages/editor` and `apps/studio`, the `examples/editor-roundtrip/project.json` fixture, store, storage and update unit tests, the editor browser suite and the author guide. Extended the APIs, events, core navigation and player for updateDocument; updated manifests, lockfile, TS and React lint, build, boundaries and E2E servers. README, DEVELOPMENT, PROJECT_SPEC and ROADMAP describe the actual decisions. LICENSE, schema, historical fixture, prompts and the vanilla implementation preserved.
 
-Non sono stati implementati grafi, parent, timeline, plugin/media, CLI/export, cloud o fase 0.3.
+Graphs, parents, timeline, plugins and media, CLI and export, cloud features and phase 0.3 were not implemented.
 
-## Ambiente e avvio
+## Environment and startup
 
-Stesso ambiente della fase 0.1: macOS 14.8.7 arm64, Apple M3 Max, Node **24.22.0** e pnpm **12.14.0** sotto `.tools`, senza cambiare strumenti globali. React/React DOM **19.3.1**, tipi **19.3.0**, plugin-react **6.1.2**, hooks lint **7.1.1** verificati dal registry e installati con peer strict; stack precedente conservato. [Metadati di questa fase](editor-environment.json).
+Same environment as phase 0.1: macOS 14.8.7 arm64, Apple M3 Max, Node **24.22.0** and pnpm **12.14.0** under `.tools`, without changing global tools. React/React DOM **19.3.1**, types **19.3.0**, plugin-react **6.1.2**, hooks lint **7.1.1** verified from the registry and installed with strict peers; the previous stack is kept. [Metadata of this phase](editor-environment.json).
 
 ```sh
-export PATH="$PWD/.tools/node_modules/.bin:$PATH" # se necessario su questa macchina
+export PATH="$PWD/.tools/node_modules/.bin:$PATH" # if needed on this machine
 pnpm install --frozen-lockfile
 pnpm dev:studio
-# Altro terminale, demo vanilla:
+# Another terminal, vanilla demo:
 pnpm dev:playground
 ```
 
-Studio: `http://127.0.0.1:5174`; playground: `/core` sulla porta stampata da Vite. I due avvii reali sono stati verificati in browser: una preview Studio e due player vanilla, zero page error; inspector Z=125 arriva alla camera. Vite risolve direttamente i sorgenti core/player, senza dist preliminari: [evidenza dev](editor-dev-smoke.json). Nessun backend/account o risorsa remota richiesta dalla demo.
+Studio: `http://127.0.0.1:5174`; playground: `/core` on the port printed by Vite. Both real startups were verified in a browser: a Studio preview and two vanilla players, zero page errors; inspector Z=125 reaches the camera. Vite resolves the core and player sources directly, without prior dists: [dev evidence](editor-dev-smoke.json). No backend, account or remote resource is required by the demo.
 
-Workflow: crea tre scene, seleziona/trascina o usa coordinate/rotazioni/scala/dimensioni, modifica testo e note, usa Annulla/Ripristina, scarica Salva JSON. Apri il file in una sessione separata e presenta; Escape ritorna all'editor. [Guida autore](../AUTHORING.md).
+Workflow: create three scenes, select and drag or use coordinates, rotations, scale and size, edit text and notes, use Undo and Redo, download with Save JSON. Open the file in a separate session and present; Escape returns to the editor. [Author guide](../AUTHORING.md).
 
-## Decisioni implementate
+## Implemented decisions
 
-- Store separato dalla sessione, snapshot validati e congelati. Comandi prima/dopo; massimo 100 comandi o 20 MiB UTF-8, con espulsione dei più vecchi finché entrambi i limiti sono rispettati. Un comando eccedente da solo viene applicato ma non conservato nella history. Edit dopo undo elimina redo; nessuna history nel JSON.
-- Drag live con un comando al pointerup; Escape/pointercancel ripristinano. Mappa SVG XY usa `sceneMatrix` core, pan/zoom restano UI. Preview aggiornata al massimo una volta per RAF; una raffica di 30 modifiche è verificata con un solo documentchange. Nessun renderer React delle scene.
-- Il player valida updateDocument prima di qualsiasi cambiamento, annulla il pending senza visitare la destinazione, conserva nodo/percorso se esistono, altrimenti seleziona start o empty e ricostruisce camera/history. DOM/listener/observer appartengono alla stessa istanza; update non rimonta il player e non ruba focus. documentchange viene emesso soltanto dopo l'aggiornamento.
-- Create/duplicate assegnano nuovi ID a scena, blocchi e nodi; il principale segue l'ordine scene. Delete ricuce i vicini con defaultTransition; undo ripristina ID/transizioni originali. Altri percorsi referenzianti: eliminazione rifiutata con nomi e conteggi. Principale importato con ordine diverso o visite ripetute: rifiuto delle modifiche strutturali, mantenendo apertura e modifiche di contenuti/trasformazioni.
-- File input e download Blob; candidato validato prima di sostituire, dialogo dirty annullabile e focus ripristinato. Salva comprende anche il draft attualmente focalizzato. Estensioni opache, note e array preservati, nessun campo UI o migrazione.
-- IndexedDB reale: `documents` e `recovery` nella stessa transazione; revisione attesa confrontata prima della scrittura; ultime dieci revisioni per projectId. Autosave 750 ms, coda seriale e nessuna scrittura di snapshot identici. Recupero proposto, con selezione esplicita delle revisioni. Quota, storage negato e conflitti lasciano memoria/download disponibili. Flush visibilitychange best effort; niente promessa unload e nessuna descrizione come backup.
-- Pannelli richiudibili, controlli etichettati/errori associati, coordinate alternative al drag, Tab/Shift+Tab e pulsanti attivabili da tastiera. Gestito il focus quando undo/redo disabilita il controllo attivo. Presentazione con istanza separata dello stesso player, modello intatto al ritorno e reduced motion rispettato. Layout verificato a 1440×1000, 768×900, 390×900 e 320×900.
+- Store separate from the session, validated and frozen snapshots. Before/after commands; at most 100 commands or 20 MiB of UTF-8, evicting the oldest until both limits are met. A command that alone exceeds the budget is applied but not kept in the history. An edit after undo discards redo; no history in the JSON.
+- Live drag with one command on pointerup; Escape and pointercancel restore. The SVG XY map uses the core `sceneMatrix`, while pan and zoom stay UI. The preview updates at most once per rAF; a burst of 30 edits is verified to produce a single documentchange. No React renderer for scenes.
+- The player validates updateDocument before any change, cancels the pending transition without visiting the destination, keeps node and path when they exist, otherwise selects the start or empty, and rebuilds camera and history. DOM, listeners and observers belong to the same instance; update does not remount the player and does not steal focus. documentchange is emitted only after the update.
+- Create and duplicate assign new IDs to the scene, its blocks and nodes; the main path follows the scene order. Delete stitches the neighbours with defaultTransition; undo restores the original IDs and transitions. Other referencing paths: deletion refused with names and counts. Imported main path with a different order or repeated visits: structural edits refused, while opening and content and transform edits are kept.
+- File input and Blob download; the candidate is validated before replacing, a cancellable dirty dialog and focus restored. Save also includes the draft currently focused. Opaque extensions, notes and arrays preserved, no UI fields or migration.
+- Real IndexedDB: `documents` and `recovery` in the same transaction; the expected revision compared before writing; the last ten revisions per projectId. Autosave at 750 ms, a serial queue and no writes of identical snapshots. Recovery is offered, with explicit selection of the revisions. Quota, denied storage and conflicts leave memory and download available. Best-effort flush on visibilitychange; no promise on unload and never described as a backup.
+- Collapsible panels, labelled controls and associated errors, coordinates as an alternative to dragging, Tab/Shift+Tab and keyboard-activatable buttons. Focus is handled when undo or redo disables the active control. Presentation with a separate instance of the same player, the model intact on return and reduced motion respected. Layout verified at 1440×1000, 768×900, 390×900 and 320×900.
 
-## Comandi finali
+## Final commands
 
-Tutti eseguiti col PATH locale; esiti riferiti all'ultima esecuzione riuscita, senza sommare ripetizioni diagnostiche. [Comandi, exit code e inventario dei file](editor-checks.json).
+All run with the local PATH; outcomes refer to the last successful run, without adding diagnostic repetitions. [Commands, exit codes and file inventory](editor-checks.json).
 
-| Comando                                  |    Exit | Risultato                                                            |
-| ---------------------------------------- | ------: | -------------------------------------------------------------------- |
-| `pnpm install --frozen-lockfile`         |       0 | 7 workspace, lockfile/peer strict                                    |
-| `pnpm typecheck`                         |       0 | Core, player, editor, app, test e configurazioni                     |
-| `pnpm lint`                              |       0 | ESLint e regole React hooks                                          |
-| `pnpm format:check`                      |       0 | File pertinenti formattati, prompt preservati                        |
-| `pnpm test`                              |       0 | **119 pass, 0 fail, 0 skip**, 7 file                                 |
-| `pnpm build`                             |       0 | Core/player/editor ESM e dichiarazioni, playground/Studio production |
-| `pnpm test:e2e`                          |       0 | **66 pass, 0 fail, 0 skip**: 22 Chromium + 22 Firefox + 22 WebKit    |
-| `pnpm check:boundaries`                  |       0 | Core/player senza React/editor; React peer dell'editor               |
-| `pnpm check:bundle`                      |       0 | **18 180 B JS / 662 B CSS gzip**, limiti 102 400 / 20 480 B          |
-| `pnpm dev:studio`, `pnpm dev:playground` | 0 avvio | Smoke browser reale sopra collegato                                  |
-| `git diff --check`                       |       0 | Whitespace dei file tracciati                                        |
+| Command                                  |    Exit | Result                                                                         |
+| ---------------------------------------- | ------: | ------------------------------------------------------------------------------ |
+| `pnpm install --frozen-lockfile`         |       0 | 7 workspaces, strict lockfile and peers                                        |
+| `pnpm typecheck`                         |       0 | Core, player, editor, app, tests and configurations                            |
+| `pnpm lint`                              |       0 | ESLint and React hooks rules                                                   |
+| `pnpm format:check`                      |       0 | Relevant files formatted, prompts preserved                                    |
+| `pnpm test`                              |       0 | **119 passed, 0 failed, 0 skipped**, 7 files                                   |
+| `pnpm build`                             |       0 | Core, player and editor ESM and declarations, production playground and Studio |
+| `pnpm test:e2e`                          |       0 | **66 passed, 0 failed, 0 skipped**: 22 Chromium + 22 Firefox + 22 WebKit       |
+| `pnpm check:boundaries`                  |       0 | Core and player without React or editor; React as editor peer                  |
+| `pnpm check:bundle`                      |       0 | **18 180 B JS / 662 B CSS gzip**, limits 102 400 / 20 480 B                    |
+| `pnpm dev:studio`, `pnpm dev:playground` | 0 start | Real browser smoke test linked above                                           |
+| `git diff --check`                       |       0 | Whitespace of the tracked files                                                |
 
-Totale: **185 test** (119 unità + 66 E2E), zero fail/skip. Le 119 unità includono tutte le 85 precedenti e 34 nuove. Le 66 E2E includono 30 regressioni core/player e 36 prove editor, senza copie o skip tra runner. Chromium/Firefox: Playwright 1.64.1. WebKit macOS 14: runner di compatibilità 1.61.1 già autorizzato dalla fase precedente. [Esiti dettagliati per test](editor-e2e-results.json); trace/report locali sotto `test-results/` e log `.tools/final-*.log`, `.tools/editor-e2e.log`.
+Total: **185 tests** (119 unit + 66 E2E), zero failed or skipped. The 119 unit tests include all 85 previous ones and 34 new ones. The 66 E2E tests include 30 core/player regressions and 36 editor tests, with no copies or skips between runners. Chromium and Firefox: Playwright 1.64.1. WebKit macOS 14: compatibility runner 1.61.1, already authorized in the previous phase. [Detailed outcomes per test](editor-e2e-results.json); local traces and reports under `test-results/` and logs `.tools/final-*.log`, `.tools/editor-e2e.log`.
 
-## Roundtrip, storage e artefatti ispezionati
+## Roundtrip, storage and inspected artefacts
 
-La prova crea tre scene dalla UI, trascina una scena e verifica un solo comando, modifica XYZ/tre Euler/scala/dimensioni, prova undo/redo, aggiunge testo letterale e note. Il file viene realmente scaricato, letto e confrontato col documento, la pagina originale viene chiusa e il file aperto in un nuovo browser context. Il modello riaperto è identico. La camera corrisponde a resolveSceneCamera core; tre landmark vengono misurati nel DOM prima/dopo e nel player di presentazione entro 1 CSS px, normalizzati per contain. Nessun confronto basato soltanto su immagini.
+The test creates three scenes from the UI, drags a scene and checks for a single command, edits XYZ, three Euler angles, scale and size, tries undo and redo, adds literal text and notes. The file is actually downloaded, read and compared with the document, the original page is closed and the file is opened in a new browser context. The reopened model is identical. The camera matches the core resolveSceneCamera; three landmarks are measured in the DOM before and after and in the presentation player within 1 CSS px, normalized for contain. No comparison relies on images alone.
 
-- [JSON realmente scaricato](editor-roundtrip-saved.json)
-- [Pose e landmark misurati](editor-roundtrip-evidence.json)
-- [Desktop](editor-desktop.png), [mobile](editor-mobile.png), [proposta recovery](editor-recovery.png)
-- [Revisioni reali e conflitto obsoleto](editor-storage-evidence.json)
+- [Actually downloaded JSON](editor-roundtrip-saved.json)
+- [Measured poses and landmarks](editor-roundtrip-evidence.json)
+- [Desktop](editor-desktop.png), [mobile](editor-mobile.png), [recovery offer](editor-recovery.png)
+- [Real revisions and stale conflict](editor-storage-evidence.json)
 
-Le immagini sono state aperte e ispezionate: toolbar/scene/inspector leggibili, selezione visibile, mappa e anteprima coerenti, target della preview interamente contenuto; a 390 px pannelli impilati e scene scorrevoli. Nessun overflow orizzontale della pagina nei tre viewport ridotti. I rendering non sostituiscono i controlli numerici.
+The images were opened and inspected: toolbar, scenes and inspector readable, selection visible, map and preview consistent, the preview target entirely contained; at 390 px the panels stack and the scenes scroll. No horizontal page overflow in the three reduced viewports. The renderings do not replace the numeric checks.
 
-Storage normale provato su IndexedDB di ogni browser, incluso reload e scelta recovery. Quota viene iniettata sul put di recovery durante una transazione reale: la scrittura head precedente viene rollbackata e resta una sola revisione. Accesso negato viene iniettato separatamente. Due vere pagine condividono lo stesso database: un writer supera la revisione dell'altro, che riceve warning conservando contenuti e download. Ultime dieci revisioni e rifiuto di un writer obsoleto verificati.
+Normal storage tested on the IndexedDB of every browser, including reload and the recovery choice. A quota error is injected into the recovery put during a real transaction: the previous head write is rolled back and a single revision remains. Denied access is injected separately. Two real pages share the same database: one writer overtakes the other's revision, which receives a warning while keeping content and download. The last ten revisions and the refusal of a stale writer verified.
 
-Difetti corretti durante QA: revisione incrementata dal solo recupero, label dei campi alterata dal messaggio d'errore, ritaglio della preview per min-height ereditato, commit del testo all'ultimo Tab su Firefox, pulsanti non tabbabili con impostazioni macOS/WebKit, perdita del focus quando redo diventava disabled e ritorno del focus dopo il selettore file. I primi tentativi falliti sono diagnostici; il risultato finale si riferisce al codice corretto. Tab e Shift+Tab sono entrambi usati nel workflow da tastiera, senza pointer o chiamate programmatiche focus nel test.
+Defects fixed during QA: revision incremented by recovery alone, field labels altered by the error message, preview clipping caused by an inherited min-height, text commit on the last Tab in Firefox, buttons not tabbable with macOS/WebKit settings, focus loss when redo became disabled and focus return after the file picker. The first failed attempts are diagnostic; the final result refers to the fixed code. Tab and Shift+Tab are both used in the keyboard workflow, with no pointer or programmatic focus calls in the test.
 
-## Gate e limiti
+## Gates and limits
 
-Tutti i gate obbligatori 0.2 locali risultano verificati. Restano fuori dalla prova Safari/Chrome/Edge installati, dispositivi fisici touch, screen reader, heap dopo GC e benchmark p95 controllati: sono verifiche di stabilizzazione, non compatibilità o prestazioni dichiarate. La CI Linux precedente rimane evidenza solo di 0.1; nessuna esecuzione remota 0.2 dichiarata.
+Every mandatory local 0.2 gate is verified. Outside the test: installed Safari, Chrome and Edge, physical touch devices, screen readers, heap after GC and controlled p95 benchmarks: these are stabilization checks, not claimed compatibility or performance. The earlier Linux CI remains evidence for 0.1 only; no remote 0.2 run is claimed.
 
-Debito esplicito: mappa ortografica XY con profondità via inspector, nessun gizmo 3D; niente file system picker avanzato, sincronizzazione collaborativa o garanzia persistenza browser. La history ha un budget reale e può espellere comandi. Per 0.3 conservare fixture/schema 1.0.0 e queste regressioni, introdurre soltanto allora schema 1.1.0/migrazione e preview d'impatto per strutture/grafi. Nessuna fase successiva avviata.
+Explicit debt: an orthographic XY map with depth through the inspector, no 3D gizmo; no advanced file system picker, collaborative sync or guaranteed browser persistence. The history has a real budget and may evict commands. For 0.3, keep the 1.0.0 fixtures and schema and these regressions, and only then introduce schema 1.1.0, migration and impact previews for structures and graphs. No later phase started.
