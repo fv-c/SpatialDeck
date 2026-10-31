@@ -1,82 +1,140 @@
-# SpatialDeck 0.6 Distribuzione
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo-light.svg" alt="SpatialDeck" width="420">
+  </picture>
+</p>
 
-Motore TypeScript e player DOM/CSS 3D per presentazioni spaziali, senza React.
-Studio React permette di creare scene annidate, percorsi con scelte e loop limitati, camera indipendente e track con timeline. Include undici tipi di blocco, asset locali, media, plugin host-approved, salvataggio JSON e archivio `.spatialdeck`. Schema corrente 1.3.0; i documenti 1.0.0, 1.1.0 e 1.2.0 si aprono come copie migrate, con la stessa resa.
+<p align="center">
+  <b>Spatial, non-linear presentations for the web.</b><br>
+  Place scenes in 3D space, branch the story, present offline. No account, no backend, no lock-in.
+</p>
 
-La 0.5 aggiunge l'impaginazione: nelle scene **canvas** ogni contenuto ha un frame (posizione, dimensione, rotazione, livello) e i contenuti possono stare affiancati, sovrapposti o ruotati; il documento ha un tema (palette, font locali, scala tipografica), ogni scena un aspetto (card o semplice, sfondo, titolo visibile o nascosto) e ogni blocco uno stile a token. Nessun campo è CSS. In Studio la modalità **Impagina** mette maniglie sopra la preview del player condiviso, con un comando annullabile per gesto, frecce, campi numerici, allinea/distribuisci, griglia, livelli, ordine di lettura e diagnostica di testo tagliato e contrasto. L'ordine di lettura resta l'ordine dei contenuti, indipendente dal livello visivo.
+<p align="center">
+  <a href="https://github.com/fv-c/SpatialDeck/actions/workflows/ci.yml"><img src="https://github.com/fv-c/SpatialDeck/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-3563e9" alt="Licence: GPL-3.0-or-later"></a>
+  <img src="https://img.shields.io/badge/status-0.6%20pre--release-f59e0b" alt="Status: 0.6 pre-release">
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" alt="TypeScript strict">
+  <img src="https://img.shields.io/badge/core%2Bplayer-~66%20KB%20gzip-2ea44f" alt="Core and player about 66 KB gzip">
+</p>
 
-La 0.6 aggiunge la distribuzione: il comando `spatialdeck` valida i progetti, produce una build web statica, un **HTML autonomo** che si apre offline da `file://` con CSP restrittiva, un **PDF** con una pagina per visita e un **video WebM** minimo di un itinerario esplicito, sempre con lo stesso player e un manifest che dichiara risorse, licenze, avvisi e verifiche eseguite. I pacchetti `@spatialdeck/*` hanno manifest completi (`GPL-3.0-or-later`), dipendenze di terze parti esterne, renderer ricchi caricati su richiesta e una build IIFE con note di licenza; restano privati finché la proprietà dello scope npm non è verificata. In Studio, **Relatore** apre una finestra pubblica sincronizzata con note private, anteprime e timer; Studio di produzione funziona offline dopo il primo caricamento. I testi predefiniti del player sono in inglese (`italianMessages` resta disponibile); Studio resta in italiano fino alla 1.0.
+<p align="center">
+  <a href="docs/AUTHORING.md">Author guide</a> ·
+  <a href="docs/DEVELOPMENT.md">API</a> ·
+  <a href="docs/DISTRIBUTION.md">Export &amp; presenter</a> ·
+  <a href="docs/PLUGINS.md">Plugins</a> ·
+  <a href="docs/ROADMAP.md">Roadmap</a>
+</p>
 
-- [Distribuzione, export e relatore](docs/DISTRIBUTION.md)
-- [Verifica 0.6, misure e limiti](docs/verification/phase-0.6.md)
-- [Architettura e contratto](docs/PROJECT_SPEC.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Guida sviluppatori e API](docs/DEVELOPMENT.md)
-- [Guida autore Studio](docs/AUTHORING.md)
-- [Plugin, renderer e policy dei contenuti](docs/PLUGINS.md)
-- [Verifica 0.5, misure e limiti](docs/verification/phase-0.5.md)
-- [Verifica 0.4.1, misure e limiti](docs/verification/phase-0.4.1.md)
-- [Verifica 0.4 e limiti](docs/verification/phase-0.4.md)
-- [Verifica 0.3, migrazione, grafi e timeline](docs/verification/phase-0.3.md)
-- [Verifica storica 0.2, roundtrip e screenshot](docs/verification/phase-0.2.md)
-- [Verifica storica 0.1](docs/verification/phase-0.1.md)
+<p align="center">
+  <img src="docs/assets/studio.png" alt="SpatialDeck Studio: scene list, live preview of a canvas scene, spatial map and inspector" width="900">
+</p>
 
-## Prossime fasi
+SpatialDeck is a local-first platform for presentations that live in space rather than on a stack of slides. Scenes are rectangles you position, rotate, scale and nest in a 3D world; a camera flies between them along the paths you design, including branches, choices and limited loops. The same JSON document drives a **framework-free player** you can embed in any page and **Studio**, a visual editor that runs entirely in your browser.
 
-Dopo l’audit pre-distribuzione del 22 ottobre 2026 il piano è: **0.4.1 Consolidamento** (implementata: correzioni di asset, prestazioni dello Studio, testi e lingua del player; schema 1.2.0 invariato), **0.5 Impaginazione** (implementata: schema 1.3.0, contenuti posizionati, dimensionati e stilizzati nella scena), **0.6 Distribuzione** (implementata: CLI, pacchetti, HTML, PDF, video, relatore, shell offline; schema 1.3.0 invariato) e **1.0 Stabilizzazione** (da avviare). Il gate decisionale G0 è chiuso: licenza `GPL-3.0-or-later`, scope npm `@spatialdeck`, inglese come lingua predefinita e modello di impaginazione confermato. Dettagli nella [roadmap](docs/ROADMAP.md) e nella [specifica, sezioni 19 e 21](docs/PROJECT_SPEC.md).
+## ✨ Features
 
-## Avvio
+- 🌌 **[Scenes in space](docs/AUTHORING.md#scenes-and-space)** — position, rotate and scale scenes in CSS 3D, nest them up to 32 levels deep and reparent them without moving them in the world.
+- 🔀 **[Non-linear paths](docs/AUTHORING.md#hierarchy-paths-and-camera)** — branches with labelled choices, limited loops, several itineraries per deck, and a `prev()` that goes back along the branch you actually took.
+- 🎥 **[Camera tracks](docs/AUTHORING.md#hierarchy-paths-and-camera)** — independent camera poses and keyframed tracks (linear or Catmull-Rom) with declarative cues for the host page.
+- 🧱 **[Eleven block types](docs/AUTHORING.md#blocks-and-resources-04)** — text, Markdown, HTML, SVG, LaTeX (KaTeX), image, audio, video with captions, internal links, opt-in embeds and plugins.
+- 📐 **[Canvas layout](docs/AUTHORING.md#layout-05)** — side-by-side, overlapping and rotated blocks with snapping, alignment and layers, a document theme and token styles; never free CSS.
+- 🎙️ **[Presenter view](docs/AUTHORING.md#presenter-export-and-offline-use-06)** — an audience window kept in sync with a console that shows private notes, the next scene or the branch choices, and a timer.
+- 📦 **[Exports](docs/DISTRIBUTION.md)** — a single offline HTML file that opens from `file://` under a strict CSP, a static web build, a PDF with one page per visit and a deterministic WebM video.
+- ✈️ **Local-first and offline** — Studio installs as an offline shell, autosaves to IndexedDB with recovery, and saves plain JSON or a portable `.spatialdeck` archive.
+- ♿ **[Accessible by design](docs/PROJECT_SPEC.md#10-cross-cutting-security-and-accessibility)** — keyboard navigation, a linear text view, reduced motion, a reading order independent of visual layering, and axe audits in CI.
+- 🔒 **[Safe with untrusted decks](docs/PLUGINS.md#trust-model-and-threats)** — a single DOMPurify pipeline, no `eval`, no code loaded from documents, a validated JSON Schema with migrations from every earlier version.
 
-Richiede **Node 24.22.0** e **pnpm 12.14.0**. Dipendenze e primo download dei browser richiedono rete; la demo in esecuzione non usa servizi remoti.
+## 🚀 Quick start
+
+You need **Node 24.22.0** and **pnpm 12.14.0** ([other versions](docs/DEVELOPMENT.md#toolchain-and-installation)).
 
 ```sh
+git clone https://github.com/fv-c/SpatialDeck.git
+cd SpatialDeck
 pnpm install --frozen-lockfile
 pnpm dev:studio
 ```
 
-Studio è su `http://127.0.0.1:5174` (o porta stampata da Vite). `pnpm dev:playground` avvia la demo vanilla separata. Entrambi i server usano i sorgenti e non richiedono una build preliminare. In sviluppo Studio espone `window.studio` per debug e la CSP ammette il websocket di Vite; la build di produzione non ha né `ws:` né `window.studio`, salvo apertura esplicita con `?studio-debug` nell’URL (usata dagli E2E).
+Open <http://127.0.0.1:5174>, press **Open** and pick [`examples/layout-canvas/layout-canvas.spatialdeck`](examples/layout-canvas/layout-canvas.spatialdeck), or start from **Create the first scene**. Press **Present** to play it full screen, or **Presenter** for the audience window and speaker console. The [author guide](docs/AUTHORING.md) walks through every panel.
 
-Per la gallery aprire `/content` nel playground. Il pulsante **Scarica archivio gallery** produce un file riapribile con **Apri** in Studio e con **Apri gallery locale** nel vanilla. È disponibile anche [l’archivio di esempio](examples/content-gallery/content-gallery.spatialdeck). Markdown, HTML, SVG, formule, immagine, WAV, H.264/VTT, link interno e badge locale funzionano senza servizi remoti dopo il caricamento dell’app. L’embed rimane disattivato. Usare **Abilita media** o **Riproduci** per avviare i media.
+Prefer code? `pnpm dev:playground` serves vanilla demos of the player at `/core`, `/structure`, `/content` and `/layout`.
 
-Per l'impaginazione aprire `/layout`: due player dello stesso documento con titolo nascosto, immagine e testo affiancati, un timbro sovrapposto e ruotato, una nota ruotata, una scena flow con aspetto semplice e una scena figlia ruotata con colonne e collegamento, su un tema non predefinito con il font locale Atkinson Hyperlegible (SIL OFL 1.1, scaricato solo se usato). **Apri progetto locale** apre JSON o archivi salvati da Studio. Lo stesso esempio è in `examples/layout-canvas/` (`project.json` e `layout-canvas.spatialdeck`, apribile in Studio, dove **Impagina** attiva l'editor di scena).
+## 🧩 Embed the player
 
-Per la demo struttura aprire `/structure`: due istanze indipendenti, rami A→B→D / A→C→D, ritorno sulla visita effettiva, loop manuale limitato a due visite e camera track a tre keyframe. Il documento è in `examples/structure-branching/project.json`, apribile anche in Studio. Panoramica e Camera controllano l’ispezione temporanea.
+The player is plain TypeScript with DOM/CSS 3D: no React, no editor, about 66 KB of gzipped JS together with the core.
 
-Per gli export usare la fixture `examples/distribution-static/` (scena canvas, font del tema, formula, immagine locale, camera track, loop esplicito e note private) dopo `pnpm build`:
+```ts
+import { createPlayer } from "@spatialdeck/player";
+import "@spatialdeck/player/style.css";
+import project from "./project.json";
 
-```sh
-pnpm spatialdeck --help
-pnpm spatialdeck export html examples/distribution-static/project.json --out deck.html
-pnpm spatialdeck export pdf examples/distribution-static/project.json --itinerary examples/distribution-static/itinerary.json --out deck.pdf
-pnpm spatialdeck export video examples/distribution-static/project.json --itinerary examples/distribution-static/itinerary.json --fps 30 --out deck.webm
+const player = createPlayer({ input: true });
+const mounted = await player.mount(document.querySelector("#deck")!, project);
+
+if (mounted.ok) {
+  player.on("scenechange", ({ visit }) => console.log("now at", visit.nodeId));
+  await player.next();
+}
 ```
 
-PDF e video richiedono Chromium di Playwright 1.64.1 (`pnpm exec playwright install chromium`); il video anche `ffmpeg` e `ffprobe` con un encoder WebM. Nulla viene installato automaticamente. Profili, requisiti e limiti in [DISTRIBUTION](docs/DISTRIBUTION.md).
+Rich content (Markdown, HTML, SVG, LaTeX) and media are opt-in renderers from [`@spatialdeck/plugins`](packages/plugins/README.md), loaded on demand. Player operations return results instead of throwing, events are typed, and `destroy()` releases everything the instance created. See the [API guide](docs/DEVELOPMENT.md).
 
-Per la demo storica vanilla aprire `/core` all'indirizzo locale stampato da Vite. La pagina contiene due player indipendenti, tre scene, controlli API, scorciatoie locali, vista testuale e riduzione del movimento.
+> [!NOTE]
+> The `@spatialdeck/*` packages are not on npm yet: publishing waits for the verification of the npm scope. Until then, use them from this workspace or install the tarballs produced by `pnpm pack`.
+
+## 📤 Export and present
 
 ```sh
-pnpm typecheck
-pnpm lint
-pnpm format:check
-pnpm test
+pnpm build
+pnpm spatialdeck export html  deck.spatialdeck --out deck.html
+pnpm spatialdeck export pdf   project.json --itinerary itinerary.json --out deck.pdf
+pnpm spatialdeck export video project.json --itinerary itinerary.json --fps 30 --out deck.webm
+pnpm spatialdeck build        project.json --out site
+```
+
+Every output is rendered by the same player and comes with a manifest that lists resources, licences, warnings and the checks actually run. Exports are strict by default: remote resources, embeds and plugins fail loudly unless you pass `--allow-partial`, and private notes never leave the authoring project. PDF and video need Chromium for Playwright; video also needs `ffmpeg` and `ffprobe`. Profiles and limits are in [DISTRIBUTION](docs/DISTRIBUTION.md).
+
+## 📚 Packages
+
+| Package                                              | What it is                                                                                                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`@spatialdeck/core`](packages/core/README.md)       | The document model: JSON Schema 1.0.0–1.3.0, validation with JSON Pointer diagnostics, migrations, camera and frame math, the navigation machine and capture plans. No DOM. |
+| [`@spatialdeck/player`](packages/player/README.md)   | The framework-free DOM/CSS 3D player, with a presenter protocol and a classic IIFE build.                                                                                   |
+| [`@spatialdeck/plugins`](packages/plugins/README.md) | Builtin renderers, the sanitization pipeline, the `.spatialdeck` archive and the plugin SDK.                                                                                |
+| [`@spatialdeck/editor`](packages/editor/README.md)   | The React editor behind Studio: command store with undo/redo and IndexedDB recovery.                                                                                        |
+| [`@spatialdeck/cli`](packages/cli/README.md)         | The `spatialdeck` command: validate, build, export HTML, PDF and video.                                                                                                     |
+
+The apps live in [`apps/studio`](apps/studio) and [`apps/playground`](apps/playground); runnable decks are in [`examples/`](examples).
+
+## 🗂️ Examples
+
+| Example                                                                   | Shows                                                              |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [`core-three-scenes`](examples/core-three-scenes/project.json)            | Three scenes in different places, the minimal document             |
+| [`structure-branching`](examples/structure-branching/project.json)        | Branches, a rotated child scene, a limited loop and a camera track |
+| [`content-gallery`](examples/content-gallery/content-gallery.spatialdeck) | All eleven block types with local media                            |
+| [`layout-canvas`](examples/layout-canvas/layout-canvas.spatialdeck)       | Canvas layout, theme, hidden title and reading order               |
+| [`distribution-static`](examples/distribution-static/project.json)        | The export fixture, with itineraries for PDF and video             |
+
+## 🛠️ Development
+
+```sh
+pnpm typecheck && pnpm lint && pnpm format:check
+pnpm test            # unit tests (Vitest)
 pnpm test:coverage
 pnpm build
-pnpm check:boundaries
-pnpm check:bundle
-pnpm check:packages
+pnpm check:boundaries && pnpm check:bundle && pnpm check:packages
 pnpm browsers:install
-pnpm test:e2e
+pnpm test:e2e        # Chromium, Firefox and WebKit, including exports and axe audits
 ```
 
-`test:e2e` compila, impacchetta i pacchetti con `pnpm pack` in un consumer esterno (`check:packages`) e prova playground, Studio **production**, consumer, CLI installato dai tarball, export HTML/PDF/video, relatore e shell offline, inclusi i controlli axe. L’ispezione delle pagine PDF usa `pdftotext` e `pdftopng`/`pdftoppm` (xpdf o poppler) e il video `ffmpeg`/`ffprobe`, strumenti di sistema non installati dagli script. Su macOS 14 esegue Chromium e Firefox con Playwright **1.64.1**, poi WebKit con il runner dedicato **1.61.1**. Su Linux e macOS più recenti esegue tutti e tre con **1.64.1**. La suite è condivisa senza copie o skip; report e trace dei due runner sono separati. Nessun comando modifica file tracciati: evidenze E2E, misure di bundle e coverage finiscono in `test-results/` (ignorata) e i rapporti in `docs/verification/` si aggiornano a mano.
+The E2E suite runs the production builds, packs every package into an external consumer and exercises the CLI installed from the tarballs. No check writes to tracked files: evidence goes to `test-results/`. Toolchain details, the macOS 14 WebKit runner and the architecture are in [DEVELOPMENT](docs/DEVELOPMENT.md); the normative contract is the [project specification](docs/PROJECT_SPEC.md).
 
-`pnpm browsers:install` installa i browser delle versioni appropriate al sistema. Per provare soltanto WebKit su macOS 14:
+## 🧭 Status
 
-```sh
-pnpm test:e2e:webkit:macos14
-```
+SpatialDeck is at **0.6**, the last phase before 1.0 Stabilization. Linux CI runs the full suite on Chromium, Firefox and WebKit; real Safari, mobile devices and screen readers are not verified yet. The [roadmap](docs/ROADMAP.md) lists what 1.0 still needs, and each phase has a [verification report](docs/verification/phase-0.6.md) with exact commands, results and known limits.
 
-La CI Linux è verde sul commit 0.4 ([run 39730492795](https://github.com/fv-c/SpatialDeck/actions/runs/39730492795): 233 unità e 120 E2E sui tre browser). La CI aggiornata (Actions fissate per SHA, coverage estesa, axe, packaging, export) è verde sul commit 0.6 ([run 40323855783](https://github.com/fv-c/SpatialDeck/actions/runs/40323855783): 458 unità e 246 E2E sui tre browser con Playwright 1.64.1, WebKit 27.2). Il runner locale di compatibilità WebKit resta verificato su macOS 14; Safari reale non è stato provato.
+## 📄 Licence
 
-`LICENSE` originale GPL v3 conservata. Identificatore SPDX deciso dal maintainer: `GPL-3.0-or-later` per tutti i pacchetti, player compreso, applicato ai manifest in 0.6; ogni tarball include `LICENSE`, gli artefatti che incorporano codice di terze parti (IIFE del player, runtime degli export, HTML autonomo) includono le note di licenza generate. I manifest restano `private` finché la proprietà dello scope npm `@spatialdeck` non è verificata (blocker della pubblicazione, G0 punto 2).
+[GPL-3.0-or-later](LICENSE), for every package including the embeddable player. Artefacts that bundle third-party code (the player IIFE, the export runtime, standalone HTML) ship with generated licence notices.
