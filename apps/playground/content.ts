@@ -1,8 +1,4 @@
-import {
-  createPlayer,
-  createAssetResolver,
-  italianMessages,
-} from "@spatialdeck/player";
+import { createPlayer, createAssetResolver } from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
 import {
   RendererRegistry,
@@ -45,10 +41,9 @@ export async function contentDemo() {
     host.className = "player-host";
     host.id = `player-${i + 1}`;
     const controls = document.createElement("nav");
-    controls.setAttribute("aria-label", `Controlli player ${i + 1}`);
+    controls.setAttribute("aria-label", `Player ${i + 1} controls`);
     const player = createPlayer({
       // The playground interface is Italian, like Studio, until 1.0.
-      messages: italianMessages,
       registry: builtin.registry,
       assets: {
         resolve: (id, signal) => resolver.resolve(id, signal),
@@ -57,8 +52,8 @@ export async function contentDemo() {
     });
     players.push(player);
     for (const [label, action] of [
-      ["Indietro", () => player.prev()],
-      ["Avanti", () => player.next()],
+      ["Previous", () => player.prev()],
+      ["Next", () => player.next()],
     ] as const) {
       const button = document.createElement("button");
       button.textContent = label;
@@ -66,7 +61,7 @@ export async function contentDemo() {
       controls.append(button);
     }
     const select = document.createElement("select");
-    select.setAttribute("aria-label", `Contenuto player ${i + 1}`);
+    select.setAttribute("aria-label", `Player ${i + 1} content`);
     for (const scene of doc.scenes) {
       const option = document.createElement("option");
       option.value = scene.id;
@@ -81,13 +76,13 @@ export async function contentDemo() {
     await player.mount(host, doc);
   }
   const io = document.createElement("nav");
-  io.setAttribute("aria-label", "File gallery");
+  io.setAttribute("aria-label", "Gallery file");
   const status = document.createElement("p");
   status.setAttribute("role", "status");
   const open = document.createElement("input");
   open.type = "file";
   open.accept = ".json,.spatialdeck";
-  open.setAttribute("aria-label", "Apri gallery locale");
+  open.setAttribute("aria-label", "Open local gallery");
   open.onchange = () =>
     void (async () => {
       try {
@@ -105,7 +100,7 @@ export async function contentDemo() {
         blobs = imported?.blobs ?? new Map();
         resolver = createAssetResolver(doc.assets, blobs);
         await Promise.all(players.map((p) => p.updateDocument(doc)));
-        status.textContent = "Progetto aperto nel player vanilla.";
+        status.textContent = "Project opened in the vanilla player.";
         Object.assign(window, { demoDocument: doc });
       } catch (e) {
         status.textContent = String(e);
@@ -114,7 +109,7 @@ export async function contentDemo() {
       }
     })();
   const save = document.createElement("button");
-  save.textContent = "Scarica archivio gallery";
+  save.textContent = "Download gallery archive";
   save.onclick = () =>
     void (async () => {
       try {
@@ -134,7 +129,7 @@ export async function contentDemo() {
   Object.assign(window, {
     demoPlayers: players,
     createDemoPlayer: (options: Parameters<typeof createPlayer>[0] = {}) =>
-      createPlayer({ messages: italianMessages, ...options }),
+      createPlayer(options),
     demoDocument: doc,
     contentRegistry: builtin.registry,
     contentBlobs: blobs,
@@ -147,10 +142,10 @@ export async function contentDemo() {
       writeArchive,
     },
   });
-  document.title = "SpatialDeck · Contenuti";
+  document.title = "SpatialDeck · Content";
   const header = document.querySelector("main header");
   if (header) {
     header.querySelector("p")!.textContent = "SpatialDeck 0.5 / vanilla";
-    header.querySelector("h1")!.textContent = "Contenuti locali";
+    header.querySelector("h1")!.textContent = "Local content";
   }
 }

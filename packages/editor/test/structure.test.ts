@@ -57,12 +57,12 @@ it("nested drag moves the world XY plane with one undo while keeping world Z", (
 it("creates an alternative path, repeated visits, choices and track edits with exact undo", () => {
   const s = store(),
     before = s.getSnapshot().document;
-  expect(s.execute(createPath("Seconda lettura")).ok).toBe(true);
+  expect(s.execute(createPath("Second reading")).ok).toBe(true);
   const p = s.getSnapshot().document.paths.at(-1)!;
   for (const scene of ["A", "C", "D"])
     expect(s.execute(createNode(p.id, scene)).ok).toBe(true);
   const path = s.getSnapshot().document.paths.at(-1)!;
-  expect(s.execute(editPath(p.id, { name: "Lettura C" })).ok).toBe(true);
+  expect(s.execute(editPath(p.id, { name: "Reading C" })).ok).toBe(true);
   expect(
     s.execute(
       editNode(p.id, path.nodes[1]!.id, {
@@ -117,7 +117,7 @@ it("previewed scene deletion includes visits, cues and parent changes, and undo 
     preview = editImpact(before, edit);
   expect(preview.ok).toBe(true);
   if (!preview.ok) throw Error();
-  expect(preview.value.description).toContain("figli ricollocati");
+  expect(preview.value.description).toContain("children reparented");
   expect(s.execute(edit).ok).toBe(true);
   expect(s.getSnapshot().document).toEqual(preview.value.document);
   expect(

@@ -34,53 +34,53 @@ export function ContentPanel({
     const asset = doc.assets.find((a) => a.mime.startsWith(kind + "/")),
       path = doc.paths.find((p) => p.nodes.length);
     if (["image", "audio", "video"].includes(kind) && !asset) {
-      setError(`Aggiungi prima una risorsa ${kind} nel pannello Risorse.`);
+      setError(`First add a ${kind} resource in the Resources panel.`);
       return;
     }
     const defaults: Record<Block["type"], unknown> = {
-      text: { text: "Nuovo testo" },
-      markdown: { source: "**Nuovo Markdown**" },
-      html: { source: "<p>Nuovo HTML</p>" },
+      text: { text: "New text" },
+      markdown: { source: "**New Markdown**" },
+      html: { source: "<p>New HTML</p>" },
       svg: {
         source:
           '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="#215baf"/></svg>',
-        alt: "Cerchio blu",
+        alt: "Blue circle",
       },
       latex: {
         source: "E=mc^2",
         display: true,
-        alt: "E uguale m c al quadrato",
+        alt: "E equals m c squared",
       },
       image: {
         assetId: asset?.id,
-        alt: "Descrizione immagine",
+        alt: "Image description",
         fit: "contain",
       },
       audio: {
         assetId: asset?.id,
-        label: "Audio locale",
+        label: "Local audio",
         autoplay: false,
         loop: false,
         onExit: "pause",
       },
       video: {
         assetId: asset?.id,
-        label: "Video locale",
-        alt: "Descrizione video",
+        label: "Local video",
+        alt: "Video description",
         autoplay: false,
         loop: false,
         onExit: "pause",
       },
       link: {
-        label: "Vai alla scena",
+        label: "Go to the scene",
         target: { pathId: path?.id, nodeId: path?.nodes[0]?.id },
       },
-      embed: { url: "https://example.invalid/", title: "Contenuto esterno" },
+      embed: { url: "https://example.invalid/", title: "External content" },
       plugin: {
         pluginId: "org.spatialdeck.badge",
         apiVersion: "1.0.0",
         dataVersion: "1.0.0",
-        payload: { label: "Plugin locale" },
+        payload: { label: "Local plugin" },
       },
     };
     const result = edit([
@@ -100,7 +100,7 @@ export function ContentPanel({
   return (
     <fieldset className="content-panel">
       <legend>
-        Contenuti <span>ordine di lettura</span>
+        Blocks <span>reading order</span>
       </legend>
       {scene.blocks.map((block, i) => (
         <fieldset key={`${scene.id}-${block.id}`} className="block-editor">
@@ -111,7 +111,7 @@ export function ContentPanel({
           </legend>
           {block.type === "text" ? (
             <TextField
-              label={`Testo ${i + 1}`}
+              label={`Text ${i + 1}`}
               short=""
               value={block.data.text}
               multiline
@@ -122,8 +122,8 @@ export function ContentPanel({
             <>
               {"source" in block.data && (
                 <TextField
-                  label={`Sorgente ${block.type} ${i + 1}`}
-                  short="Sorgente"
+                  label={`Source ${block.type} ${i + 1}`}
+                  short="Source"
                   value={block.data.source}
                   multiline
                   code={block.type !== "markdown"}
@@ -160,10 +160,10 @@ export function ContentPanel({
                   />
                 )}
               <details>
-                <summary>Dati {block.type}</summary>
+                <summary>{block.type} data</summary>
                 <TextField
-                  label={`Dati ${block.type} ${i + 1}`}
-                  short="JSON del blocco"
+                  label={`Data ${block.type} ${i + 1}`}
+                  short="Block JSON"
                   value={JSON.stringify(block.data, null, 2)}
                   multiline
                   code
@@ -175,10 +175,7 @@ export function ContentPanel({
                         JSON.parse(text) as JsonValue,
                       );
                     } catch {
-                      return failure(
-                        "CONTENT_JSON",
-                        "JSON del blocco non valido.",
-                      );
+                      return failure("CONTENT_JSON", "Invalid block JSON.");
                     }
                   }}
                   onEnd={end}
@@ -189,7 +186,7 @@ export function ContentPanel({
           <div className="block-actions">
             <IconButton
               icon="up"
-              label={`Sposta su blocco ${i + 1}`}
+              label={`Move up block ${i + 1}`}
               tip="left"
               disabled={i === 0}
               onClick={() => {
@@ -200,7 +197,7 @@ export function ContentPanel({
             />
             <IconButton
               icon="down"
-              label={`Sposta giù blocco ${i + 1}`}
+              label={`Move down block ${i + 1}`}
               tip="left"
               disabled={i === scene.blocks.length - 1}
               onClick={() => {
@@ -211,7 +208,7 @@ export function ContentPanel({
             />
             <IconButton
               icon="trash"
-              label={`Elimina blocco ${i + 1}`}
+              label={`Delete block ${i + 1}`}
               tip="left"
               onClick={() =>
                 edit(scene.blocks.filter((b) => b.id !== block.id))
@@ -225,14 +222,14 @@ export function ContentPanel({
           type="button"
           tabIndex={0}
           className="tool-button"
-          aria-label="Aggiungi testo"
+          aria-label="Add text"
           onClick={() => add("text")}
         >
           <Icon name="plus" />
-          Testo
+          Text
         </button>
         <select
-          aria-label="Tipo contenuto"
+          aria-label="Block type"
           value={type}
           onChange={(e) => {
             setType(e.target.value as Block["type"]);
@@ -262,18 +259,18 @@ export function ContentPanel({
           type="button"
           tabIndex={0}
           className="tool-button"
-          aria-label="Aggiungi contenuto"
+          aria-label="Add block"
           onClick={() => add(type)}
         >
           <Icon name="plus" />
-          Aggiungi
+          Add
         </button>
       </div>
       {error && <p role="alert">{error}</p>}
       <details className="plugin-settings">
-        <summary>Impostazioni plugin documento</summary>
+        <summary>Document plugin settings</summary>
         <TextField
-          label="Impostazioni plugin documento"
+          label="Document plugin settings"
           short="JSON"
           value={JSON.stringify(
             store.getSnapshot().document.pluginSettings ?? {},
@@ -290,10 +287,7 @@ export function ContentPanel({
                 return success(doc);
               });
             } catch {
-              return failure(
-                "PLUGIN_SETTINGS",
-                "JSON impostazioni non valido.",
-              );
+              return failure("PLUGIN_SETTINGS", "Invalid settings JSON.");
             }
           }}
         />

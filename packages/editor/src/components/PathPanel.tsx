@@ -92,16 +92,16 @@ export function PathPanel({
     (path?.nodes.findIndex((n) => n.id === id) ?? -1) + 1;
   const condition = (e: PathEdge) =>
     !e.condition
-      ? "Avanzamento diretto"
+      ? "Direct advance"
       : e.condition.kind === "manual"
-        ? "Scelta manuale"
-        : `Limite ${e.condition.maxVisits} visite`;
+        ? "Manual choice"
+        : `Limit ${e.condition.maxVisits} ${e.condition.maxVisits === 1 ? "visit" : "visits"}`;
   return (
     <div className="path-panel">
       <div className="structure-content">
         <div className="path-head">
           <select
-            aria-label="Percorso da modificare"
+            aria-label="Path to edit"
             value={path?.id ?? ""}
             onChange={(e) => {
               setPathId(e.target.value);
@@ -110,18 +110,18 @@ export function PathPanel({
             }}
           >
             <option value="" disabled>
-              Scegli percorso
+              Choose a path
             </option>
             {document.paths.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-                {p.id === document.defaultPathId ? " · principale" : ""}
+                {p.id === document.defaultPathId ? " · main" : ""}
               </option>
             ))}
           </select>
           <IconButton
             icon="plus"
-            label="Nuovo percorso"
+            label="New path"
             tip="left"
             onClick={() => {
               if (run(createPath()).ok)
@@ -134,15 +134,15 @@ export function PathPanel({
             <div className="inspector-group path-settings">
               <TextField
                 key={path.id}
-                label="Nome percorso"
-                short="Nome"
+                label="Path name"
+                short="Name"
                 value={path.name}
                 apply={(name) => run(editPath(path.id, { name }))}
               />
               <label className="kv">
-                <span>Inizio</span>
+                <span>Start</span>
                 <select
-                  aria-label="Nodo iniziale"
+                  aria-label="Start node"
                   value={path.startNodeId ?? ""}
                   onChange={(e) =>
                     run(
@@ -152,7 +152,7 @@ export function PathPanel({
                     )
                   }
                 >
-                  <option value="">Vuoto</option>
+                  <option value="">Empty</option>
                   {path.nodes.map((n) => (
                     <option key={n.id} value={n.id}>
                       {position(n.id)} · {sceneOf(n.sceneId)?.title}
@@ -162,11 +162,11 @@ export function PathPanel({
               </label>
               {path.loopPolicy ? (
                 <div className="kv">
-                  <span>Loop manuale</span>
+                  <span>Manual loop</span>
                   <div className="kv-controls">
                     <Numeric
-                      label="Limite visite per nodo"
-                      short="Visite"
+                      label="Visit limit per node"
+                      short="Visits"
                       value={path.loopPolicy.maxVisitsPerNode}
                       apply={(maxVisitsPerNode) =>
                         run(
@@ -188,13 +188,13 @@ export function PathPanel({
                         })
                       }
                     >
-                      Rimuovi policy loop
+                      Remove loop policy
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="kv">
-                  <span>Loop manuale</span>
+                  <span>Manual loop</span>
                   <button
                     type="button"
                     tabIndex={0}
@@ -209,13 +209,13 @@ export function PathPanel({
                       })
                     }
                   >
-                    Abilita loop manuale (3 visite)
+                    Enable manual loop (3 visits)
                   </button>
                 </div>
               )}
               <div className="path-actions">
                 {document.defaultPathId === path.id ? (
-                  <span className="chip">Percorso principale</span>
+                  <span className="chip">Main path</span>
                 ) : (
                   <button
                     type="button"
@@ -228,7 +228,7 @@ export function PathPanel({
                       })
                     }
                   >
-                    Usa come percorso principale
+                    Use as main path
                   </button>
                 )}
                 <button
@@ -237,16 +237,16 @@ export function PathPanel({
                   className="tool-button quiet danger"
                   onClick={() => remove(deletePath(path.id))}
                 >
-                  Elimina percorso
+                  Delete path
                 </button>
               </div>
             </div>
             <section className="inspector-group" aria-labelledby="path-visits">
               <h3 id="path-visits">
-                Visite <span className="count">{path.nodes.length}</span>
+                Visits <span className="count">{path.nodes.length}</span>
               </h3>
               {path.nodes.length ? (
-                <ol className="graph-list" aria-label="Visite del percorso">
+                <ol className="graph-list" aria-label="Path visits">
                   {path.nodes.map((n, i) => {
                     const scene = sceneOf(n.sceneId),
                       current = n.id === node?.id;
@@ -268,18 +268,18 @@ export function PathPanel({
                             <SceneThumb document={document} scene={scene} />
                           )}
                           <span className="graph-label">
-                            {scene?.title ?? "Scena mancante"}
+                            {scene?.title ?? "Missing scene"}
                           </span>
                           {path.startNodeId === n.id && (
-                            <span className="chip">Inizio</span>
+                            <span className="chip">Start</span>
                           )}
                         </button>
                         {current && (
                           <div className="graph-detail">
                             <label className="kv">
-                              <span>Scena</span>
+                              <span>Scene</span>
                               <select
-                                aria-label="Scena della visita"
+                                aria-label="Visit scene"
                                 value={n.sceneId}
                                 onChange={(e) =>
                                   run(
@@ -297,10 +297,10 @@ export function PathPanel({
                               </select>
                             </label>
                             <div className="kv">
-                              <span>Sosta</span>
+                              <span>Hold</span>
                               <div className="kv-controls">
                                 <Numeric
-                                  label="Sosta nodo ms"
+                                  label="Node hold ms"
                                   short="ms"
                                   value={n.holdMs}
                                   apply={(holdMs) =>
@@ -318,7 +318,7 @@ export function PathPanel({
                                   remove(removeGraphItem(path.id, n.id, "node"))
                                 }
                               >
-                                Elimina visita
+                                Delete visit
                               </button>
                             </div>
                           </div>
@@ -329,12 +329,12 @@ export function PathPanel({
                 </ol>
               ) : (
                 <p className="panel-note">
-                  Nessuna visita: aggiungi una scena al percorso.
+                  No visits: add a scene to the path.
                 </p>
               )}
               <div className="add-row">
                 <select
-                  aria-label="Scena da aggiungere al percorso"
+                  aria-label="Scene to add to the path"
                   value={sceneId || document.scenes[0]?.id || ""}
                   onChange={(e) => setSceneId(e.target.value)}
                 >
@@ -370,7 +370,7 @@ export function PathPanel({
                   }}
                 >
                   <Icon name="plus" />
-                  Aggiungi visita
+                  Add visit
                 </button>
               </div>
             </section>
@@ -379,13 +379,10 @@ export function PathPanel({
               aria-labelledby="path-connections"
             >
               <h3 id="path-connections">
-                Connessioni <span className="count">{path.edges.length}</span>
+                Connections <span className="count">{path.edges.length}</span>
               </h3>
               {path.edges.length ? (
-                <ol
-                  className="graph-list"
-                  aria-label="Connessioni del percorso"
-                >
+                <ol className="graph-list" aria-label="Path connections">
                   {path.edges.map((e) => {
                     const current = e.id === edge?.id;
                     return (
@@ -402,7 +399,7 @@ export function PathPanel({
                               {position(e.from)}
                             </span>
                             <Icon name="arrow-right" />
-                            <span className="visually-hidden"> verso </span>
+                            <span className="visually-hidden"> to </span>
                             <span className="node-badge">{position(e.to)}</span>
                           </span>
                           <span className="graph-label">
@@ -416,17 +413,17 @@ export function PathPanel({
                           <div className="graph-detail">
                             <TextField
                               key={e.id}
-                              label="Etichetta scelta"
-                              short="Etichetta"
+                              label="Choice label"
+                              short="Label"
                               value={e.label}
                               apply={(label) =>
                                 run(editEdge(path.id, e.id, { label }))
                               }
                             />
                             <label className="kv">
-                              <span>Condizione</span>
+                              <span>Condition</span>
                               <select
-                                aria-label="Condizione connessione"
+                                aria-label="Connection condition"
                                 value={e.condition?.kind ?? "always"}
                                 onChange={(event) =>
                                   run((doc) => {
@@ -447,21 +444,17 @@ export function PathPanel({
                                   })
                                 }
                               >
-                                <option value="always">
-                                  Avanzamento diretto
-                                </option>
-                                <option value="manual">Scelta manuale</option>
-                                <option value="visit-limit">
-                                  Limite visite
-                                </option>
+                                <option value="always">Direct advance</option>
+                                <option value="manual">Manual choice</option>
+                                <option value="visit-limit">Visit limit</option>
                               </select>
                             </label>
                             {e.condition?.kind === "visit-limit" && (
                               <div className="kv">
-                                <span>Limite</span>
+                                <span>Limit</span>
                                 <Numeric
-                                  label="Limite visite connessione"
-                                  short="Visite"
+                                  label="Connection visit limit"
+                                  short="Visits"
                                   value={e.condition.maxVisits}
                                   apply={(maxVisits) =>
                                     run(
@@ -485,7 +478,7 @@ export function PathPanel({
                                   remove(removeGraphItem(path.id, e.id, "edge"))
                                 }
                               >
-                                Elimina connessione
+                                Delete connection
                               </button>
                             </div>
                           </div>
@@ -495,17 +488,15 @@ export function PathPanel({
                   })}
                 </ol>
               ) : (
-                <p className="panel-note">
-                  Nessuna connessione: collega due visite.
-                </p>
+                <p className="panel-note">No connections: link two visits.</p>
               )}
               <fieldset className="connect-row">
-                <legend className="visually-hidden">Nuova connessione</legend>
+                <legend className="visually-hidden">New connection</legend>
                 {(["from", "to"] as const).map((kind) => (
                   <select
                     key={kind}
                     aria-label={
-                      kind === "from" ? "Connessione da" : "Connessione a"
+                      kind === "from" ? "Connection from" : "Connection to"
                     }
                     value={(kind === "from" ? from : to) || node?.id || ""}
                     onChange={(e) =>
@@ -539,7 +530,7 @@ export function PathPanel({
                   }}
                 >
                   <Icon name="link" />
-                  Collega nodi
+                  Link nodes
                 </button>
               </fieldset>
             </section>
@@ -562,8 +553,8 @@ export function PathPanel({
       </div>
       {deletion && (
         <Dialog
-          title="Eliminare struttura e riferimenti?"
-          confirm="Elimina struttura"
+          title="Delete the structure and its references?"
+          confirm="Delete structure"
           onCancel={() => setDeletion(null)}
           onConfirm={() => {
             run(deletion.edit);

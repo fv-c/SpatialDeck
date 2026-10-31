@@ -1,9 +1,5 @@
 import { useEffect, useRef } from "react";
-import {
-  createPlayer,
-  createAssetResolver,
-  italianMessages,
-} from "@spatialdeck/player";
+import { createPlayer, createAssetResolver } from "@spatialdeck/player";
 import type { Player } from "@spatialdeck/player";
 import type { AssetBlobs } from "@spatialdeck/player";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
@@ -58,7 +54,6 @@ export function PlayerSurface({
     const builtins = createBuiltinRegistry({ plugins: approved.current });
     const instance = createPlayer({
       // Studio's interface is Italian until 1.0 (G0 decision 3).
-      messages: italianMessages,
       input: present,
       motion: present ? "system" : "reduced",
       registry: builtins.registry,
@@ -129,7 +124,7 @@ export function PlayerSurface({
     <div
       ref={host}
       className={present ? "presentation-player" : "preview-player"}
-      aria-label={present ? "Player presentazione" : "Anteprima player"}
+      aria-label={present ? "Presentation player" : "Preview player"}
     />
   );
 }

@@ -66,29 +66,29 @@ export function MapView({
     gesture.current = null;
   }
   return (
-    <section className="map-panel" aria-label="Mappa XY">
+    <section className="map-panel" aria-label="XY map">
       <div className="panel-heading">
         <h2>
-          Mappa spaziale <span>XY</span>
+          Spatial map <span>XY</span>
         </h2>
         <div className="map-tools">
           <button
             type="button"
             tabIndex={0}
             className="icon-button"
-            aria-label="Riduci zoom"
+            aria-label="Zoom out"
             onClick={() =>
               store.setMap({ ...map, zoom: Math.max(0.02, map.zoom / 1.25) })
             }
           >
             <Icon name="zoom-out" />
           </button>
-          <output aria-label="Zoom mappa">{Math.round(map.zoom * 100)}%</output>
+          <output aria-label="Map zoom">{Math.round(map.zoom * 100)}%</output>
           <button
             type="button"
             tabIndex={0}
             className="icon-button"
-            aria-label="Aumenta zoom"
+            aria-label="Zoom in"
             onClick={() =>
               store.setMap({ ...map, zoom: Math.min(2, map.zoom * 1.25) })
             }
@@ -101,14 +101,14 @@ export function MapView({
             className="tool-button quiet"
             onClick={() => store.setMap({ x: 0, y: 0, zoom: 0.25 })}
           >
-            Centra
+            Centre
           </button>
         </div>
       </div>
       <svg
         ref={svg}
         role="application"
-        aria-label="Mappa XY: trascina le scene; trascina lo sfondo per spostare la mappa. Escape annulla."
+        aria-label="XY map: drag the scenes; drag the background to pan the map. Escape cancels."
         tabIndex={0}
         viewBox="-600 -400 1200 800"
         preserveAspectRatio="xMidYMid meet"
@@ -239,12 +239,12 @@ export function MapView({
             fontSize={13 / unit}
             className="map-empty"
           >
-            Crea una scena per iniziare.
+            Create a scene to get started.
           </text>
         )}
       </svg>
       <p className="map-help" aria-hidden="true">
-        Trascina per spostare · Rotella per zoom · Esc annulla
+        Drag to move · Wheel to zoom · Esc cancels
       </p>
     </section>
   );

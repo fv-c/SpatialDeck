@@ -305,25 +305,25 @@ test.describe("player", () => {
     await update(page, d);
     const article = page
       .locator("#player-1")
-      .getByRole("article", { name: "Spazi che si leggono" });
+      .getByRole("article", { name: "Spaces that read" });
     await expect(article).toHaveCount(1);
     const box = await cover.locator("h2").boundingBox();
     expect(box!.width).toBeLessThanOrEqual(1.01);
     expect(box!.height).toBeLessThanOrEqual(1.01);
     await page
       .locator("#player-1")
-      .getByRole("button", { name: "Vista testuale" })
+      .getByRole("button", { name: "Text view" })
       .click();
     await expect(page.locator("#player-1 .sd-outline")).toContainText(
-      "Spazi che si leggono",
+      "Spaces that read",
     );
     const outline = await page
       .locator("#player-1 .sd-outline li")
       .first()
       .locator("p")
       .allTextContents();
-    expect(outline[0]).toBe("Spazi che si leggono");
-    expect(outline[2]).toContain("Illustrazione");
+    expect(outline[0]).toBe("Spaces that read");
+    expect(outline[2]).toContain("Illustration");
   });
   test("theme and block tokens apply under a CSP without unsafe-inline, and theme fonts load only when used", async ({
     page,
@@ -586,13 +586,11 @@ async function openStudio(
 ) {
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
-  await page.getByLabel("File progetto JSON").setInputFiles(file);
-  await expect(page.getByLabel("Titolo progetto")).not.toHaveValue(
-    "Senza titolo",
-  );
+  await page.getByLabel("JSON project file").setInputFiles(file);
+  await expect(page.getByLabel("Project title")).not.toHaveValue("Untitled");
 }
-async function impagina(page: Page) {
-  await page.getByRole("button", { name: "Impagina", exact: true }).click();
+async function openLayout(page: Page) {
+  await page.getByRole("button", { name: "Layout", exact: true }).click();
   const count = await page.evaluate(() => {
     const s = window.studio!.store.getSnapshot();
     return s.document.scenes.find((x) => x.id === s.selection)!.blocks.length;
@@ -675,7 +673,7 @@ test.describe("Studio scene editor", () => {
     page,
   }, info) => {
     await openStudio(page);
-    await impagina(page);
+    await openLayout(page);
     await overlayAligned(page, "cover");
     const start = await studioFrame(page, "cover", "summary");
     const k = await scale(page, "summary", start);
@@ -692,7 +690,7 @@ test.describe("Studio scene editor", () => {
     expect(moved.width).toBe(start.width);
     expect(await history(page)).toBe(before + 1);
     await previewMatches(page, "cover", "summary");
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     expect(await studioFrame(page, "cover", "summary")).toEqual(start);
     expect(await history(page)).toBe(before);
     // Escape during the drag restores the frame and records nothing.
@@ -755,7 +753,7 @@ test.describe("Studio scene editor", () => {
     let keyed = await studioFrame(page, "cover", "summary");
     expect([keyed.x, keyed.y]).toEqual([beforeKeys.x + 1, beforeKeys.y + 10]);
     expect(await history(page)).toBe(before + 4);
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     keyed = await studioFrame(page, "cover", "summary");
     expect([keyed.x, keyed.y]).toEqual([beforeKeys.x + 1, beforeKeys.y]);
     // Handle and rotation keys.
@@ -773,7 +771,7 @@ test.describe("Studio scene editor", () => {
     await field.press("Enter");
     expect((await studioFrame(page, "cover", "summary")).x).toBe(100);
     const height = page.getByRole("textbox", {
-      name: "Altezza frame",
+      name: "Frame height",
       exact: true,
     });
     await height.fill("5");
@@ -783,7 +781,7 @@ test.describe("Studio scene editor", () => {
       (await studioFrame(page, "cover", "summary")).height,
     ).toBeGreaterThanOrEqual(8);
     const count = await history(page);
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     expect(await history(page)).toBe(count - 1);
     await previewMatches(page, "cover", "summary");
     if (info.project.name === "chromium")
@@ -793,22 +791,20 @@ test.describe("Studio scene editor", () => {
     page,
   }) => {
     await openStudio(page);
-    await impagina(page);
-    await page.getByRole("button", { name: "Seleziona tutti" }).click();
-    await page.getByRole("button", { name: "Allinea a sinistra" }).click();
+    await openLayout(page);
+    await page.getByRole("button", { name: "Select all" }).click();
+    await page.getByRole("button", { name: "Align left" }).click();
     let d = await studioDoc(page);
     const lefts = scene(d, "cover").blocks.map((b) => frameBounds(b.frame!).x);
     lefts.forEach((x) => expect(x).toBeCloseTo(Math.min(...lefts), 6));
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     // Three frames distributed horizontally keep equal gaps.
-    await page.getByRole("button", { name: "Deseleziona" }).click();
+    await page.getByRole("button", { name: "Deselect" }).click();
     for (const id of ["headline", "picture", "stamp"])
       await page
         .locator(`[data-layout-block="${id}"]`)
         .click({ modifiers: ["Shift"] });
-    await page
-      .getByRole("button", { name: "Distribuisci in orizzontale" })
-      .click();
+    await page.getByRole("button", { name: "Distribute horizontally" }).click();
     d = await studioDoc(page);
     const boxes = ["headline", "picture", "stamp"]
       .map((id) => frameBounds(frame(d, "cover", id)))
@@ -816,11 +812,11 @@ test.describe("Studio scene editor", () => {
     const gap1 = boxes[1]!.x - (boxes[0]!.x + boxes[0]!.width),
       gap2 = boxes[2]!.x - (boxes[1]!.x + boxes[1]!.width);
     expect(gap1).toBeCloseTo(gap2, 6);
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     // Layers: the picture comes to the front and now covers the stamp.
-    await page.getByRole("button", { name: "Deseleziona" }).click();
+    await page.getByRole("button", { name: "Deselect" }).click();
     await page.locator('[data-layout-block="picture"]').click();
-    await page.getByRole("button", { name: "In primo piano" }).click();
+    await page.getByRole("button", { name: "Bring to front" }).click();
     d = await studioDoc(page);
     expect(frame(d, "cover", "picture").z).toBe(5);
     const camera = resolveSceneCamera(d, "cover");
@@ -846,7 +842,7 @@ test.describe("Studio scene editor", () => {
     // Reading order changes the array and the DOM, never frames or z.
     const framesBefore = scene(d, "cover").blocks.map((b) => [b.id, b.frame]);
     await page
-      .getByRole("button", { name: "Posticipa nella lettura il blocco 1" })
+      .getByRole("button", { name: "Move block 1 later in reading order" })
       .click();
     d = await studioDoc(page);
     expect(scene(d, "cover").blocks.map((b) => b.id)).toEqual([
@@ -872,8 +868,8 @@ test.describe("Studio scene editor", () => {
       .toEqual(["summary", "headline", "picture", "stamp", "note"]);
     // Convert the flow scene: frames from the measured preview rectangles.
     await page
-      .getByRole("list", { name: "Elenco scene" })
-      .getByRole("button", { name: /Flusso con aspetto/ })
+      .getByRole("list", { name: "Scene list" })
+      .getByRole("button", { name: /Flow with a plain/ })
       .click();
     await expect(page.locator("[data-layout-block]")).toHaveCount(2);
     // Wait until the preview frames the new scene with the core camera.
@@ -900,7 +896,7 @@ test.describe("Studio scene editor", () => {
     await expect.poll(async () => (await rects())[0].width).toBeGreaterThan(0);
     const flowRects = await rects();
     const historyBefore = await history(page);
-    await page.getByRole("button", { name: "Converti in canvas" }).click();
+    await page.getByRole("button", { name: "Convert to canvas" }).click();
     d = await studioDoc(page);
     expect(scene(d, "context").layout).toBe("canvas");
     expect(scene(d, "context").blocks.every((b) => b.frame)).toBe(true);
@@ -918,32 +914,32 @@ test.describe("Studio scene editor", () => {
         );
       })
       .toBeLessThanOrEqual(1.5);
-    await page.getByRole("button", { name: "Torna a flow" }).click();
-    await expect(page.getByRole("dialog")).toContainText("andranno persi");
+    await page.getByRole("button", { name: "Switch to flow" }).click();
+    await expect(page.getByRole("dialog")).toContainText("will be lost");
     await page
       .getByRole("dialog")
-      .getByRole("button", { name: "Annulla" })
+      .getByRole("button", { name: "Cancel" })
       .click();
     expect(scene(await studioDoc(page), "context").layout).toBe("canvas");
-    await page.getByRole("button", { name: "Torna a flow" }).click();
+    await page.getByRole("button", { name: "Switch to flow" }).click();
     await page
       .getByRole("dialog")
-      .getByRole("button", { name: "Torna a flow" })
+      .getByRole("button", { name: "Switch to flow" })
       .click();
     d = await studioDoc(page);
     expect(scene(d, "context").layout).toBe("flow");
     expect(scene(d, "context").blocks.some((b) => b.frame)).toBe(false);
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     expect(frame(await studioDoc(page), "context", "flow-1")).toBeDefined();
   });
   test("theme, appearance and block style edit tokens; clipped text and low contrast are diagnosed", async ({
     page,
   }, info) => {
     await openStudio(page);
-    await impagina(page);
-    await page.getByRole("tab", { name: /^Tema/ }).click();
+    await openLayout(page);
+    await page.getByRole("tab", { name: /^Theme/ }).click();
     await page
-      .getByRole("combobox", { name: "Font del testo" })
+      .getByRole("combobox", { name: "Body font" })
       .selectOption("system-serif");
     await expect
       .poll(() =>
@@ -956,26 +952,26 @@ test.describe("Studio scene editor", () => {
       .toContain("serif");
     expect((await studioDoc(page)).theme.fonts.body).toBe("system-serif");
     await page
-      .getByRole("combobox", { name: "Colore del testo" })
+      .getByRole("combobox", { name: "Text colour" })
       .selectOption("sky");
     await expect(page.locator(".layout-diagnostics")).toContainText(
-      "testo del tema sullo sfondo",
+      "theme text on the background",
     );
     await expect(page.locator(".contrast-list")).toContainText(
-      "testo del tema sullo sfondo",
+      "theme text on the background",
     );
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     // Appearance of the scene, in the scene tab with the scene editor.
-    await page.getByRole("tab", { name: /^Scena/ }).click();
+    await page.getByRole("tab", { name: /^Scene/ }).click();
     await page
-      .getByRole("combobox", { name: "Variante della scena" })
+      .getByRole("combobox", { name: "Scene variant" })
       .selectOption("plain");
     await expect(
       page.locator(
         '.preview-player .sd-scene[data-scene-id="cover"] .sd-content',
       ),
     ).toHaveClass(/sd-variant-plain/);
-    await page.getByRole("checkbox", { name: /Titolo visibile/ }).check();
+    await page.getByRole("checkbox", { name: /Visible title/ }).check();
     expect(scene(await studioDoc(page), "cover").appearance).toEqual({
       variant: "plain",
       background: null,
@@ -983,9 +979,7 @@ test.describe("Studio scene editor", () => {
     });
     // Block style on the selected block.
     await page.locator('[data-layout-block="headline"]').click();
-    await page
-      .getByRole("combobox", { name: "Dimensione testo" })
-      .selectOption("xs");
+    await page.getByRole("combobox", { name: "Text size" }).selectOption("xs");
     await expect(
       page.locator('.preview-player [data-block-id="headline"]'),
     ).toHaveClass(/sd-size-xs/);
@@ -996,28 +990,28 @@ test.describe("Studio scene editor", () => {
     // Text that exceeds its frame is clipped and reported.
     await page.locator('[data-layout-block="summary"]').click();
     const height = page.getByRole("textbox", {
-      name: "Altezza frame",
+      name: "Frame height",
       exact: true,
     });
     await height.fill("24");
     await height.press("Enter");
     await expect(page.locator(".layout-diagnostics")).toContainText(
-      "Contenuto tagliato: il blocco 2",
+      "Clipped content: block 2",
     );
     // A frame above interactive controls is reported too.
     await page
-      .getByRole("list", { name: "Elenco scene" })
-      .getByRole("button", { name: /Colonne e collegamenti/ })
+      .getByRole("list", { name: "Scene list" })
+      .getByRole("button", { name: /Columns and links/ })
       .click();
     await page.locator('[data-layout-block="column-a"]').click();
     const y = page.getByRole("textbox", { name: "Y frame", exact: true });
     await y.fill("280");
     await y.press("Enter");
-    const z = page.getByRole("textbox", { name: "Livello z", exact: true });
+    const z = page.getByRole("textbox", { name: "Z layer", exact: true });
     await z.fill("5");
     await z.press("Enter");
     await expect(page.locator(".layout-diagnostics")).toContainText(
-      "il blocco 1 copre i controlli interattivi del blocco 3",
+      "block 1 covers the interactive controls of block 3",
     );
     if (info.project.name === "chromium")
       await page.screenshot({
@@ -1030,35 +1024,31 @@ test.describe("Studio scene editor", () => {
   }) => {
     const d = doc();
     // Four lines of title: the visible title band reaches the columns at y 150.
-    scene(d, "details").title = Array(4)
-      .fill("Colonne e collegamenti")
-      .join(" · ");
+    scene(d, "details").title = Array(4).fill("Columns and links").join(" · ");
     scene(d, "context").blocks.push({
       id: "long",
       type: "text",
-      data: { text: "Una riga di testo che non entra.\n".repeat(40) },
+      data: { text: "A line of text that does not fit.\n".repeat(40) },
     });
     await openStudio(page, {
       name: "project.json",
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(d)),
     });
-    const scenes = page.getByRole("list", { name: "Elenco scene" });
-    await scenes
-      .getByRole("button", { name: /Colonne e collegamenti/ })
-      .click();
-    await impagina(page);
+    const scenes = page.getByRole("list", { name: "Scene list" });
+    await scenes.getByRole("button", { name: /Columns and links/ }).click();
+    await openLayout(page);
     await expect(page.locator(".layout-diagnostics")).toContainText(
-      "Titolo: il blocco 1 occupa la fascia del titolo visibile.",
+      "Title: block 1 overlaps the band of the visible title.",
     );
-    await scenes.getByRole("button", { name: /Flusso con aspetto/ }).click();
+    await scenes.getByRole("button", { name: /Flow with a plain/ }).click();
     await expect(page.locator(".layout-diagnostics")).toContainText(
-      /Contenuto oltre la scena: \d+ px restano fuori/,
+      /Content beyond the scene: \d+ px stay outside/,
     );
     // A hidden title takes no band, whatever the frames.
-    await scenes.getByRole("button", { name: /Spazi che si leggono/ }).click();
+    await scenes.getByRole("button", { name: /Spaces that read/ }).click();
     await expect(page.locator(".layout-diagnostics")).not.toContainText(
-      "Titolo:",
+      "Title:",
     );
   });
   test("saved JSON and archive reopen in a new session, recover after reload and present in the vanilla player with the same model and landmarks", async ({
@@ -1066,11 +1056,11 @@ test.describe("Studio scene editor", () => {
     browser,
   }, info) => {
     await openStudio(page);
-    await impagina(page);
+    await openLayout(page);
     await page.locator('[data-layout-block="note"]').click();
     for (const [label, value] of [
       ["X frame", "60"],
-      ["Rotazione frame", "8"],
+      ["Frame rotation", "8"],
     ] as const) {
       const field = page.getByRole("textbox", { name: label, exact: true });
       await field.fill(value);
@@ -1082,13 +1072,13 @@ test.describe("Studio scene editor", () => {
       rotation: 8,
     });
     const json = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+    await page.getByRole("button", { name: "Save JSON", exact: true }).click();
     // Saved with their real names: Studio picks the reader from the extension.
     const jsonPath = evidencePath(`layout/saved-${info.project.name}.json`);
     await (await json).saveAs(jsonPath);
     const zip = page.waitForEvent("download");
     await page
-      .getByRole("button", { name: "Salva archivio", exact: true })
+      .getByRole("button", { name: "Save archive", exact: true })
       .click();
     const archivePath = evidencePath(
       `layout/saved-${info.project.name}.spatialdeck`,
@@ -1101,8 +1091,8 @@ test.describe("Studio scene editor", () => {
     const unsaved = await studioDoc(page);
     await page.waitForTimeout(1200);
     await page.reload();
-    await expect(page.getByRole("dialog")).toContainText("Recupero locale");
-    await page.getByRole("button", { name: "Recupera revisione" }).click();
+    await expect(page.getByRole("dialog")).toContainText("Local recovery");
+    await page.getByRole("button", { name: "Recover revision" }).click();
     await expect.poll(() => studioDoc(page)).toEqual(unsaved);
     await page.close();
     // A fresh session reopens both files.
@@ -1119,7 +1109,7 @@ test.describe("Studio scene editor", () => {
       fresh.locator('.preview-player [data-block-id="picture"] img'),
     ).toHaveCount(1);
     // Presenting in Studio uses the same player and the same frames.
-    await fresh.getByRole("button", { name: "Presenta" }).click();
+    await fresh.getByRole("button", { name: "Present", exact: true }).click();
     await expect(fresh.locator(".presentation-player .sd-player")).toHaveCount(
       1,
     );
@@ -1143,9 +1133,9 @@ test.describe("Studio scene editor", () => {
     const plain = await context.newPage();
     await plain.emulateMedia({ reducedMotion: "reduce" });
     await vanilla(plain);
-    await plain.getByLabel("Apri progetto locale").setInputFiles(archivePath);
+    await plain.getByLabel("Open local project").setInputFiles(archivePath);
     await expect(
-      plain.getByRole("status").filter({ hasText: "Progetto aperto" }),
+      plain.getByRole("status").filter({ hasText: "Project opened" }),
     ).toHaveCount(1);
     expect(await plain.evaluate(() => window.demoDocument)).toEqual(edited);
     await plain.evaluate(() =>
@@ -1179,7 +1169,7 @@ test.describe("Studio scene editor", () => {
       const page = await context.newPage();
       await page.emulateMedia({ reducedMotion: "reduce" });
       await openStudio(page);
-      await page.getByRole("button", { name: "Impagina", exact: true }).focus();
+      await page.getByRole("button", { name: "Layout", exact: true }).focus();
       await page.keyboard.press("Enter");
       await expect(page.locator("[data-layout-block]")).toHaveCount(5);
       await overlayAligned(page, "cover");
@@ -1236,7 +1226,7 @@ test.describe("Studio scene editor", () => {
       id: `b${i}`,
       type: "text" as const,
       data: {
-        text: `Blocco ${i + 1} con un testo di prova di qualche parola.`,
+        text: `Block ${i + 1} with a test text of a few words.`,
       },
       frame: {
         x: 20 + (i % 6) * 195,
@@ -1257,7 +1247,7 @@ test.describe("Studio scene editor", () => {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(d)),
     });
-    await impagina(page);
+    await openLayout(page);
     await page.evaluate(() => {
       const marks = { inputs: [] as number[], commits: [] as number[] };
       (window as unknown as { marks: typeof marks }).marks = marks;

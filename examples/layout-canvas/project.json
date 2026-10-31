@@ -2,10 +2,10 @@
   "schemaVersion": "1.3.0",
   "id": "layout-canvas",
   "metadata": {
-    "title": "Impaginazione nella scena",
-    "language": "it",
+    "title": "Layout inside the scene",
+    "language": "en",
     "author": "SpatialDeck example",
-    "description": "Esempio 0.5: scene canvas con contenuti affiancati, sovrapposti e ruotati, titolo nascosto, tema non predefinito e ordine di lettura diverso dall'ordine visivo."
+    "description": "0.5 example: canvas scenes with side-by-side, overlapping and rotated blocks, a hidden title, a non-default theme and a reading order that differs from the visual order."
   },
   "settings": {
     "viewport": {
@@ -68,7 +68,7 @@
   "scenes": [
     {
       "id": "cover",
-      "title": "Spazi che si leggono",
+      "title": "Spaces that read",
       "position": [0, 0, 0],
       "rotation": [0, 0, 0],
       "scale": 1,
@@ -86,7 +86,7 @@
           "id": "headline",
           "type": "text",
           "data": {
-            "text": "Spazi che si leggono"
+            "text": "Spaces that read"
           },
           "frame": {
             "x": 640,
@@ -105,7 +105,7 @@
           "id": "summary",
           "type": "markdown",
           "data": {
-            "source": "Immagine e testo **affiancati**. L’ordine di lettura segue l’elenco dei contenuti, non la posizione né il livello."
+            "source": "Image and text **side by side**. The reading order follows the list of blocks, not their position or layer."
           },
           "frame": {
             "x": 640,
@@ -121,7 +121,7 @@
           "type": "image",
           "data": {
             "assetId": "skyline",
-            "alt": "Illustrazione: tre volumi colorati davanti a un sole, su un orizzonte chiaro",
+            "alt": "Illustration: three coloured volumes in front of a sun, on a light horizon",
             "fit": "cover"
           },
           "frame": {
@@ -138,7 +138,7 @@
           "type": "svg",
           "data": {
             "source": "<svg viewBox=\"0 0 100 100\"><polygon points=\"50.0,2.0 58.8,17.2 74.0,8.4 74.0,26.0 91.6,26.0 82.8,41.2 98.0,50.0 82.8,58.8 91.6,74.0 74.0,74.0 74.0,91.6 58.8,82.8 50.0,98.0 41.2,82.8 26.0,91.6 26.0,74.0 8.4,74.0 17.2,58.8 2.0,50.0 17.2,41.2 8.4,26.0 26.0,26.0 26.0,8.4 41.2,17.2\" fill=\"#f97316\"/><circle cx=\"50\" cy=\"50\" r=\"22\" fill=\"#fffaf0\"/><circle cx=\"50\" cy=\"50\" r=\"12\" fill=\"#9a3412\"/></svg>",
-            "alt": "Timbro decorativo a stella"
+            "alt": "Decorative star stamp"
           },
           "frame": {
             "x": 470,
@@ -153,7 +153,7 @@
           "id": "note",
           "type": "text",
           "data": {
-            "text": "Il testo ruotato resta selezionabile e leggibile dagli screen reader."
+            "text": "Rotated text stays selectable and readable by screen readers."
           },
           "frame": {
             "x": 640,
@@ -171,12 +171,12 @@
           }
         }
       ],
-      "notes": "Il titolo è nascosto alla vista ma resta il nome accessibile della scena e compare nella vista testuale.",
+      "notes": "The title is hidden from view but remains the accessible name of the scene and appears in the text view.",
       "extensions": {}
     },
     {
       "id": "context",
-      "title": "Flusso con aspetto semplice",
+      "title": "Flow with a plain appearance",
       "position": [1500, 0, 0],
       "rotation": [0, 0, 0],
       "scale": 1,
@@ -194,7 +194,7 @@
           "id": "flow-1",
           "type": "markdown",
           "data": {
-            "source": "Le scene **flow** restano impilate nell’ordine di lettura; tema e stile a token valgono anche qui."
+            "source": "**Flow** scenes stay stacked in reading order; the theme and token styles apply here too."
           },
           "style": {
             "align": "center"
@@ -204,7 +204,7 @@
           "id": "flow-2",
           "type": "text",
           "data": {
-            "text": "Sfondo dalla palette, nessun bordo, titolo visibile."
+            "text": "Background from the palette, no border, visible title."
           },
           "style": {
             "size": "s",
@@ -217,7 +217,7 @@
     },
     {
       "id": "details",
-      "title": "Colonne e collegamenti",
+      "title": "Columns and links",
       "position": [0, 900, -200],
       "rotation": [10, -15, 4],
       "scale": 0.8,
@@ -235,7 +235,7 @@
           "id": "column-a",
           "type": "text",
           "data": {
-            "text": "Prima colonna: il frame fissa posizione e dimensione; il testo che eccede resta tagliato e Studio lo segnala."
+            "text": "First column: the frame fixes position and size; text that overflows stays clipped and Studio reports it."
           },
           "frame": {
             "x": 60,
@@ -253,7 +253,7 @@
           "id": "column-b",
           "type": "text",
           "data": {
-            "text": "Seconda colonna, allineata in basso a destra."
+            "text": "Second column, aligned bottom right."
           },
           "frame": {
             "x": 520,
@@ -272,7 +272,7 @@
           "id": "back",
           "type": "link",
           "data": {
-            "label": "Torna alla copertina",
+            "label": "Back to the cover",
             "target": {
               "pathId": "main",
               "nodeId": "n1"
@@ -288,7 +288,7 @@
           }
         }
       ],
-      "notes": "Scena figlia della copertina, ruotata: i frame restano geometria 2D del rettangolo contenuti.",
+      "notes": "Rotated child scene of the cover: frames stay 2D geometry of the content rectangle.",
       "extensions": {}
     }
   ],
@@ -299,14 +299,14 @@
       "id": "skyline",
       "path": "assets/skyline.svg",
       "mime": "image/svg+xml",
-      "byteLength": 508,
-      "sha256": "ddcc1f4afc51f8dc11cb703ffe68bcd3da5ec9e13ff29dfa96bbc1d9079f0a54"
+      "byteLength": 510,
+      "sha256": "07f2bc7d36fbaa467a382415c8528d6b018a14e7aaa51781c047aa7134192eb4"
     }
   ],
   "paths": [
     {
       "id": "main",
-      "name": "Principale",
+      "name": "Main",
       "startNodeId": "n1",
       "nodes": [
         {

@@ -42,7 +42,7 @@ async function loadedGallery(page: Page) {
   await expect(
     page
       .locator('.sd-block [role="status"]')
-      .filter({ hasText: "Caricamento risorsa locale" }),
+      .filter({ hasText: "Loading local resource" }),
   ).toHaveCount(0);
 }
 test("assets with digests load over HTTP on a non-localhost host: gallery, archive and Studio preview", async ({
@@ -72,24 +72,24 @@ test("assets with digests load over HTTP on a non-localhost host: gallery, archi
   await expect(video).toHaveAttribute("playsinline", "");
   await expect(video.locator("track")).toHaveCount(1);
   await expect(page.locator("#player-1 .sd-world")).not.toContainText(
-    /Digest|firma|Risorsa mancante/,
+    /digest|signature|Missing resource/,
   );
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Scarica archivio gallery" }).click();
+  await page.getByRole("button", { name: "Download gallery archive" }).click();
   const archive = await readFile((await (await download).path())!);
   const studio = await context.newPage();
   await studio.goto("http://studio.spatialdeck.test/?studio-debug");
   await expect(studio.locator(".preview-player .sd-player")).toHaveCount(1);
-  await studio.getByLabel("File progetto JSON").setInputFiles({
+  await studio.getByLabel("JSON project file").setInputFiles({
     name: "gallery.spatialdeck",
     mimeType: "application/zip",
     buffer: archive,
   });
   await expect(
-    studio.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    studio.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(11);
   await studio
-    .getByRole("list", { name: "Elenco scene" })
+    .getByRole("list", { name: "Scene list" })
     .getByRole("button")
     .nth(5)
     .click();
@@ -101,11 +101,11 @@ test("assets with digests load over HTTP on a non-localhost host: gallery, archi
     )
     .toBeGreaterThan(0);
   await studio
-    .getByLabel("Aggiungi risorsa locale")
+    .getByLabel("Add local resource")
     .setInputFiles("examples/content-gallery/assets/captions.vtt");
   await expect(studio.locator(".asset-panel li")).toHaveCount(5);
   await expect(studio.locator(".asset-panel li").last()).toContainText(
-    "disponibile",
+    "available",
   );
   await expect(studio.locator(".asset-panel [role=alert]")).toHaveCount(0);
 });
@@ -173,28 +173,26 @@ test("Studio preview with 50 MiB of media stays incremental: no digests or URLs 
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   for (let i = 0; i < 3; i++)
-    await page
-      .getByRole("button", { name: "Nuova scena", exact: true })
-      .click();
+    await page.getByRole("button", { name: "New scene", exact: true }).click();
   for (const file of [
     files.image,
     "examples/content-gallery/assets/diagram.svg",
     files.video,
   ]) {
     const count = await page.locator(".asset-panel li").count();
-    await page.getByLabel("Aggiungi risorsa locale").setInputFiles(file);
+    await page.getByLabel("Add local resource").setInputFiles(file);
     await expect(page.locator(".asset-panel li")).toHaveCount(count + 1, {
       timeout: 60_000,
     });
   }
   await page
-    .getByRole("list", { name: "Elenco scene" })
+    .getByRole("list", { name: "Scene list" })
     .getByRole("button")
     .first()
     .click();
   for (const type of ["image", "video"]) {
-    await page.getByLabel("Tipo contenuto").selectOption(type);
-    await page.getByRole("button", { name: "Aggiungi contenuto" }).click();
+    await page.getByLabel("Block type").selectOption(type);
+    await page.getByRole("button", { name: "Add block" }).click();
   }
   const previewVideo = page.locator(
     '.preview-player [data-block-type="video"] video',
@@ -390,7 +388,7 @@ test("an embedded player shows host-supplied texts, document language and derive
       ),
       outlineHasSource: /\*\*|<p>|<table|<svg|\\int/.test(outline),
       outlineHasText:
-        outline.includes("Testo forte") && outline.includes("HTML semantico"),
+        outline.includes("Strong text") && outline.includes("Semantic HTML"),
     };
     player.destroy();
     host.remove();
@@ -443,7 +441,7 @@ test("an unchanged playing video is not interrupted by updates to other blocks",
       doc = structuredClone(window.demoDocument);
     const markdown = doc.scenes.find((s) => s.id === "markdown")!.blocks[0]!;
     if (markdown.type === "markdown") markdown.data.source = "## Aggiornato";
-    doc.scenes.find((s) => s.id === "text")!.title = "Titolo aggiornato";
+    doc.scenes.find((s) => s.id === "text")!.title = "Updated title";
     const media = document.querySelector<HTMLVideoElement>(
       '#player-1 [data-block-type="video"] video',
     )!;
@@ -489,15 +487,15 @@ test("production Studio has no ws: in its CSP and no window.studio unless explic
 async function openStudio(page: Page, document: unknown = fixture) {
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(document)),
   });
 }
 async function autosaved(page: Page, note: string) {
-  await page.getByLabel("Note relatore").fill(note);
-  await page.getByLabel("Note relatore").press("Tab");
+  await page.getByLabel("Speaker notes").fill(note);
+  await page.getByLabel("Speaker notes").press("Tab");
   await expect
     .poll(() =>
       page.evaluate(async () =>
@@ -533,12 +531,12 @@ test("a newer IndexedDB version from a second tab produces a persistent warning 
         request.onerror = () => reject(request.error);
       }),
   );
-  await expect(page.locator(".warning")).toContainText("versione più recente");
-  await page.getByLabel("Note relatore").fill("still editable");
-  await page.getByLabel("Note relatore").press("Tab");
-  await expect(page.locator(".warning")).toContainText("versione più recente");
+  await expect(page.locator(".warning")).toContainText("newer version");
+  await page.getByLabel("Speaker notes").fill("still editable");
+  await page.getByLabel("Speaker notes").press("Tab");
+  await expect(page.locator(".warning")).toContainText("newer version");
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   const saved = JSON.parse(
     await readFile((await (await download).path())!, "utf8"),
   ) as ProjectDocument;
@@ -582,9 +580,11 @@ test("an upgrade blocked by an old tab waits with a warning and resumes autosave
       }),
   );
   await openStudio(page);
-  await page.getByLabel("Note relatore").fill("waiting");
-  await page.getByLabel("Note relatore").press("Tab");
-  await expect(page.locator(".warning")).toContainText("altra scheda");
+  await page.getByLabel("Speaker notes").fill("waiting");
+  await page.getByLabel("Speaker notes").press("Tab");
+  await expect(page.locator(".warning")).toContainText(
+    "another SpatialDeck Studio tab",
+  );
   await old.evaluate(() => window.heldDatabase!.close());
   await expect
     .poll(() =>
@@ -603,17 +603,17 @@ test("local projects and revisions can be deleted only after confirmation", asyn
   await openStudio(page);
   await autosaved(page, "first");
   await autosaved(page, "second");
-  await page.getByRole("button", { name: "Recupero", exact: true }).click();
+  await page.getByRole("button", { name: "Recovery", exact: true }).click();
   const dialog = page.getByRole("dialog", {
-    name: "Recupero locale disponibile",
+    name: "Local recovery available",
   });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Elimina revisione" }).click();
+  await dialog.getByRole("button", { name: "Delete revision" }).click();
   const confirm = page.getByRole("dialog", {
-    name: "Eliminare la revisione locale?",
+    name: "Delete the local revision?",
   });
   await expect(confirm).toBeVisible();
-  await confirm.getByRole("button", { name: "Annulla" }).click();
+  await confirm.getByRole("button", { name: "Cancel" }).click();
   expect(
     await page.evaluate(async () => {
       const head = (await window.studio!.repository.heads())[0]!;
@@ -621,8 +621,8 @@ test("local projects and revisions can be deleted only after confirmation", asyn
     }),
   ).toBe(2);
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Elimina revisione" }).click();
-  await confirm.getByRole("button", { name: "Elimina revisione" }).click();
+  await dialog.getByRole("button", { name: "Delete revision" }).click();
+  await confirm.getByRole("button", { name: "Delete revision" }).click();
   await expect
     .poll(() =>
       page.evaluate(async () => {
@@ -634,11 +634,11 @@ test("local projects and revisions can be deleted only after confirmation", asyn
     )
     .toEqual([1]);
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Elimina progetto locale" }).click();
+  await dialog.getByRole("button", { name: "Delete local project" }).click();
   const project = page.getByRole("dialog", {
-    name: "Eliminare il progetto locale?",
+    name: "Delete the local project?",
   });
-  await project.getByRole("button", { name: "Elimina progetto" }).click();
+  await project.getByRole("button", { name: "Delete project" }).click();
   await expect
     .poll(() =>
       page.evaluate(
@@ -666,11 +666,11 @@ test("recovery is proposed after unsaved edits but not after a clean save", asyn
   await autosaved(page, "unsaved");
   await page.reload();
   await expect(
-    page.getByRole("dialog", { name: "Recupero locale disponibile" }),
+    page.getByRole("dialog", { name: "Local recovery available" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Recupera revisione" }).click();
+  await page.getByRole("button", { name: "Recover revision" }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   await download;
   await expect
     .poll(() =>
@@ -686,12 +686,12 @@ test("recovery is proposed after unsaved edits but not after a clean save", asyn
 });
 test("open limits name the right file kind", async ({ page }) => {
   await page.goto(studioURL);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "big.json",
     mimeType: "application/json",
     buffer: Buffer.alloc(10 * 1024 * 1024 + 1, 32),
   });
   await expect(page.getByRole("alert")).toContainText(
-    "Il file JSON supera 10 MiB",
+    "The JSON file exceeds 10 MiB",
   );
 });

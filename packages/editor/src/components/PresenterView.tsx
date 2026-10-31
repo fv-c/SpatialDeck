@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  createAssetResolver,
-  createPlayer,
-  italianMessages,
-} from "@spatialdeck/player";
+import { createAssetResolver, createPlayer } from "@spatialdeck/player";
 import type {
   AssetBlobs,
   NavigationRequest,
@@ -99,7 +95,6 @@ export function PresenterView({
       createBuiltinRegistry({ plugins: approved }),
     ];
     const current = createPlayer({
-      messages: italianMessages,
       registry: registries[0]!.registry,
       assets,
       muted: true,
@@ -108,7 +103,6 @@ export function PresenterView({
       delegate: (request) => run.current(request),
     });
     const next = createPlayer({
-      messages: italianMessages,
       registry: registries[1]!.registry,
       assets,
       muted: true,
@@ -238,7 +232,7 @@ export function PresenterView({
       ? path?.edges.find((e) => e.id === eligible[0]!.edgeId)
       : undefined;
   // A manual edge needs an explicit choice even when it is the only exit, as
-  // `next` would: it is offered as a choice, never previewed as «Successiva».
+  // `next` would: it is offered as a choice, never previewed as «Next».
   const asChoice = eligible.length > 1 || single?.condition?.kind === "manual";
   const following = asChoice ? undefined : single;
   const nextScene = following
@@ -250,7 +244,7 @@ export function PresenterView({
     <div
       className="presenter"
       role="region"
-      aria-label="Vista relatore"
+      aria-label="Presenter view"
       tabIndex={-1}
       onKeyDown={(event) => {
         if ((event.target as Element).matches("input,textarea,select,button"))
@@ -270,26 +264,26 @@ export function PresenterView({
     >
       <header className="presenter-bar">
         <div className="presenter-identity">
-          <h2>Vista relatore</h2>
+          <h2>Presenter view</h2>
           <p
             role="status"
             className={`presenter-link ${connected ? "is-connected" : blocked ? "is-blocked" : ""}`}
           >
             {connected
-              ? "Finestra pubblica collegata"
+              ? "Audience window connected"
               : blocked
-                ? "Finestra pubblica non aperta"
-                : "In attesa della finestra pubblica…"}
+                ? "Audience window not open"
+                : "Waiting for the audience window…"}
           </p>
         </div>
         <div className="presenter-timer">
-          <output aria-label="Tempo trascorso">{clock(elapsed)}</output>
+          <output aria-label="Elapsed time">{clock(elapsed)}</output>
           <IconButton
             icon={running ? "pause" : "play"}
-            label={running ? "Pausa" : "Avvia"}
+            label={running ? "Pause" : "Start"}
             onClick={toggleTimer}
           />
-          <IconButton icon="reset" label="Azzera" onClick={resetTimer} />
+          <IconButton icon="reset" label="Reset" onClick={resetTimer} />
         </div>
         <div className="presenter-end">
           <button
@@ -298,40 +292,39 @@ export function PresenterView({
             className="tool-button danger"
             onClick={end}
           >
-            Termina
+            End
           </button>
         </div>
       </header>
       {blocked && (
         <div className="presenter-blocked" role="alert">
           <p>
-            Il browser ha bloccato la finestra pubblica. Consenti i popup per
-            questo sito e riprova, oppure presenta in questa scheda (senza note
-            né anteprime).
+            The browser blocked the audience window. Allow pop-ups for this site
+            and try again, or present in this tab (without notes or previews).
           </p>
           <button type="button" tabIndex={0} onClick={retry}>
-            Riprova ad aprire
+            Try opening again
           </button>
           <button type="button" tabIndex={0} onClick={onSingleWindow}>
-            Presenta in questa scheda
+            Present in this tab
           </button>
         </div>
       )}
       <div className="presenter-grid">
-        <section aria-label="Scena corrente" className="presenter-current">
+        <section aria-label="Current scene" className="presenter-current">
           <h3>
-            <span className="presenter-kicker">Ora</span>
+            <span className="presenter-kicker">Now</span>
             {scene?.title ?? "—"}
           </h3>
           <div ref={currentHost} className="presenter-player" />
-          <nav className="presenter-nav" aria-label="Navigazione relatore">
+          <nav className="presenter-nav" aria-label="Presenter navigation">
             <button
               type="button"
               tabIndex={0}
               onClick={() => run.current({ kind: "prev" })}
             >
               <Icon name="arrow-left" />
-              Indietro
+              Back
             </button>
             <button
               type="button"
@@ -339,18 +332,18 @@ export function PresenterView({
               className="primary"
               onClick={() => run.current({ kind: "next" })}
             >
-              Avanti
+              Next
               <Icon name="arrow-right" />
             </button>
             <span className="presenter-keys">
-              Frecce, Pagina su/giù o Spazio
+              Arrows, Page Up/Down or Space
             </span>
           </nav>
         </section>
         <div className="presenter-side">
-          <section aria-label="Successiva" className="presenter-next">
+          <section aria-label="Next" className="presenter-next">
             <h3>
-              <span className="presenter-kicker">Successiva</span>
+              <span className="presenter-kicker">Next</span>
               {nextScene?.title}
             </h3>
             <div
@@ -359,7 +352,7 @@ export function PresenterView({
               hidden={!following}
             />
             {asChoice && (
-              <ul className="presenter-choices" aria-label="Scelte del ramo">
+              <ul className="presenter-choices" aria-label="Branch choices">
                 {eligible.map((c) => (
                   <li key={c.edgeId}>
                     <button
@@ -376,12 +369,12 @@ export function PresenterView({
               </ul>
             )}
             {eligible.length === 0 && (
-              <p className="presenter-end-note">Fine del percorso.</p>
+              <p className="presenter-end-note">End of the path.</p>
             )}
           </section>
-          <section aria-label="Note del relatore" className="presenter-notes">
-            <h3>Note</h3>
-            <p>{scene?.notes || "Nessuna nota per questa scena."}</p>
+          <section aria-label="Speaker notes" className="presenter-notes">
+            <h3>Notes</h3>
+            <p>{scene?.notes || "No notes for this scene."}</p>
           </section>
         </div>
       </div>

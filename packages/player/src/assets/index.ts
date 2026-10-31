@@ -168,14 +168,14 @@ async function signature(mime: string, blob: Blob): Promise<boolean> {
 }
 async function check(asset: Asset, blob: Blob): Promise<void> {
   if (blob.size !== asset.byteLength || blob.size > FILE_LIMIT)
-    throw new AssetError("size", "Dimensione asset non valida.");
+    throw new AssetError("size", "Invalid asset size.");
   if (!(await signature(asset.mime, blob)))
     throw new AssetError(
       "signature",
-      `MIME o firma asset incoerenti: ${asset.mime}`,
+      `Asset MIME type and signature do not match: ${asset.mime}`,
     );
   if (asset.sha256 && (await sha256(blob)) !== asset.sha256)
-    throw new AssetError("digest", "Digest asset errato.");
+    throw new AssetError("digest", "Wrong asset digest.");
 }
 const verified = new WeakMap<Blob, Map<string, Promise<void>>>();
 /**
@@ -208,11 +208,11 @@ export function createAssetResolver(
       if (!asset || !blob)
         throw new AssetError(
           "missing",
-          `Risorsa mancante: ${id}. Associa il file nel pannello Risorse.`,
+          `Missing resource: ${id}. Link the file in the Resources panel.`,
         );
       await verifyAsset(asset, blob);
       if (signal?.aborted)
-        throw new AssetError("aborted", "Caricamento annullato.");
+        throw new AssetError("aborted", "Loading cancelled.");
       const url = URL.createObjectURL(
         blob.type === asset.mime
           ? blob

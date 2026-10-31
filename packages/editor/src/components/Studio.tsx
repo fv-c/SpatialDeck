@@ -58,9 +58,9 @@ import {
 import { randomToken } from "@spatialdeck/player/presenter";
 const noPlugins: readonly PluginDefinition[] = [];
 const inspectorTabs = [
-  ["scene", "Scena"],
-  ["paths", "Percorsi"],
-  ["theme", "Tema"],
+  ["scene", "Scene"],
+  ["paths", "Paths"],
+  ["theme", "Theme"],
 ] as const;
 type InspectorTab = (typeof inspectorTabs)[number][0];
 export interface StudioProps {
@@ -214,7 +214,7 @@ export function Studio({
       })
       .catch((e) => {
         if (active)
-          setWarning(`Recupero non disponibile: ${String(e)} Usa Salva JSON.`);
+          setWarning(`Recovery unavailable: ${String(e)} Use Save JSON.`);
       });
     return () => {
       active = false;
@@ -311,8 +311,8 @@ export function Studio({
   function confirmReplace(action: () => void) {
     if (store.getSnapshot().dirty)
       setDialog({
-        title: "Scartare le modifiche?",
-        body: "Le modifiche non salvate nel file JSON saranno sostituite. Puoi annullare e salvare prima di continuare.",
+        title: "Discard changes?",
+        body: "Changes not saved to the JSON file will be replaced. You can cancel and save before continuing.",
         action,
       });
     else action();
@@ -353,14 +353,14 @@ export function Studio({
               );
             else if (head) {
               setWarning(
-                "Esiste un recupero diverso per questo progetto. Apri Recupero per confrontare le revisioni; il file attivo resta intatto.",
+                "A different recovery exists for this project. Open Recovery to compare the revisions; the active file stays untouched.",
               );
             }
           })
           .catch(() => {});
       });
     } catch (e) {
-      setError(`Apertura non riuscita: ${String(e)}`);
+      setError(`Could not open the file: ${String(e)}`);
     }
   }
   function save() {
@@ -409,7 +409,7 @@ export function Studio({
       void autosave.flush(doc, true);
       setError("");
     } catch (e) {
-      setError(`Salvataggio archivio non riuscito: ${String(e)}`);
+      setError(`Could not save the archive: ${String(e)}`);
     }
   }
   function remove() {
@@ -421,9 +421,9 @@ export function Studio({
       return;
     }
     setDialog({
-      title: "Eliminare la scena?",
+      title: "Delete the scene?",
       body: `“${selected.title}”: ${impact.value.description}`,
-      confirm: "Elimina scena",
+      confirm: "Delete scene",
       action: () => report(store.execute(edit)),
     });
   }
@@ -433,7 +433,7 @@ export function Studio({
       const heads = await repository.heads();
       if (!heads.length) {
         setRevisions([]);
-        if (reportEmpty) setError("Nessun recupero disponibile.");
+        if (reportEmpty) setError("No recovery available.");
         return;
       }
       const all = (
@@ -451,12 +451,12 @@ export function Studio({
     const title = target.document.metadata.title;
     setDialog({
       title: project
-        ? "Eliminare il progetto locale?"
-        : "Eliminare la revisione locale?",
+        ? "Delete the local project?"
+        : "Delete the local revision?",
       body: project
-        ? `Tutte le revisioni locali di “${title}” e le risorse non più usate saranno rimosse da questo browser. Il documento aperto e i file salvati non cambiano.`
-        : `La revisione ${target.revision} di “${title}” sarà rimossa da questo browser. Il documento aperto e i file salvati non cambiano.`,
-      confirm: project ? "Elimina progetto" : "Elimina revisione",
+        ? `All local revisions of “${title}” and the assets no longer in use will be removed from this browser. The open document and saved files do not change.`
+        : `Revision ${target.revision} of “${title}” will be removed from this browser. The open document and saved files do not change.`,
+      confirm: project ? "Delete project" : "Delete revision",
       action: () =>
         void (async () => {
           try {
@@ -469,7 +469,7 @@ export function Studio({
             autosave.rebase(target.projectId, head?.revision ?? null);
             await recoverList(false);
           } catch (e) {
-            setError(`Eliminazione non riuscita: ${String(e)}`);
+            setError(`Could not delete: ${String(e)}`);
           }
         })(),
     });
@@ -546,9 +546,9 @@ export function Studio({
         </div>
         <span className="toolbar-divider" aria-hidden="true" />
         <label className="title-field">
-          <span className="visually-hidden">Titolo progetto</span>
+          <span className="visually-hidden">Project title</span>
           <input
-            aria-label="Titolo progetto"
+            aria-label="Project title"
             value={session.document.metadata.title}
             onChange={(e) =>
               report(
@@ -561,10 +561,10 @@ export function Studio({
             onBlur={() => store.endCoalesce()}
           />
         </label>
-        <nav aria-label="Strumenti documento" className="toolbar-actions">
+        <nav aria-label="Document tools" className="toolbar-actions">
           <IconButton
             icon="new"
-            label="Nuovo"
+            label="New"
             onClick={() =>
               confirmReplace(() => {
                 autosave.cancelPending();
@@ -575,27 +575,27 @@ export function Studio({
           />
           <IconButton
             icon="open"
-            label="Apri"
-            shortcut="⌘O · JSON o .spatialdeck"
+            label="Open"
+            shortcut="⌘O · JSON or .spatialdeck"
             ref={openButton}
             onClick={() => file.current?.click()}
           />
           <IconButton
             icon="save"
-            label="Salva JSON"
+            label="Save JSON"
             shortcut="⌘S"
             onClick={save}
           />
           <IconButton
             icon="archive"
-            label="Salva archivio"
-            shortcut="file .spatialdeck con le risorse"
+            label="Save archive"
+            shortcut=".spatialdeck file with the assets"
             onClick={() => void savePortable()}
           />
           <span className="toolbar-divider" aria-hidden="true" />
           <IconButton
             icon="undo"
-            label="Annulla"
+            label="Undo"
             shortcut="⌘Z"
             ref={undoButton}
             disabled={!session.canUndo}
@@ -606,7 +606,7 @@ export function Studio({
           />
           <IconButton
             icon="redo"
-            label="Ripristina"
+            label="Redo"
             shortcut="⇧⌘Z"
             ref={redoButton}
             disabled={!session.canRedo}
@@ -618,13 +618,13 @@ export function Studio({
           <span className="toolbar-divider" aria-hidden="true" />
           <IconButton
             icon="history"
-            label="Recupero"
-            shortcut="revisioni locali"
+            label="Recovery"
+            shortcut="local revisions"
             onClick={() => void recoverList()}
           />
           <IconButton
             icon="eye"
-            label="Anteprima"
+            label="Preview"
             pressed={preview}
             onClick={() => setPreview(!preview)}
           />
@@ -633,13 +633,13 @@ export function Studio({
             type="button"
             tabIndex={0}
             className="tool-button quiet"
-            data-tip="Note, anteprime e finestra pubblica"
+            data-tip="Notes, previews and the audience window"
             data-tip-side="left"
             onClick={startPresenter}
             disabled={!session.document.scenes.length}
           >
             <Icon name="presenter" />
-            Relatore
+            Presenter
           </button>
           <button
             type="button"
@@ -650,14 +650,14 @@ export function Studio({
             disabled={!session.document.scenes.length}
           >
             <Icon name="play" />
-            Presenta
+            Present
           </button>
         </nav>
         <input
           ref={file}
           type="file"
           accept=".json,.spatialdeck,application/json,application/zip"
-          aria-label="File progetto JSON"
+          aria-label="JSON project file"
           className="file-input"
           onChange={(e) => {
             const input = e.target.files?.[0];
@@ -679,7 +679,7 @@ export function Studio({
           {error}
           <button
             tabIndex={0}
-            aria-label="Chiudi errore"
+            aria-label="Dismiss error"
             onClick={() => setError("")}
           >
             ×
@@ -689,16 +689,16 @@ export function Studio({
       <div className="workspace">
         <details open className="scene-panel">
           <summary>
-            Scene <span>{session.document.scenes.length}</span>
+            Scenes <span>{session.document.scenes.length}</span>
           </summary>
           <div
             className="panel-actions"
             role="toolbar"
-            aria-label="Azioni scene"
+            aria-label="Scene actions"
           >
             <IconButton
               icon="plus"
-              label="Nuova scena"
+              label="New scene"
               onClick={() => {
                 setNavigation(null);
                 setCapture(null);
@@ -712,7 +712,7 @@ export function Studio({
             />
             <IconButton
               icon="copy"
-              label="Duplica scena"
+              label="Duplicate scene"
               disabled={!selected}
               onClick={() => {
                 setNavigation(null);
@@ -727,15 +727,15 @@ export function Studio({
             />
             <IconButton
               icon="trash"
-              label="Elimina scena"
-              shortcut="Canc"
+              label="Delete scene"
+              shortcut="Del"
               disabled={!selected}
               onClick={remove}
             />
           </div>
           {!session.document.scenes.length && (
             <div className="empty-scenes">
-              <p>Nessuna scena. Una scena è un rettangolo nello spazio.</p>
+              <p>No scenes yet. A scene is a rectangle in space.</p>
               <button
                 type="button"
                 tabIndex={0}
@@ -745,11 +745,11 @@ export function Studio({
                 }
               >
                 <Icon name="plus" />
-                Crea la prima scena
+                Create the first scene
               </button>
             </div>
           )}
-          <ol aria-label="Elenco scene">
+          <ol aria-label="Scene list">
             {session.document.scenes.map((scene, index) => (
               <li key={scene.id}>
                 <button
@@ -764,13 +764,13 @@ export function Studio({
                   <span className="scene-number">{index + 1}</span>
                   <SceneThumb document={session.document} scene={scene} />
                   <span className="scene-label">
-                    {scene.title || "Senza titolo"}
+                    {scene.title || "Untitled"}
                     <small>
                       {scene.layout === "canvas" ? "Canvas" : "Flow"} ·{" "}
                       {scene.blocks.length === 1
-                        ? "1 contenuto"
-                        : `${scene.blocks.length} contenuti`}
-                      {!scene.visible && " · nascosta"}
+                        ? "1 block"
+                        : `${scene.blocks.length} blocks`}
+                      {!scene.visible && " · hidden"}
                     </small>
                   </span>
                 </button>
@@ -786,7 +786,7 @@ export function Studio({
           />
           <p className="local-note">
             <Icon name="device" />
-            Solo su questo dispositivo: salva un file per conservarlo.
+            Only on this device: save a file to keep it.
           </p>
         </details>
         <div
@@ -795,18 +795,18 @@ export function Studio({
           {preview && (
             <section
               className={`preview-panel ${layoutScene ? "is-layout" : ""}`}
-              aria-label="Anteprima"
+              aria-label="Preview"
             >
               <div className="panel-heading">
-                <h2>Anteprima</h2>
+                <h2>Preview</h2>
                 <span className="panel-context">
-                  {selected?.title ?? "Nessuna scena"}
+                  {selected?.title ?? "No scene"}
                 </span>
                 <button
                   type="button"
                   tabIndex={0}
                   className="tool-button layout-toggle"
-                  data-tip="Disponi i contenuti della scena"
+                  data-tip="Arrange the blocks of the scene"
                   aria-pressed={layoutMode}
                   disabled={!selected}
                   onClick={() => {
@@ -818,13 +818,13 @@ export function Studio({
                     setLayoutMode(!layoutMode);
                     setAnnouncement(
                       layoutMode
-                        ? "Impaginazione chiusa."
-                        : "Impaginazione: scena inquadrata frontalmente.",
+                        ? "Layout closed."
+                        : "Layout: scene framed head-on.",
                     );
                   }}
                 >
                   <Icon name="frame" />
-                  Impagina
+                  Layout
                 </button>
               </div>
               <div className="preview-stage">
@@ -861,7 +861,7 @@ export function Studio({
           <div
             className="inspector-tabs"
             role="tablist"
-            aria-label="Sezioni dell’inspector"
+            aria-label="Inspector sections"
             onKeyDown={(event) => {
               const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
               if (!step) return;
@@ -892,7 +892,7 @@ export function Studio({
                 )}
                 {id === "theme" && themeIssues > 0 && (
                   <span className="count has-issues">
-                    <span className="visually-hidden">avvisi: </span>
+                    <span className="visually-hidden">warnings: </span>
                     {themeIssues}
                   </span>
                 )}
@@ -922,16 +922,18 @@ export function Studio({
                 announce={setAnnouncement}
                 onFlow={() =>
                   setDialog({
-                    title: "Tornare a flow?",
-                    body: `Le posizioni, le dimensioni, le rotazioni e i livelli di ${layoutScene.blocks.length} contenuti di “${layoutScene.title}” andranno persi; i contenuti tornano impilati nell’ordine di lettura. Annulla li ripristina.`,
-                    confirm: "Torna a flow",
+                    title: "Switch back to flow?",
+                    body: `The positions, sizes, rotations and layers of ${layoutScene.blocks.length} blocks in “${layoutScene.title}” will be lost; the blocks are stacked again in reading order. Undo restores them.`,
+                    confirm: "Switch to flow",
                     action: () => {
                       const result = store.execute(
                         convertToFlow(layoutScene.id),
                       );
                       report(result);
                       if (result.ok)
-                        setAnnouncement("Scena tornata a flow: frame rimossi.");
+                        setAnnouncement(
+                          "Scene switched to flow: frames removed.",
+                        );
                     },
                   })
                 }
@@ -966,20 +968,20 @@ export function Studio({
       </div>
       <footer className="statusbar">
         <span className={`save-state ${session.dirty ? "is-dirty" : ""}`}>
-          {session.dirty ? "Modifiche da salvare in JSON" : "Documento salvato"}
+          {session.dirty ? "Changes not yet saved to JSON" : "Document saved"}
         </span>
         <span>
           schema {session.document.schemaVersion} ·{" "}
-          {session.document.scenes.length} scene · {session.historyLength}{" "}
-          comandi
+          {session.document.scenes.length} scenes · {session.historyLength}{" "}
+          commands
         </span>
       </footer>
       {resumable && !presenter && (
         <div className="presenter-resume" role="status">
           <span>
-            Sessione relatore attiva in un’altra finestra.
+            Presenter session active in another window.
             {!session.document.scenes.length &&
-              " Apri il progetto presentato per riprenderla."}
+              " Open the presented project to resume it."}
           </span>
           <button
             type="button"
@@ -993,7 +995,7 @@ export function Studio({
               setResumable(null);
             }}
           >
-            Riprendi vista relatore
+            Resume presenter view
           </button>
           <button
             type="button"
@@ -1003,7 +1005,7 @@ export function Studio({
               setResumable(null);
             }}
           >
-            Ignora
+            Dismiss
           </button>
         </div>
       )}
@@ -1030,7 +1032,7 @@ export function Studio({
           ref={presentation}
           tabIndex={-1}
           role="region"
-          aria-label="Modalità presentazione"
+          aria-label="Presentation mode"
         >
           <div className="present-controls">
             <button
@@ -1040,25 +1042,25 @@ export function Studio({
               onClick={() => setPresent(false)}
             >
               <Icon name="arrow-left" />
-              Torna all’editor
+              Back to the editor
             </button>
             <span className="present-divider" aria-hidden="true" />
             <IconButton
               icon="chevron-left"
-              label="Scena precedente"
+              label="Previous scene"
               tip="top"
               onClick={() => void presenting.current?.prev()}
             />
             <span className="present-title">{presentedTitle}</span>
             <IconButton
               icon="chevron-right"
-              label="Scena successiva"
+              label="Next scene"
               tip="top"
               onClick={() => void presenting.current?.next()}
             />
             <span className="present-divider" aria-hidden="true" />
             <span className="present-hint">
-              Frecce per navigare · Esc per uscire
+              Arrows to navigate · Esc to exit
             </span>
           </div>
           <PlayerSurface
@@ -1089,8 +1091,8 @@ export function Studio({
       )}
       {!!revisions.length && !dialog && (
         <Dialog
-          title="Recupero locale disponibile"
-          confirm="Recupera revisione"
+          title="Local recovery available"
+          confirm="Recover revision"
           onCancel={() => {
             setRevisions([]);
             setRecoveryIndex(0);
@@ -1098,28 +1100,29 @@ export function Studio({
           onConfirm={recover}
         >
           <p>
-            Scegli una revisione dell’autosave. Il file originale resta intatto.
-            Il recupero non è un backup.
+            Choose an autosave revision. The original file stays untouched.
+            Recovery is not a backup.
           </p>
           <label>
-            Revisione
+            Revision
             <select
-              aria-label="Revisione da recuperare"
+              aria-label="Revision to recover"
               value={recoveryIndex}
               onChange={(e) => setRecoveryIndex(Number(e.target.value))}
             >
               {revisions.map((r, index) => (
                 <option key={`${r.projectId}-${r.revision}`} value={index}>
                   {r.document.metadata.title} · rev. {r.revision} ·{" "}
-                  {revisionTime(r.updatedAt)} · {r.document.scenes.length} scene
+                  {revisionTime(r.updatedAt)} · {r.document.scenes.length}{" "}
+                  scenes
                 </option>
               ))}
             </select>
           </label>
           <p>
-            Attivo: {session.document.metadata.title},{" "}
-            {session.document.scenes.length} scene. Recupero:{" "}
-            {revisions[recoveryIndex]?.document.scenes.length} scene.
+            Active: {session.document.metadata.title},{" "}
+            {session.document.scenes.length} scenes. Recovery:{" "}
+            {revisions[recoveryIndex]?.document.scenes.length} scenes.
           </p>
           <div className="recovery-actions">
             <button
@@ -1127,14 +1130,14 @@ export function Studio({
               tabIndex={0}
               onClick={() => confirmDelete(false)}
             >
-              Elimina revisione
+              Delete revision
             </button>
             <button
               type="button"
               tabIndex={0}
               onClick={() => confirmDelete(true)}
             >
-              Elimina progetto locale
+              Delete local project
             </button>
           </div>
         </Dialog>

@@ -12,6 +12,6 @@ import "@spatialdeck/player/fonts.css";
 createRoot(root).render(<Studio store={new EditorStore(emptyProject())} />);
 ```
 
-The public API is delimited since 0.6 (see `dist/index.d.ts`); components and storage internals are private. The interface is Italian until 1.0, when Studio moves to English (G0 decision 3).
+The public API is delimited since 0.6 (see `dist/index.d.ts`); components and storage internals are private. The interface is in English (G0 decision 3).
 
 Not yet published to npm (scope verification pending). Licence: GPL-3.0-or-later. Guide: [AUTHORING.md](https://github.com/fv-c/SpatialDeck/blob/main/docs/AUTHORING.md).

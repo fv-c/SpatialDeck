@@ -6,15 +6,15 @@ export const blockTypes: Record<
   Block["type"],
   { label: string; icon: IconName }
 > = {
-  text: { label: "Testo", icon: "type-text" },
+  text: { label: "Text", icon: "type-text" },
   markdown: { label: "Markdown", icon: "type-markdown" },
   html: { label: "HTML", icon: "type-html" },
   svg: { label: "SVG", icon: "type-svg" },
   latex: { label: "Formula", icon: "type-latex" },
-  image: { label: "Immagine", icon: "type-image" },
+  image: { label: "Image", icon: "type-image" },
   audio: { label: "Audio", icon: "type-audio" },
   video: { label: "Video", icon: "type-video" },
-  link: { label: "Collegamento", icon: "link" },
-  embed: { label: "Incorporato", icon: "type-embed" },
+  link: { label: "Link", icon: "link" },
+  embed: { label: "Embed", icon: "type-embed" },
   plugin: { label: "Plugin", icon: "type-plugin" },
 };

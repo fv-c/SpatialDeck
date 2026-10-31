@@ -36,7 +36,7 @@ export function emptyProject(): ProjectDocument {
   return {
     schemaVersion: "1.3.0",
     id: id(),
-    metadata: { title: "Senza titolo", language: "it" },
+    metadata: { title: "Untitled", language: "en" },
     settings: {
       viewport: { width: 1280, height: 720, perspective: 1000 },
       presentation: {
@@ -61,7 +61,7 @@ function mainPath(document: ProjectDocument): Result<ScenePath> {
   if (!path) {
     path = {
       id: id(),
-      name: "Principale",
+      name: "Main",
       startNodeId: null,
       nodes: [],
       edges: [],
@@ -80,7 +80,7 @@ function mainPath(document: ProjectDocument): Result<ScenePath> {
     )
       return failure(
         "PATH_STRUCTURE",
-        "Il percorso contiene dati strutturali: crea una scena indipendente e aggiungi la visita esplicitamente.",
+        "The path holds structural data: create a standalone scene and add the visit explicitly.",
       );
     const ordered: string[] = [];
     let next = path.startNodeId;
@@ -90,8 +90,7 @@ function mainPath(document: ProjectDocument): Result<ScenePath> {
       const node = path.nodes.find((n) => n.id === next)!;
       ordered.push(node.sceneId);
       const exits = path.edges.filter((e) => e.from === next);
-      if (exits.length > 1)
-        return failure("PATH_ORDER", "Il percorso è ramificato.");
+      if (exits.length > 1) return failure("PATH_ORDER", "The path branches.");
       next = exits[0]?.to ?? null;
     }
     if (
@@ -103,7 +102,7 @@ function mainPath(document: ProjectDocument): Result<ScenePath> {
     )
       return failure(
         "PATH_ORDER",
-        "Il percorso principale non segue l’ordine delle scene o contiene visite ripetute. La modifica strutturale è rifiutata; contenuti e trasformazioni restano modificabili.",
+        "The main path does not follow the scene order or repeats visits. The structural edit is rejected; blocks and transforms remain editable.",
       );
   }
   return success(path);
@@ -139,13 +138,13 @@ export function createScene(afterId?: string, duplicate = false): DocumentEdit {
     const path = mainPath(document);
     const source = document.scenes.find((s) => s.id === afterId);
     if (duplicate && !source)
-      return failure("SELECTION", "Selezionare una scena da duplicare.");
+      return failure("SELECTION", "Select a scene to duplicate.");
     const scene: Scene =
       source && duplicate
         ? {
             ...structuredClone(source),
             id: id(),
-            title: `${source.title} — copia`,
+            title: `${source.title} — copy`,
             position: [
               source.position[0] + 120,
               source.position[1] + 120,
@@ -159,7 +158,7 @@ export function createScene(afterId?: string, duplicate = false): DocumentEdit {
         : {
             id: id(),
             parentId: null,
-            title: `Scena ${document.scenes.length + 1}`,
+            title: `Scene ${document.scenes.length + 1}`,
             position: source
               ? [source.position[0] + 1000, source.position[1], 0]
               : [0, 0, 0],
@@ -168,7 +167,7 @@ export function createScene(afterId?: string, duplicate = false): DocumentEdit {
             size: [800, 450],
             visible: true,
             blocks: [
-              { id: id(), type: "text", data: { text: "Scrivi la tua idea." } },
+              { id: id(), type: "text", data: { text: "Write your idea." } },
             ],
             notes: "",
             extensions: {},
@@ -195,7 +194,7 @@ export function deleteImpact(
     )
     .map(
       (p) =>
-        `${p.name} (${p.nodes.filter((n) => n.sceneId === sceneId).length} riferimenti)`,
+        `${p.name} (${p.nodes.filter((n) => n.sceneId === sceneId).length} references)`,
     );
 }
 export function deleteScene(sceneId: string, confirmed = false): DocumentEdit {
@@ -204,11 +203,11 @@ export function deleteScene(sceneId: string, confirmed = false): DocumentEdit {
     if (impact.length && !confirmed)
       return failure(
         "REFERENCED_SCENE",
-        `Eliminazione rifiutata: la scena è usata anche in ${impact.join(", ")}.`,
+        `Deletion rejected: the scene is also used in ${impact.join(", ")}.`,
       );
     const path = mainPath(document);
     if (!document.scenes.some((s) => s.id === sceneId))
-      return failure("SELECTION", "Scena assente.");
+      return failure("SELECTION", "Scene not found.");
     for (const child of document.scenes.filter((s) => s.parentId === sceneId)) {
       const changed = reparentScene(
         document,
@@ -243,7 +242,7 @@ export function editScene(
 ): DocumentEdit {
   return (document) => {
     const scene = document.scenes.find((s) => s.id === sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     Object.assign(scene, structuredClone(patch));
     return success(document);
   };
@@ -273,7 +272,7 @@ export function reparent(
 ): DocumentEdit {
   return (doc) => reparentScene(doc, sceneId, parentId, preserveWorld);
 }
-export function createPath(name = "Nuovo percorso"): DocumentEdit {
+export function createPath(name = "New path"): DocumentEdit {
   return (doc) => {
     const path: ScenePath = {
       id: id(),
@@ -293,7 +292,7 @@ export function editPath(
 ): DocumentEdit {
   return (doc) => {
     const path = doc.paths.find((p) => p.id === pathId);
-    if (!path) return failure("UNKNOWN_PATH", "Percorso assente.");
+    if (!path) return failure("UNKNOWN_PATH", "Path not found.");
     Object.assign(path, structuredClone(patch));
     return success(doc);
   };
@@ -301,7 +300,7 @@ export function editPath(
 export function deletePath(pathId: string): DocumentEdit {
   return (doc) => {
     const path = doc.paths.find((p) => p.id === pathId);
-    if (!path) return failure("UNKNOWN_PATH", "Percorso assente.");
+    if (!path) return failure("UNKNOWN_PATH", "Path not found.");
     doc.paths = doc.paths.filter((p) => p.id !== pathId);
     if (doc.defaultPathId === pathId)
       doc.defaultPathId = doc.paths[0]?.id ?? null;
@@ -317,7 +316,7 @@ export function createNode(
 ): DocumentEdit {
   return (doc) => {
     const path = doc.paths.find((p) => p.id === pathId);
-    if (!path) return failure("UNKNOWN_PATH", "Percorso assente.");
+    if (!path) return failure("UNKNOWN_PATH", "Path not found.");
     const node = { id: id(), sceneId, holdMs: 0 };
     const from = fromId ?? path.nodes.at(-1)?.id;
     path.nodes.push(node);
@@ -344,7 +343,7 @@ export function editNode(
     const node = doc.paths
       .find((p) => p.id === pathId)
       ?.nodes.find((n) => n.id === nodeId);
-    if (!node) return failure("UNKNOWN_NODE", "Nodo assente.");
+    if (!node) return failure("UNKNOWN_NODE", "Node not found.");
     Object.assign(node, structuredClone(patch));
     return success(doc);
   };
@@ -356,12 +355,12 @@ export function connectNodes(
 ): DocumentEdit {
   return (doc) => {
     const path = doc.paths.find((p) => p.id === pathId);
-    if (!path) return failure("UNKNOWN_PATH", "Percorso assente.");
+    if (!path) return failure("UNKNOWN_PATH", "Path not found.");
     path.edges.push({
       id: id(),
       from,
       to,
-      label: "Nuova scelta",
+      label: "New choice",
       transition: structuredClone(doc.settings.presentation.defaultTransition),
       condition: { kind: "manual" },
     });
@@ -377,7 +376,7 @@ export function editEdge(
     const edge = doc.paths
       .find((p) => p.id === pathId)
       ?.edges.find((e) => e.id === edgeId);
-    if (!edge) return failure("UNKNOWN_EDGE", "Connessione assente.");
+    if (!edge) return failure("UNKNOWN_EDGE", "Connection not found.");
     Object.assign(edge, structuredClone(patch));
     return success(doc);
   };
@@ -389,7 +388,7 @@ export function removeGraphItem(
 ): DocumentEdit {
   return (doc) => {
     const path = doc.paths.find((p) => p.id === pathId);
-    if (!path) return failure("UNKNOWN_PATH", "Percorso assente.");
+    if (!path) return failure("UNKNOWN_PATH", "Path not found.");
     if (kind === "node") path.nodes = path.nodes.filter((n) => n.id !== itemId);
     else path.edges = path.edges.filter((e) => e.id !== itemId);
     prunePath(path);
@@ -418,7 +417,7 @@ export function editImpact(
   ).length;
   return success({
     document: next,
-    description: `${document.scenes.length - next.scenes.length} scene, ${document.paths.length - next.paths.length} percorsi, ${nodes} visite, ${edges} connessioni e ${document.cues.length - next.cues.length} cue rimossi; ${parents} figli ricollocati conservando la posa nel mondo. Le visite non più raggiungibili vengono rimosse. Annulla ripristina tutti i dati.`,
+    description: `${document.scenes.length - next.scenes.length} scenes, ${document.paths.length - next.paths.length} paths, ${nodes} visits, ${edges} connections and ${document.cues.length - next.cues.length} cues removed; ${parents} children reparented, keeping their world pose. Visits no longer reachable are removed. Undo restores all the data.`,
   });
 }
 
@@ -449,12 +448,12 @@ export function setFrames(
 ): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     if (scene.layout !== "canvas")
-      return failure("LAYOUT_FLOW", "La scena non è in modalità canvas.");
+      return failure("LAYOUT_FLOW", "The scene is not in canvas mode.");
     for (const [id, frame] of Object.entries(frames)) {
       const block = scene.blocks.find((b) => b.id === id);
-      if (!block) return failure("SELECTION", "Contenuto assente.");
+      if (!block) return failure("SELECTION", "Block not found.");
       block.frame = structuredClone(frame);
     }
     return success(document);
@@ -468,10 +467,10 @@ export function setBlockStyle(
 ): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     for (const id of blockIds) {
       const block = scene.blocks.find((b) => b.id === id);
-      if (!block) return failure("SELECTION", "Contenuto assente.");
+      if (!block) return failure("SELECTION", "Block not found.");
       const style: Record<string, string | undefined> = {
         ...block.style,
         ...patch,
@@ -490,7 +489,7 @@ export function setAppearance(
 ): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     scene.appearance = { ...scene.appearance, ...structuredClone(patch) };
     return success(document);
   };
@@ -502,15 +501,15 @@ export function convertToCanvas(
 ): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     if (scene.layout === "canvas")
-      return failure("LAYOUT_CANVAS", "La scena è già in modalità canvas.");
+      return failure("LAYOUT_CANVAS", "The scene is already in canvas mode.");
     for (const block of scene.blocks) {
       const frame = frames[block.id];
       if (!frame)
         return failure(
           "FRAME_REQUIRED",
-          "Manca la misura di un contenuto: riprova con l’anteprima visibile.",
+          "A block measurement is missing: try again with the preview visible.",
         );
       block.frame = clampFrame(structuredClone(frame), scene.size);
     }
@@ -522,7 +521,7 @@ export function convertToCanvas(
 export function convertToFlow(sceneId: string): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     scene.layout = "flow";
     for (const block of scene.blocks) delete block.frame;
     return success(document);
@@ -536,10 +535,10 @@ export function moveInReadingOrder(
 ): DocumentEdit {
   return (document) => {
     const scene = sceneById(document, sceneId);
-    if (!scene) return failure("SELECTION", "Scena assente.");
+    if (!scene) return failure("SELECTION", "Scene not found.");
     const from = scene.blocks.findIndex((b) => b.id === blockId),
       to = from + delta;
-    if (from < 0) return failure("SELECTION", "Contenuto assente.");
+    if (from < 0) return failure("SELECTION", "Block not found.");
     if (to < 0 || to >= scene.blocks.length) return success(document);
     const [block] = scene.blocks.splice(from, 1) as [Block];
     scene.blocks.splice(to, 0, block);

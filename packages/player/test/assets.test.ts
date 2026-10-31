@@ -43,14 +43,14 @@ it("owns independent Blob URLs, releases idempotently and aborts without leaking
   expect(revoke).toHaveBeenCalledTimes(2);
   revoke.mockRestore();
   await expect(resolver.resolve("tone", controller.signal)).rejects.toThrow(
-    /annullato/,
+    /cancelled/,
   );
 });
 it("rejects missing bytes, wrong length/signature/digest and unsupported MIME", async () => {
   const { asset, blob } = await resource();
   await expect(
     createAssetResolver([asset], new Map()).resolve("tone"),
-  ).rejects.toThrow(/mancante/);
+  ).rejects.toThrow(/Missing resource/);
   for (const patch of [
     { byteLength: 1 },
     { sha256: "0".repeat(64) },

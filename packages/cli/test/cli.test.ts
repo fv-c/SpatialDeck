@@ -596,7 +596,7 @@ describe("remote references in markup", () => {
 });
 
 describe("animated images in a capture", () => {
-  it("recognises GIF with several frames, APNG and animated WebP, not their still forms", async () => {
+  it("recognizes GIF with several frames, APNG and animated WebP, not their still forms", async () => {
     const b64 = (text: string) => new Uint8Array(Buffer.from(text, "base64"));
     // Two-frame 2×2 images and their single-frame forms (Pillow).
     const gif = b64(

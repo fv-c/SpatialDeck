@@ -93,10 +93,10 @@ for (const route of ["/core", "/structure", "/content", "/layout"])
     await expect(
       page
         .locator('.sd-block [role="status"]')
-        .filter({ hasText: "Caricamento risorsa locale" }),
+        .filter({ hasText: "Loading local resource" }),
     ).toHaveCount(0);
     await audit(page, route.slice(1), info);
-    await page.getByRole("button", { name: "Vista testuale" }).first().click();
+    await page.getByRole("button", { name: "Text view" }).first().click();
     await audit(page, `${route.slice(1)}-outline`, info);
   });
 test("axe: Studio empty, with content and dialogs has no serious or critical violations", async ({
@@ -106,25 +106,25 @@ test("axe: Studio empty, with content and dialogs has no serious or critical vio
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   await audit(page, "studio-empty", info);
   await page
-    .getByLabel("File progetto JSON")
+    .getByLabel("JSON project file")
     .setInputFiles("examples/content-gallery/content-gallery.spatialdeck");
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(11);
   await page
-    .getByRole("list", { name: "Elenco scene" })
+    .getByRole("list", { name: "Scene list" })
     .getByRole("button")
     .nth(7)
     .click();
   await audit(page, "studio-content", info);
-  await page.getByRole("button", { name: "Elimina scena" }).click();
+  await page.getByRole("button", { name: "Delete scene" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await audit(page, "studio-dialog", info);
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Annulla" })
+    .getByRole("button", { name: "Cancel" })
     .click();
-  await page.getByRole("button", { name: "Presenta" }).click();
+  await page.getByRole("button", { name: "Present", exact: true }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   await audit(page, "studio-presentation", info);
 });
@@ -134,17 +134,17 @@ test("axe: Studio scene editor, its panels and the theme have no serious or crit
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   await page
-    .getByLabel("File progetto JSON")
+    .getByLabel("JSON project file")
     .setInputFiles("examples/layout-canvas/layout-canvas.spatialdeck");
-  await expect(page.getByLabel("Titolo progetto")).toHaveValue(
-    "Impaginazione nella scena",
+  await expect(page.getByLabel("Project title")).toHaveValue(
+    "Layout inside the scene",
   );
-  await page.getByRole("button", { name: "Impagina", exact: true }).click();
+  await page.getByRole("button", { name: "Layout", exact: true }).click();
   await expect(page.locator("[data-layout-block]")).toHaveCount(5);
   await page.locator('[data-layout-block="summary"]').focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".layout-handle")).toHaveCount(9);
   await audit(page, "studio-layout", info);
-  await page.getByRole("tab", { name: /^Tema/ }).click();
+  await page.getByRole("tab", { name: /^Theme/ }).click();
   await audit(page, "studio-theme", info);
 });

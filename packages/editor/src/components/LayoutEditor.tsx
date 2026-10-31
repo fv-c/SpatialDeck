@@ -136,14 +136,14 @@ export function measureFlowFrames(
   return frames;
 }
 const handles: Array<[FrameHandle, string, Point]> = [
-  ["nw", "angolo in alto a sinistra", [0, 0]],
-  ["n", "lato superiore", [0.5, 0]],
-  ["ne", "angolo in alto a destra", [1, 0]],
-  ["e", "lato destro", [1, 0.5]],
-  ["se", "angolo in basso a destra", [1, 1]],
-  ["s", "lato inferiore", [0.5, 1]],
-  ["sw", "angolo in basso a sinistra", [0, 1]],
-  ["w", "lato sinistro", [0, 0.5]],
+  ["nw", "top left corner", [0, 0]],
+  ["n", "top edge", [0.5, 0]],
+  ["ne", "top right corner", [1, 0]],
+  ["e", "right edge", [1, 0.5]],
+  ["se", "bottom right corner", [1, 1]],
+  ["s", "bottom edge", [0.5, 1]],
+  ["sw", "bottom left corner", [0, 1]],
+  ["w", "left edge", [0, 0.5]],
 ];
 const arrows: Record<string, Point> = {
   ArrowLeft: [-1, 0],
@@ -154,9 +154,9 @@ const arrows: Record<string, Point> = {
 export function frameSummary(block: Block, index: number, count: number) {
   const f = block.frame;
   const where = f
-    ? `x ${Math.round(f.x)}, y ${Math.round(f.y)}, ${Math.round(f.width)} × ${Math.round(f.height)}, rotazione ${Math.round(f.rotation)}°, livello ${f.z}`
-    : "nel flusso";
-  return `Blocco ${index + 1} di ${count}, ${block.type}: ${where}`;
+    ? `x ${Math.round(f.x)}, y ${Math.round(f.y)}, ${Math.round(f.width)} × ${Math.round(f.height)}, rotation ${Math.round(f.rotation)}°, layer ${f.z}`
+    : "in the flow";
+  return `Block ${index + 1} of ${count}, ${block.type}: ${where}`;
 }
 type Gesture = {
   pointer: number;
@@ -356,7 +356,7 @@ export function LayoutEditor({
     gesture.current = null;
     if (cancel) {
       store.cancelDrag();
-      announce("Gesto annullato.");
+      announce("Gesture cancelled.");
       return;
     }
     store.endDrag();
@@ -367,10 +367,10 @@ export function LayoutEditor({
     if (frame)
       announce(
         g.kind === "move"
-          ? `Spostato: x ${Math.round(frame.x)}, y ${Math.round(frame.y)}.`
+          ? `Moved: x ${Math.round(frame.x)}, y ${Math.round(frame.y)}.`
           : g.kind === "rotate"
-            ? `Ruotato: ${Math.round(frame.rotation)}°.`
-            : `Ridimensionato: ${Math.round(frame.width)} × ${Math.round(frame.height)}.`,
+            ? `Rotated: ${Math.round(frame.rotation)}°.`
+            : `Resized: ${Math.round(frame.width)} × ${Math.round(frame.height)}.`,
       );
   }
   const pointerProps = {
@@ -428,8 +428,8 @@ export function LayoutEditor({
     onSelect(next);
     announce(
       next.length === 1
-        ? `Selezionato blocco ${index(next[0]!) + 1}.`
-        : `Selezionati ${next.length} blocchi.`,
+        ? `Selected block ${index(next[0]!) + 1}.`
+        : `Selected ${next.length} blocks.`,
     );
   }
   function keys(event: ReactKeyboardEvent<HTMLElement>, block: Block) {
@@ -589,7 +589,7 @@ export function LayoutEditor({
                   tabIndex={0}
                   className={`layout-handle handle-${handle}`}
                   data-handle={handle}
-                  aria-label={`Ridimensiona blocco ${i + 1}: ${name}`}
+                  aria-label={`Resize block ${i + 1}: ${name}`}
                   aria-describedby="layout-help"
                   style={{ left: at[0], top: at[1] }}
                   {...pointerProps}
@@ -608,7 +608,7 @@ export function LayoutEditor({
               tabIndex={0}
               className="layout-handle layout-rotate"
               data-handle="rotate"
-              aria-label={`Ruota blocco ${i + 1}: ${Math.round(frame.rotation)}°`}
+              aria-label={`Rotate block ${i + 1}: ${Math.round(frame.rotation)}°`}
               aria-describedby="layout-help"
               style={{ left: rotateAt[0], top: rotateAt[1] }}
               {...pointerProps}
@@ -624,9 +624,9 @@ export function LayoutEditor({
         ];
       })}
       <p id="layout-help" className="visually-hidden">
-        Invio seleziona, Maiusc+Invio aggiunge alla selezione. Frecce: sposta o
-        ridimensiona di 1 px, con Maiusc di 10 px; sulla maniglia di rotazione
-        1° o 15°. Esc annulla il gesto in corso.
+        Enter selects, Shift+Enter adds to the selection. Arrows: move or resize
+        by 1 px, by 10 px with Shift; on the rotation handle 1° or 15°. Esc
+        cancels the gesture in progress.
       </p>
     </div>
   );

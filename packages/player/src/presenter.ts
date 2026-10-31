@@ -12,7 +12,7 @@ import type { NavigationRequest, Player } from "./index.js";
  * misreports `event.source` (WebKit after the presenter tab reloads), the
  * nonce proves the message comes from the window behind the popup reference.
  * The public side never sends a navigation, only requests, so there is no
- * feedback loop; after a reload it resynchronises from a snapshot, not by
+ * feedback loop; after a reload it resynchronizes from a snapshot, not by
  * replaying messages.
  */
 export const PRESENTER_PROTOCOL = "spatialdeck-presenter/1";

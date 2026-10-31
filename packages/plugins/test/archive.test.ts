@@ -89,14 +89,16 @@ it("refuses a dishonest digest, incompatible MIME, missing resources and oversiz
   const { document, blobs } = await gallery(),
     a = document.assets[0]!;
   document.assets[0] = { ...a, sha256: "0".repeat(64) };
-  await expect(writeArchive(document, blobs)).rejects.toThrow(/Digest/);
+  await expect(writeArchive(document, blobs)).rejects.toThrow(/digest/i);
   document.assets[0] = a;
   await expect(
     verifyAsset({ ...a, mime: "image/png" }, blobs.get(a.id)!),
   ).rejects.toThrow(/MIME/);
-  await expect(writeArchive(document, new Map())).rejects.toThrow(/mancante/);
+  await expect(writeArchive(document, new Map())).rejects.toThrow(
+    /Missing resource/,
+  );
   const zip = zipSync({ "project.json": new Uint8Array(10 * 1024 * 1024 + 1) });
-  await expect(readArchive(new Blob([zip]))).rejects.toThrow(/Limite/);
+  await expect(readArchive(new Blob([zip]))).rejects.toThrow(/limit exceeded/i);
 });
 it("enforces actual file/entry/total limits before allocating inflated bodies", async () => {
   const zip = zipSync({ asset: strToU8("x") }),
@@ -105,7 +107,7 @@ it("enforces actual file/entry/total limits before allocating inflated bodies", 
       (_, i) => i + 4 <= zip.length && v.getUint32(i, true) === 0x02014b50,
     );
   v.setUint32(central + 24, 50 * 1024 * 1024 + 1, true);
-  await expect(readArchive(new Blob([zip]))).rejects.toThrow(/Limite/);
+  await expect(readArchive(new Blob([zip]))).rejects.toThrow(/limit exceeded/i);
   const many = Object.fromEntries(
     Array.from({ length: 10001 }, (_, i) => ["x" + i, new Uint8Array()]),
   );
@@ -119,7 +121,7 @@ it("checks manifest digests and cumulative size, rejects extra files and CRC cor
   manifest.assets[0].sha256 = "0".repeat(64);
   files["manifest.json"] = strToU8(JSON.stringify(manifest));
   await expect(readArchive(new Blob([zipSync(files)]))).rejects.toThrow(
-    /Digest/,
+    /digest/i,
   );
   const many = zipSync(
       Object.fromEntries(
@@ -132,14 +134,16 @@ it("checks manifest digests and cumulative size, rejects extra files and CRC cor
       v.setUint32(i + 24, 50 * 1024 * 1024, true);
       v.setUint32(v.getUint32(i + 42, true) + 22, 50 * 1024 * 1024, true);
     }
-  await expect(readArchive(new Blob([many]))).rejects.toThrow(/Limite/);
+  await expect(readArchive(new Blob([many]))).rejects.toThrow(
+    /limit exceeded/i,
+  );
   const corrupt = zipSync({ "project.json": strToU8("{}") }, { level: 0 });
   corrupt[30 + "project.json".length] = 32;
   await expect(readArchive(new Blob([corrupt]))).rejects.toThrow(/CRC/);
   const original = unzipSync(new Uint8Array(await archive.arrayBuffer()));
   original["extra.txt"] = strToU8("extra");
   await expect(readArchive(new Blob([zipSync(original)]))).rejects.toThrow(
-    /extra/,
+    /extra files/i,
   );
 });
 it("packs arbitrary safe sidecar paths without rewriting the canonical JSON", async () => {

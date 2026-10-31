@@ -23,7 +23,7 @@ describe("schema/document", () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       r.value.scenes[0]!.title = "changed";
-      expect(fixture.scenes[0]!.title).toBe("Introduzione");
+      expect(fixture.scenes[0]!.title).toBe("Introduction");
     }
   });
   it.each(["{", "null", "[]", "42", '"x"'])(

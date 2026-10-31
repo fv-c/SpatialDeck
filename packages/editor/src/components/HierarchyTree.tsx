@@ -42,13 +42,13 @@ export function HierarchyTree({
   };
   return (
     <details className="hierarchy-panel">
-      <summary>Gerarchia spaziale</summary>
-      <ul aria-label="Albero gerarchia">{render(null)}</ul>
+      <summary>Spatial hierarchy</summary>
+      <ul aria-label="Hierarchy tree">{render(null)}</ul>
       {selected && (
         <label>
-          Parent della scena
+          Scene parent
           <select
-            aria-label="Parent della scena"
+            aria-label="Scene parent"
             value={selected.parentId ?? ""}
             onChange={(e) => {
               const result = store.execute(
@@ -61,7 +61,7 @@ export function HierarchyTree({
               );
             }}
           >
-            <option value="">Spazio principale</option>
+            <option value="">Root space</option>
             {session.document.scenes
               .filter((s) => !forbidden(s))
               .map((s) => (
@@ -73,8 +73,8 @@ export function HierarchyTree({
         </label>
       )}
       <p className="panel-note">
-        Il cambio parent conserva la posizione nel mondo. Coordinate e rotazioni
-        nell’inspector sono locali.
+        Changing the parent keeps the world position. Coordinates and rotations
+        in the inspector are local.
       </p>
       {error && <p role="alert">{error}</p>}
     </details>

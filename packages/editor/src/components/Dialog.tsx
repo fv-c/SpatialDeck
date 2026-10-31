@@ -5,7 +5,7 @@ export function Dialog({
   children,
   onCancel,
   onConfirm,
-  confirm = "Continua",
+  confirm = "Continue",
 }: {
   title: string;
   children: ReactNode;
@@ -34,7 +34,7 @@ export function Dialog({
       {children}
       <div className="dialog-actions">
         <button tabIndex={0} autoFocus onClick={onCancel}>
-          Annulla
+          Cancel
         </button>
         <button tabIndex={0} className="primary" onClick={onConfirm}>
           {confirm}

@@ -100,7 +100,7 @@ export const defaultMessages: Readonly<PlayerMessages> = Object.freeze({
           : "MIME type and signature do not match."
     } Link a compatible file.`,
   embedUnauthorized:
-    "Embed disabled: origin not authorised by the host. Not available offline.",
+    "Embed disabled: origin not authorized by the host. Not available offline.",
   embedDisabled: "External web content disabled. Requires network and consent.",
   embedConsent: (title: string) => `Allow embed: ${title}`,
   embedOffline: "Embed not available offline.",

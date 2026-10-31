@@ -2,8 +2,8 @@
   "schemaVersion": "1.1.0",
   "id": "structure-branching",
   "metadata": {
-    "title": "Rami, gerarchia e camera",
-    "language": "it"
+    "title": "Branches, hierarchy and camera",
+    "language": "en"
   },
   "settings": {
     "viewport": {
@@ -24,7 +24,7 @@
   "scenes": [
     {
       "id": "A",
-      "title": "A · Inizio",
+      "title": "A · Start",
       "position": [0, 0, 0],
       "rotation": [0, 0, 0],
       "scale": 1,
@@ -36,16 +36,16 @@
           "id": "text-A",
           "type": "text",
           "data": {
-            "text": "Scegli un approfondimento: B oppure C."
+            "text": "Choose a deep dive: B or C."
           }
         }
       ],
-      "notes": "Nota A",
+      "notes": "Note A",
       "extensions": {}
     },
     {
       "id": "C",
-      "title": "C · Alternativa",
+      "title": "C · Alternative",
       "position": [-1300, 200, -100],
       "rotation": [5, -10, -12],
       "scale": 1,
@@ -57,16 +57,16 @@
           "id": "text-C",
           "type": "text",
           "data": {
-            "text": "Un secondo percorso raggiunge la stessa conclusione."
+            "text": "A second path reaches the same conclusion."
           }
         }
       ],
-      "notes": "Nota C",
+      "notes": "Note C",
       "extensions": {}
     },
     {
       "id": "B",
-      "title": "B · Figlia",
+      "title": "B · Child",
       "position": [1000, -80, -150],
       "rotation": [12, 20, -18],
       "scale": 0.7,
@@ -78,16 +78,16 @@
           "id": "text-B",
           "type": "text",
           "data": {
-            "text": "Il ramo B entra in una scena figlia ruotata."
+            "text": "Branch B enters a rotated child scene."
           }
         }
       ],
-      "notes": "Nota B",
+      "notes": "Note B",
       "extensions": {}
     },
     {
       "id": "D",
-      "title": "D · Conclusione",
+      "title": "D · Conclusion",
       "position": [1500, 850, -300],
       "rotation": [-8, 10, 12],
       "scale": 1,
@@ -99,11 +99,11 @@
           "id": "text-D",
           "type": "text",
           "data": {
-            "text": "Torna alla visita effettiva o ripeti il loop limitato."
+            "text": "Go back to the actual visit or repeat the limited loop."
           }
         }
       ],
-      "notes": "Nota D",
+      "notes": "Note D",
       "extensions": {}
     }
   ],
@@ -111,7 +111,7 @@
   "paths": [
     {
       "id": "branch",
-      "name": "Biforcazione e loop",
+      "name": "Fork and loop",
       "startNodeId": "A",
       "nodes": [
         {
@@ -140,7 +140,7 @@
           "id": "AB",
           "from": "A",
           "to": "B",
-          "label": "Esplora B",
+          "label": "Explore B",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -154,7 +154,7 @@
           "id": "AC",
           "from": "A",
           "to": "C",
-          "label": "Esplora C",
+          "label": "Explore C",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -167,7 +167,7 @@
           "id": "BD",
           "from": "B",
           "to": "D",
-          "label": "Conclusione da B",
+          "label": "Conclusion from B",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -180,7 +180,7 @@
           "id": "CD",
           "from": "C",
           "to": "D",
-          "label": "Conclusione da C",
+          "label": "Conclusion from C",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -193,7 +193,7 @@
           "id": "DA",
           "from": "D",
           "to": "A",
-          "label": "Ripeti (massimo 2 visite)",
+          "label": "Repeat (at most 2 visits)",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -206,7 +206,7 @@
           "id": "DD",
           "from": "D",
           "to": "D",
-          "label": "Sosta (massimo 2 visite)",
+          "label": "Stay (at most 2 visits)",
           "transition": {
             "durationMs": 1200,
             "easing": "ease-in-out"
@@ -222,7 +222,7 @@
     },
     {
       "id": "alternate",
-      "name": "Percorso alternativo",
+      "name": "Alternative path",
       "startNodeId": "alt-C",
       "nodes": [
         {
@@ -241,7 +241,7 @@
           "id": "alt-CD",
           "from": "alt-C",
           "to": "alt-D",
-          "label": "Vai alla conclusione",
+          "label": "Go to the conclusion",
           "transition": {
             "durationMs": 600,
             "easing": "linear"
@@ -301,7 +301,7 @@
       "atMs": 600,
       "event": "presentation.mark",
       "payload": {
-        "label": "metà percorso"
+        "label": "halfway"
       }
     },
     {

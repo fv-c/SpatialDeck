@@ -341,7 +341,7 @@ describe("media lifecycle", () => {
     const clip = mount(registry, video, { services: services(assets) });
     await flush();
     expect(clip.host.querySelector("video")!.poster).toMatch(/^blob:test/);
-    expect(clip.host.querySelector("track")!.srclang).toBe("it");
+    expect(clip.host.querySelector("track")!.srclang).toBe("en");
     clip.renderer.update({ ...clip.context, active: false });
     expect(time).toHaveBeenCalledTimes(1);
     clip.renderer.destroy();

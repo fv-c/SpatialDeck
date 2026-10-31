@@ -1,5 +1,5 @@
-# Risorse della gallery
+# Gallery resources
 
-`diagram.svg`, `tone.wav`, `motion.mp4` e `captions.vtt` sono fixture originali generate per SpatialDeck il 22 ottobre 2026. Dedicate al pubblico dominio sotto CC0-1.0. Nessun materiale esterno. Il tono è una sinusoide 440 Hz con inviluppo; il video è un pattern sintetico FFmpeg testsrc2, senza audio.
+`diagram.svg`, `tone.wav`, `motion.mp4` and `captions.vtt` are original fixtures generated for SpatialDeck on 22 October 2026 and dedicated to the public domain under CC0-1.0. No external material is included. The tone is a 440 Hz sine wave with an envelope; the video is a synthetic FFmpeg testsrc2 pattern without audio.
 
-I font KaTeX sono distribuiti localmente dalla dipendenza MIT; relativa licenza inclusa nel pacchetto npm.
+The KaTeX fonts are served locally from the MIT-licensed dependency; its licence is included in the npm package.

@@ -40,7 +40,7 @@ function PoseFields({
           {["X", "Y", "Z"].map((axis, i) => (
             <Numeric
               key={axis}
-              label={`${prefix} ${property === "position" ? "posizione" : "rotazione"} ${axis}`}
+              label={`${prefix} ${property === "position" ? "position" : "rotation"} ${axis}`}
               value={pose[property][i]!}
               apply={(value) => {
                 const next = structuredClone(pose);
@@ -131,10 +131,10 @@ export function CameraTimeline({
     });
   return (
     <details className="timeline-panel" open>
-      <summary>Camera e timeline</summary>
+      <summary>Camera and timeline</summary>
       {node && (
         <fieldset>
-          <legend>Camera del nodo</legend>
+          <legend>Node camera</legend>
           <button
             type="button"
             tabIndex={0}
@@ -150,11 +150,11 @@ export function CameraTimeline({
               })
             }
           >
-            {node.camera ? "Usa inquadratura scena" : "Camera indipendente"}
+            {node.camera ? "Use scene framing" : "Independent camera"}
           </button>
           {node.camera && (
             <PoseFields
-              prefix="Nodo"
+              prefix="Node"
               pose={node.camera}
               apply={(camera) =>
                 run((doc) => {
@@ -171,12 +171,12 @@ export function CameraTimeline({
       {edge ? (
         <>
           <p className="panel-note">
-            Transizione {position(edge.from)} → {position(edge.to)}
+            Transition {position(edge.from)} → {position(edge.to)}
             {edge.label && ` · ${edge.label}`}
           </p>
           <div className="prop-grid two">
             <Numeric
-              label="Durata transizione ms"
+              label="Transition duration ms"
               value={edge.transition.durationMs}
               apply={(durationMs) =>
                 run((doc) => {
@@ -189,9 +189,9 @@ export function CameraTimeline({
               }
             />
             <label>
-              Easing transizione
+              Transition easing
               <select
-                aria-label="Easing transizione"
+                aria-label="Transition easing"
                 value={edge.transition.easing}
                 onChange={(e) =>
                   run((doc) => {
@@ -203,15 +203,15 @@ export function CameraTimeline({
                   })
                 }
               >
-                <option value="linear">Lineare</option>
+                <option value="linear">Linear</option>
                 <option value="ease-in-out">Ease in/out</option>
               </select>
             </label>
           </div>
           <label>
-            Track camera
+            Camera track
             <select
-              aria-label="Track camera"
+              aria-label="Camera track"
               value={edge.cameraTrackId ?? ""}
               onChange={(e) =>
                 run((doc) => {
@@ -224,7 +224,7 @@ export function CameraTimeline({
                 })
               }
             >
-              <option value="">Nessuna track</option>
+              <option value="">No track</option>
               {document.cameraTracks.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.id}
@@ -239,14 +239,14 @@ export function CameraTimeline({
             onClick={addTrack}
           >
             <Icon name="plus" />
-            Crea track a tre keyframe
+            Create a three-keyframe track
           </button>
           {track && (
             <>
               <label>
-                Interpolazione posizione
+                Position interpolation
                 <select
-                  aria-label="Interpolazione posizione"
+                  aria-label="Position interpolation"
                   value={track.interpolation}
                   onChange={(e) =>
                     editTrack({
@@ -255,14 +255,14 @@ export function CameraTimeline({
                     })
                   }
                 >
-                  <option value="linear">Lineare</option>
+                  <option value="linear">Linear</option>
                   <option value="cubic">Catmull-Rom</option>
                 </select>
               </label>
               <label>
-                Easing track
+                Track easing
                 <select
-                  aria-label="Easing track"
+                  aria-label="Track easing"
                   value={track.easing}
                   onChange={(e) =>
                     editTrack({
@@ -270,11 +270,11 @@ export function CameraTimeline({
                     })
                   }
                 >
-                  <option value="linear">Lineare</option>
+                  <option value="linear">Linear</option>
                   <option value="ease-in-out">Ease in/out</option>
                 </select>
               </label>
-              <ol className="keyframes" aria-label="Keyframe camera">
+              <ol className="keyframes" aria-label="Camera keyframes">
                 {track.keyframes.map((k, index) => (
                   <li key={`${track.id}-${index}`}>
                     <details open={index === 1}>
@@ -283,7 +283,7 @@ export function CameraTimeline({
                         {Math.round(k.at * edge.transition.durationMs)} ms
                       </summary>
                       <Numeric
-                        label={`Keyframe ${index + 1} tempo normalizzato`}
+                        label={`Keyframe ${index + 1} normalized time`}
                         value={k.at}
                         apply={(at) =>
                           editTrack({
@@ -317,7 +317,7 @@ export function CameraTimeline({
                             })
                           }
                         >
-                          Rimuovi keyframe {index + 1}
+                          Remove keyframe {index + 1}
                         </button>
                       )}
                     </details>
@@ -347,7 +347,7 @@ export function CameraTimeline({
                   editTrack({ keyframes: keys });
                 }}
               >
-                Aggiungi keyframe
+                Add keyframe
               </button>
             </>
           )}
@@ -391,7 +391,7 @@ export function CameraTimeline({
             className="tool-button"
             onClick={() => onCapture(null)}
           >
-            Termina ispezione camera
+            End camera inspection
           </button>
           {warnings.map((message) => (
             <p role="status" key={message}>
@@ -405,18 +405,18 @@ export function CameraTimeline({
               </p>
             ))}
           <p className="panel-note">
-            Lo scrub modifica soltanto la camera della preview, senza visite o
-            cue. Keyframe iniziale risolto dalla posa di partenza; endpoint
-            conservato.
+            Scrubbing only moves the preview camera, without visits or cues. The
+            first keyframe is resolved from the starting pose; the endpoint is
+            kept.
           </p>
           <fieldset>
-            <legend>Cue dichiarativi</legend>
+            <legend>Declarative cues</legend>
             {document.cues
               .filter((c) => c.edgeId === edge.id)
               .map((c) => (
                 <div className="cue-row" key={c.id}>
                   <TextField
-                    label={`Evento cue ${c.id}`}
+                    label={`Cue event ${c.id}`}
                     value={c.event}
                     apply={(event) =>
                       run((doc) => {
@@ -426,7 +426,7 @@ export function CameraTimeline({
                     }
                   />
                   <Numeric
-                    label={`Tempo cue ${c.id} ms`}
+                    label={`Cue time ${c.id} ms`}
                     value={c.atMs}
                     apply={(atMs) =>
                       run((doc) => {
@@ -455,7 +455,7 @@ export function CameraTimeline({
                               code: "INVALID_JSON",
                               severity: "error",
                               pointer: "",
-                              message: "Payload JSON non valido.",
+                              message: "Invalid payload JSON.",
                             },
                           ],
                         };
@@ -473,7 +473,7 @@ export function CameraTimeline({
                       })
                     }
                   >
-                    Rimuovi cue
+                    Remove cue
                   </button>
                 </div>
               ))}
@@ -495,13 +495,13 @@ export function CameraTimeline({
               }
             >
               <Icon name="plus" />
-              Aggiungi cue
+              Add cue
             </button>
           </fieldset>
         </>
       ) : (
         <p className="panel-note">
-          Seleziona una connessione per modificarne durata, track e cue.
+          Select a connection to edit its duration, track and cues.
         </p>
       )}
     </details>

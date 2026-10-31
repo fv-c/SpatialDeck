@@ -32,7 +32,7 @@ function deck(): ProjectDocument {
 async function openStudio(page: Page, document: ProjectDocument = deck()) {
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(document)),
@@ -48,16 +48,16 @@ async function openStudio(page: Page, document: ProjectDocument = deck()) {
 async function startPresenter(page: Page) {
   const [popup] = await Promise.all([
     page.waitForEvent("popup"),
-    page.getByRole("button", { name: "Relatore" }).click(),
+    page.getByRole("button", { name: "Presenter" }).click(),
   ]);
   await popup.waitForLoadState();
   await expect(popup.locator("html")).toHaveAttribute(
     "data-presenter",
     "connected",
   );
-  const console = page.getByRole("region", { name: "Vista relatore" });
+  const console = page.getByRole("region", { name: "Presenter view" });
   await expect(console.getByRole("status").first()).toHaveText(
-    "Finestra pubblica collegata",
+    "Audience window connected",
   );
   return { popup, console };
 }
@@ -70,20 +70,20 @@ test("presenter and public window: synced navigation and branches, private notes
   await openStudio(page);
   const { popup, console } = await startPresenter(page);
   await expect(
-    console.getByRole("region", { name: "Note del relatore" }),
+    console.getByRole("region", { name: "Speaker notes" }),
   ).toContainText("PRIVATE-NOTE A");
   expect(await publicNode(popup)).toBe("A");
   // A is a manual branch: the presenter offers both exits, the public waits.
   await expect(
-    console.getByRole("list", { name: "Scelte del ramo" }).getByRole("button"),
+    console.getByRole("list", { name: "Branch choices" }).getByRole("button"),
   ).toHaveCount(2);
   await console
-    .getByRole("list", { name: "Scelte del ramo" })
-    .getByRole("button", { name: "Esplora B" })
+    .getByRole("list", { name: "Branch choices" })
+    .getByRole("button", { name: "Explore B" })
     .click();
   await expect.poll(() => publicNode(popup)).toBe("B");
   await expect(
-    console.getByRole("region", { name: "Note del relatore" }),
+    console.getByRole("region", { name: "Speaker notes" }),
   ).toContainText("PRIVATE-NOTE B");
   // Keyboard on the presenter console moves both windows.
   await console.focus();
@@ -96,7 +96,7 @@ test("presenter and public window: synced navigation and branches, private notes
   await popup.keyboard.press("ArrowRight");
   await expect.poll(() => publicNode(popup)).toBe("D");
   await expect(
-    console.getByRole("region", { name: "Note del relatore" }),
+    console.getByRole("region", { name: "Speaker notes" }),
   ).toContainText("PRIVATE-NOTE D");
   // Notes never reach the public window, its DOM or its renderers.
   expect(await popup.content()).not.toContain("PRIVATE-NOTE");
@@ -114,22 +114,22 @@ test("presenter and public window: synced navigation and branches, private notes
     ),
   ).toBe(true);
   // Monotonic timer: start, pause keeps the value, reset.
-  const timer = console.getByLabel("Tempo trascorso");
+  const timer = console.getByLabel("Elapsed time");
   await expect(timer).toHaveText("00:00");
-  await console.getByRole("button", { name: "Avvia" }).click();
+  await console.getByRole("button", { name: "Start" }).click();
   await expect(timer).toHaveText("00:01", { timeout: 4000 });
-  await console.getByRole("button", { name: "Pausa" }).click();
+  await console.getByRole("button", { name: "Pause" }).click();
   const paused = await timer.textContent();
   await page.waitForTimeout(1200);
   await expect(timer).toHaveText(paused!);
-  await console.getByRole("button", { name: "Azzera" }).click();
+  await console.getByRole("button", { name: "Reset" }).click();
   await expect(timer).toHaveText("00:00");
   await writeEvidence("presenter/sync.json", {
     publicNode: await publicNode(popup),
   });
-  await console.getByRole("button", { name: "Termina" }).click();
+  await console.getByRole("button", { name: "End" }).click();
   await expect(
-    page.getByRole("region", { name: "Vista relatore" }),
+    page.getByRole("region", { name: "Presenter view" }),
   ).toHaveCount(0);
 });
 
@@ -143,15 +143,15 @@ test("a single manual exit is offered as a choice, not previewed as the next vis
   await openStudio(page, document);
   const { popup, console } = await startPresenter(page);
   const choices = console
-    .getByRole("list", { name: "Scelte del ramo" })
+    .getByRole("list", { name: "Branch choices" })
     .getByRole("button");
-  await choices.filter({ hasText: "Esplora B" }).click();
+  await choices.filter({ hasText: "Explore B" }).click();
   await expect.poll(() => publicNode(popup)).toBe("B");
   // `next` would ask for a choice: the console asks too, with no stale preview.
-  await expect(choices).toHaveText(["Conclusione da B"]);
-  const following = console.getByRole("region", { name: "Successiva" });
+  await expect(choices).toHaveText(["Conclusion from B"]);
+  const following = console.getByRole("region", { name: "Next" });
   await expect(following.locator(".presenter-player")).toBeHidden();
-  await expect(following.locator(":scope > h3")).toHaveText("Successiva");
+  await expect(following.locator(":scope > h3")).toHaveText("Next");
   await choices.click();
   await expect.poll(() => publicNode(popup)).toBe("D");
 });
@@ -164,7 +164,7 @@ test("paths that reuse node IDs: the console shows the scene and notes of the pr
   const document = deck();
   document.paths.push({
     id: "reuse",
-    name: "Stessi ID",
+    name: "Same IDs",
     startNodeId: "A",
     nodes: [
       { id: "A", sceneId: "C", holdMs: 0 },
@@ -183,34 +183,34 @@ test("paths that reuse node IDs: the console shows the scene and notes of the pr
   document.defaultPathId = "reuse";
   await openStudio(page, document);
   const { popup, console } = await startPresenter(page);
-  const notes = console.getByRole("region", { name: "Note del relatore" });
+  const notes = console.getByRole("region", { name: "Speaker notes" });
   expect(
     await popup.evaluate(() => window.publicPlayer!.getState().sceneId),
   ).toBe("C");
   await expect(notes).toContainText("PRIVATE-NOTE C");
   await expect(
     console
-      .getByRole("region", { name: "Scena corrente" })
+      .getByRole("region", { name: "Current scene" })
       .locator(":scope > h3"),
-  ).toContainText("C · Alternativa");
+  ).toContainText("C · Alternative");
   await expect(
-    console.getByRole("region", { name: "Successiva" }).locator(":scope > h3"),
-  ).toContainText("D · Conclusione");
-  await console.getByRole("button", { name: "Avanti" }).click();
+    console.getByRole("region", { name: "Next" }).locator(":scope > h3"),
+  ).toContainText("D · Conclusion");
+  await console.getByRole("button", { name: "Next" }).click();
   await expect
     .poll(() => popup.evaluate(() => window.publicPlayer!.getState().sceneId))
     .toBe("D");
   await expect(notes).toContainText("PRIVATE-NOTE D");
 });
 
-test("reloads resynchronise from a snapshot: public window and presenter tab", async ({
+test("reloads resynchronize from a snapshot: public window and presenter tab", async ({
   page,
 }) => {
   await openStudio(page);
   const { popup, console } = await startPresenter(page);
   await console
-    .getByRole("list", { name: "Scelte del ramo" })
-    .getByRole("button", { name: "Esplora C" })
+    .getByRole("list", { name: "Branch choices" })
+    .getByRole("button", { name: "Explore C" })
     .click();
   await expect.poll(() => publicNode(popup)).toBe("C");
   // Public reload: new epoch, hello, snapshot with the history, no replay.
@@ -234,24 +234,24 @@ test("reloads resynchronise from a snapshot: public window and presenter tab", a
   await page.reload();
   // The reloaded tab must open the presented project again before resuming.
   await expect(
-    page.getByRole("button", { name: "Riprendi vista relatore" }),
+    page.getByRole("button", { name: "Resume presenter view" }),
   ).toBeDisabled();
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(deck())),
   });
-  await page.getByRole("button", { name: "Riprendi vista relatore" }).click();
-  const resumed = page.getByRole("region", { name: "Vista relatore" });
+  await page.getByRole("button", { name: "Resume presenter view" }).click();
+  const resumed = page.getByRole("region", { name: "Presenter view" });
   await expect(resumed.getByRole("status").first()).toHaveText(
-    "Finestra pubblica collegata",
+    "Audience window connected",
     { timeout: 10000 },
   );
   // The resumed console starts at the path start and sends its own snapshot.
   await expect.poll(() => publicNode(popup)).toBe("A");
   await resumed
-    .getByRole("list", { name: "Scelte del ramo" })
-    .getByRole("button", { name: "Esplora B" })
+    .getByRole("list", { name: "Branch choices" })
+    .getByRole("button", { name: "Explore B" })
     .click();
   await expect.poll(() => publicNode(popup)).toBe("B");
 });
@@ -339,16 +339,14 @@ test("a blocked popup falls back to instructions and a single-window presentatio
     window.open = () => null;
   });
   await openStudio(page);
-  await page.getByRole("button", { name: "Relatore" }).click();
-  const console = page.getByRole("region", { name: "Vista relatore" });
+  await page.getByRole("button", { name: "Presenter" }).click();
+  const console = page.getByRole("region", { name: "Presenter view" });
   await expect(console.getByRole("alert")).toContainText(
-    "Il browser ha bloccato la finestra pubblica",
+    "The browser blocked the audience window",
   );
-  await console
-    .getByRole("button", { name: "Presenta in questa scheda" })
-    .click();
+  await console.getByRole("button", { name: "Present in this tab" }).click();
   await expect(
-    page.getByRole("region", { name: "Modalità presentazione" }),
+    page.getByRole("region", { name: "Presentation mode" }),
   ).toBeVisible();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   expect(await page.locator(".presentation-player").innerText()).not.toContain(
@@ -365,7 +363,7 @@ test("the public page alone, without the presenter, explains how to open it", as
     "no-opener",
   );
   await expect(page.getByRole("status")).toContainText(
-    "Apri questa finestra dal pulsante Relatore",
+    "Open this window from the Presenter button",
   );
   expect(
     await readFile(

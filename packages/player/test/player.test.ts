@@ -562,7 +562,7 @@ describe("messages, language and outline", () => {
     expect(choices.textContent).toContain(
       "Again (limit of 1 visits reached for TEXT)",
     );
-    expect(choices.textContent).not.toContain("Limite");
+    expect(choices.textContent).not.toContain("Limit");
   });
   it("outline shows derived text, never Markdown or HTML source", async () => {
     const { registry, assets } = harness();
@@ -577,7 +577,7 @@ describe("messages, language and outline", () => {
       expect(outline).not.toContain("<p>");
       expect(outline).not.toContain("<svg");
       expect(outline).not.toContain("\\int");
-      expect(outline).toContain("Rettangolo con sfumatura");
+      expect(outline).toContain("Rectangle with a blue to pink gradient");
     }
     const outline = rendered.host.querySelector(".sd-outline")!.textContent!;
     expect(outline).toContain("Rendered markdown markdown-block");

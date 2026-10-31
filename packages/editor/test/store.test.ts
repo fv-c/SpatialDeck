@@ -66,12 +66,12 @@ describe("editor atomic commands", () => {
     input.paths.push({
       ...structuredClone(input.paths[0]!),
       id: "other",
-      name: "Alternativo",
+      name: "Alternative",
     });
     const store = new EditorStore(input);
     const result = store.execute(deleteScene("detail"));
     expect(result.ok).toBe(false);
-    expect(result.diagnostics[0]!.message).toContain("Alternativo");
+    expect(result.diagnostics[0]!.message).toContain("Alternative");
     expect(store.getSnapshot().document).toEqual(input);
   });
   it("adds independent scenes without rewriting a reordered main path", () => {
@@ -264,23 +264,23 @@ describe("0.4.1 store publication and text sessions", () => {
         doc.metadata.title = value;
         return { ok: true, value: doc, diagnostics: [] };
       });
-    for (const value of ["N", "Nu", "Nuo", "Nuovo"])
+    for (const value of ["N", "Nu", "Nuo", "New"])
       expect(title(value).ok).toBe(true);
     expect(store.getSnapshot().historyLength).toBe(1);
-    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo");
+    expect(store.getSnapshot().document.metadata.title).toBe("New");
     store.endCoalesce();
-    title("Nuovo titolo");
+    title("New title");
     expect(store.getSnapshot().historyLength).toBe(2);
     store.undo();
-    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo");
+    expect(store.getSnapshot().document.metadata.title).toBe("New");
     store.undo();
     expect(store.getSnapshot().document).toBe(original);
     store.redo();
     store.redo();
-    expect(store.getSnapshot().document.metadata.title).toBe("Nuovo titolo");
-    title("Altro");
+    expect(store.getSnapshot().document.metadata.title).toBe("New title");
+    title("Other");
     store.execute(editScene("intro", { notes: "interleaved" }));
-    title("Ancora");
+    title("Again");
     expect(store.getSnapshot().historyLength).toBe(5);
     expect(title("").ok).toBe(true);
     const notes = (value: string) =>

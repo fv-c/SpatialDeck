@@ -357,7 +357,7 @@ export class NavigationMachine {
         : Infinity,
     );
     return count >= limit
-      ? `Limite di ${limit} visite raggiunto per ${nodeId}`
+      ? `Limit of ${limit} ${limit === 1 ? "visit" : "visits"} reached for ${nodeId}`
       : undefined;
   }
   private choices(): Choice[] {

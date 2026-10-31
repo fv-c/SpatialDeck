@@ -24,7 +24,7 @@ const doc = (input: unknown = fixture) => {
   return r.value;
 };
 async function upload(page: Page, input: unknown = fixture) {
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "structure.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(input)),
@@ -38,8 +38,8 @@ async function studio(page: Page) {
   await page.goto(studioURL);
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
   await upload(page);
-  await expect(page.getByLabel("Titolo progetto")).toHaveValue(
-    "Rami, gerarchia e camera",
+  await expect(page.getByLabel("Project title")).toHaveValue(
+    "Branches, hierarchy and camera",
   );
 }
 async function points(page: Page, host: string, sceneId: string) {
@@ -114,7 +114,7 @@ test("vanilla branch choices, actual prev poses, manual loop limits and keyboard
   expect(await page.evaluate(() => window.demoPlayers[0]!.getState())).toEqual(
     initial,
   );
-  await host.getByRole("button", { name: "Esplora B", exact: true }).focus();
+  await host.getByRole("button", { name: "Explore B", exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(host.locator('[data-scene-id="B"] h2')).toBeFocused();
   const endpoint = cameraPose(doc().cameraTracks[0]!.keyframes.at(-1)!.pose);
@@ -122,7 +122,7 @@ test("vanilla branch choices, actual prev poses, manual loop limits and keyboard
     await page.evaluate(() => window.demoPlayers[0]!.getState().camera),
   ).toEqual(endpoint);
   await host
-    .getByRole("button", { name: "Conclusione da B", exact: true })
+    .getByRole("button", { name: "Conclusion from B", exact: true })
     .click();
   await page.evaluate(() => window.demoPlayers[0]!.prev());
   expect(
@@ -133,15 +133,15 @@ test("vanilla branch choices, actual prev poses, manual loop limits and keyboard
   ).toEqual(endpoint);
   await page.evaluate(() => window.demoPlayers[0]!.setPath("branch"));
   for (const label of [
-    "Esplora C",
-    "Conclusione da C",
-    "Ripeti (massimo 2 visite)",
-    "Esplora B",
-    "Conclusione da B",
+    "Explore C",
+    "Conclusion from C",
+    "Repeat (at most 2 visits)",
+    "Explore B",
+    "Conclusion from B",
   ])
     await host.getByRole("button", { name: label, exact: true }).click();
   await expect(
-    host.getByRole("button", { name: /Ripeti.*Limite/ }),
+    host.getByRole("button", { name: /Repeat.*Limit/ }),
   ).toBeDisabled();
   await host.focus();
   await page.keyboard.press("ArrowRight");
@@ -155,9 +155,7 @@ test("vanilla branch choices, actual prev poses, manual loop limits and keyboard
   expect(
     await page.evaluate(() => window.demoPlayers[1]!.getState().nodeId),
   ).toBe("A");
-  await host
-    .getByRole("button", { name: "Vista testuale", exact: true })
-    .click();
+  await host.getByRole("button", { name: "Text view", exact: true }).click();
   expect(await host.locator(".sd-outline button").count()).toBe(4);
 });
 test("nested world landmarks and independent track endpoint render within 1 CSS pixel", async ({
@@ -191,17 +189,15 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
 }, info) => {
   await studio(page);
   await page
-    .getByRole("list", { name: "Elenco scene" })
-    .getByRole("button", { name: /B · Figlia/ })
+    .getByRole("list", { name: "Scene list" })
+    .getByRole("button", { name: /B · Child/ })
     .click();
   await expect
     .poll(() => page.evaluate(() => window.studio!.preview!.getState().nodeId))
     .toBe("B");
   const before = await points(page, ".preview-player", "B");
-  await page.getByText("Gerarchia spaziale", { exact: true }).click();
-  await page
-    .getByLabel("Parent della scena", { exact: true })
-    .selectOption("C");
+  await page.getByText("Spatial hierarchy", { exact: true }).click();
+  await page.getByLabel("Scene parent", { exact: true }).selectOption("C");
   await expect
     .poll(() =>
       page.evaluate(
@@ -216,7 +212,7 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
     .poll(() => page.evaluate(() => window.studio!.preview!.getState().status))
     .toBe("idle");
   close(await points(page, ".preview-player", "B"), before);
-  await page.getByRole("button", { name: "Annulla", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   expect(
     await page.evaluate(
       () =>
@@ -225,41 +221,35 @@ test("Studio reparent preserves real geometry; alternative graph, save and reope
           .document.scenes.find((s) => s.id === "B")!.parentId,
     ),
   ).toBe("A");
-  await page.getByRole("tab", { name: /^Percorsi/ }).click();
+  await page.getByRole("tab", { name: /^Paths/ }).click();
+  await page.getByRole("button", { name: "New path", exact: true }).click();
   await page
-    .getByRole("button", { name: "Nuovo percorso", exact: true })
-    .click();
-  await page
-    .getByLabel("Nome percorso", { exact: true })
-    .fill("Lettura da Studio");
-  await page.getByLabel("Nome percorso", { exact: true }).press("Tab");
+    .getByLabel("Path name", { exact: true })
+    .fill("Reading from Studio");
+  await page.getByLabel("Path name", { exact: true }).press("Tab");
   for (const scene of ["A", "C", "D"]) {
-    await page
-      .getByLabel("Scena da aggiungere al percorso")
-      .selectOption(scene);
-    await page
-      .getByRole("button", { name: "Aggiungi visita", exact: true })
-      .click();
+    await page.getByLabel("Scene to add to the path").selectOption(scene);
+    await page.getByRole("button", { name: "Add visit", exact: true }).click();
   }
   const path = await page.evaluate(() =>
     window.studio!.store.getSnapshot().document.paths.at(-1)!,
   );
   await page
-    .getByLabel("Connessione da", { exact: true })
+    .getByLabel("Connection from", { exact: true })
     .selectOption(path.nodes[0]!.id);
   await page
-    .getByLabel("Connessione a", { exact: true })
+    .getByLabel("Connection to", { exact: true })
     .selectOption(path.nodes[2]!.id);
-  await page.getByRole("button", { name: "Collega nodi", exact: true }).click();
+  await page.getByRole("button", { name: "Link nodes", exact: true }).click();
   await page
-    .getByLabel("Etichetta scelta", { exact: true })
-    .fill("Scelta diretta D");
-  await page.getByLabel("Etichetta scelta", { exact: true }).press("Tab");
+    .getByLabel("Choice label", { exact: true })
+    .fill("Direct choice D");
+  await page.getByLabel("Choice label", { exact: true }).press("Tab");
   const expected = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   const file = await download,
     pathToFile = (await file.path())!;
   const saved = JSON.parse(
@@ -292,10 +282,10 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
   page,
 }, info) => {
   await studio(page);
-  await page.getByRole("tab", { name: /^Percorsi/ }).click();
+  await page.getByRole("tab", { name: /^Paths/ }).click();
   await page
-    .getByRole("list", { name: "Connessioni del percorso" })
-    .getByRole("button", { name: /Esplora B/ })
+    .getByRole("list", { name: "Path connections" })
+    .getByRole("button", { name: /Explore B/ })
     .click();
   const updated = page.evaluate(
     () =>
@@ -306,7 +296,7 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
         });
       }),
   );
-  await number(page, "Keyframe 2 posizione Y", "-500");
+  await number(page, "Keyframe 2 position Y", "-500");
   await updated;
   const document = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
@@ -357,7 +347,7 @@ test("timeline editing and scrub use the actual preview sampler with no visits o
     });
   }
   await page
-    .getByRole("button", { name: "Termina ispezione camera", exact: true })
+    .getByRole("button", { name: "End camera inspection", exact: true })
     .click();
   await expect
     .poll(() => page.evaluate(() => window.studio!.preview!.getState().camera))
@@ -390,8 +380,8 @@ test("historic JSON opens as migrated copy, future versions preserve active work
     ),
   ).toBe("intro");
   await upload(page, fixture);
-  await page.getByLabel("Titolo progetto").fill("Struttura recuperata");
-  await page.getByLabel("Titolo progetto").press("Tab");
+  await page.getByLabel("Project title").fill("Struttura recuperata");
+  await page.getByLabel("Project title").press("Tab");
   await page.evaluate(
     () => new Promise((resolve) => setTimeout(resolve, 1000)),
   );
@@ -402,7 +392,7 @@ test("historic JSON opens as migrated copy, future versions preserve active work
   await page.reload();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
-    .getByRole("button", { name: "Recupera revisione", exact: true })
+    .getByRole("button", { name: "Recover revision", exact: true })
     .click();
   await expect
     .poll(() =>
@@ -419,7 +409,7 @@ test("overview, pan, zoom and direct goTo keep history and mobile controls usabl
     before = await page.evaluate(
       () => window.demoPlayers[0]!.getState().history,
     );
-  await host.getByRole("button", { name: "Panoramica", exact: true }).click();
+  await host.getByRole("button", { name: "Overview", exact: true }).click();
   const overview = await page.evaluate(
     () => window.demoPlayers[0]!.getState().camera!,
   );
@@ -427,12 +417,12 @@ test("overview, pan, zoom and direct goTo keep history and mobile controls usabl
     await page.evaluate(() => window.demoPlayers[0]!.getState().history),
   ).toEqual(before);
   await host.getByText("Camera", { exact: true }).click();
-  await host.getByRole("button", { name: "Pan destra", exact: true }).click();
+  await host.getByRole("button", { name: "Pan right", exact: true }).click();
   expect(
     (await page.evaluate(() => window.demoPlayers[0]!.getState().camera!))
       .position[0],
   ).toBeGreaterThan(overview.position[0]);
-  await host.getByRole("button", { name: "Zoom +", exact: true }).click();
+  await host.getByRole("button", { name: "Zoom in", exact: true }).click();
   expect(
     (await page.evaluate(() => window.demoPlayers[0]!.getState().camera!)).zoom,
   ).toBeGreaterThan(overview.zoom);
@@ -447,7 +437,7 @@ test("overview, pan, zoom and direct goTo keep history and mobile controls usabl
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(studioURL);
   await upload(page);
-  await page.getByRole("tab", { name: /^Percorsi/ }).click();
+  await page.getByRole("tab", { name: /^Paths/ }).click();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -458,28 +448,28 @@ test("Studio creates a real camera track, node pose and declarative cue through 
   page,
 }) => {
   await studio(page);
-  await page.getByRole("tab", { name: /^Percorsi/ }).click();
-  await page.getByLabel("Percorso da modificare").selectOption("alternate");
+  await page.getByRole("tab", { name: /^Paths/ }).click();
+  await page.getByLabel("Path to edit").selectOption("alternate");
   await page
-    .getByRole("button", { name: "Camera indipendente", exact: true })
+    .getByRole("button", { name: "Independent camera", exact: true })
     .click();
-  await number(page, "Nodo posizione Z", "-220");
+  await number(page, "Node position Z", "-220");
   await page
-    .getByRole("button", { name: "Crea track a tre keyframe", exact: true })
+    .getByRole("button", { name: "Create a three-keyframe track", exact: true })
     .click();
   await expect(
-    page.getByRole("list", { name: "Keyframe camera" }).locator("li"),
+    page.getByRole("list", { name: "Camera keyframes" }).locator("li"),
   ).toHaveCount(3);
-  await number(page, "Keyframe 2 posizione X", "-500");
-  await page.getByLabel("Interpolazione posizione").selectOption("cubic");
+  await number(page, "Keyframe 2 position X", "-500");
+  await page.getByLabel("Position interpolation").selectOption("cubic");
   await page
-    .getByLabel("Easing track", { exact: true })
+    .getByLabel("Track easing", { exact: true })
     .selectOption("ease-in-out");
-  await page.getByRole("button", { name: "Aggiungi cue", exact: true }).click();
+  await page.getByRole("button", { name: "Add cue", exact: true }).click();
   await page
-    .getByRole("textbox", { name: /Evento cue/ })
+    .getByRole("textbox", { name: /Cue event/ })
     .fill("presentation.note");
-  await page.getByRole("textbox", { name: /Evento cue/ }).press("Tab");
+  await page.getByRole("textbox", { name: /Cue event/ }).press("Tab");
   await page
     .getByRole("textbox", { name: /Payload cue/ })
     .fill('{"note":"dichiarativo"}');
@@ -503,19 +493,19 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   page,
 }) => {
   await studio(page);
-  await page.getByRole("tab", { name: /^Percorsi/ }).click();
-  await page.getByLabel("Percorso da modificare").selectOption("alternate");
+  await page.getByRole("tab", { name: /^Paths/ }).click();
+  await page.getByLabel("Path to edit").selectOption("alternate");
   await page
     .getByRole("button", {
-      name: "Abilita loop manuale (3 visite)",
+      name: "Enable manual loop (3 visits)",
       exact: true,
     })
     .click();
   await page
-    .getByLabel("Connessione da", { exact: true })
+    .getByLabel("Connection from", { exact: true })
     .selectOption("alt-D");
-  await page.getByLabel("Connessione a", { exact: true }).selectOption("alt-C");
-  await page.getByRole("button", { name: "Collega nodi", exact: true }).click();
+  await page.getByLabel("Connection to", { exact: true }).selectOption("alt-C");
+  await page.getByRole("button", { name: "Link nodes", exact: true }).click();
   const loop = await page.evaluate(() =>
     window
       .studio!.store.getSnapshot()
@@ -524,7 +514,7 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   expect(loop.loopPolicy!.maxVisitsPerNode).toBe(3);
   expect(loop.edges.every((e) => e.condition?.kind === "manual")).toBe(true);
   // The limit field shows its whole value next to «Rimuovi policy loop».
-  const limit = page.getByLabel("Limite visite per nodo", { exact: true });
+  const limit = page.getByLabel("Visit limit per node", { exact: true });
   await expect(limit).toHaveValue("3");
   const field = await limit.evaluate((input: HTMLInputElement) => ({
     width: input.clientWidth,
@@ -532,34 +522,30 @@ test("Studio loop policy, graph deletion impact and undo restore all references 
   }));
   expect(field.width).toBeGreaterThanOrEqual(48);
   expect(field.clipped).toBe(false);
-  await page.getByLabel("Percorso da modificare").selectOption("branch");
+  await page.getByLabel("Path to edit").selectOption("branch");
   const before = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
-  await page
-    .getByRole("button", { name: "Elimina percorso", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("4 visite");
+  await page.getByRole("button", { name: "Delete path", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("4 visits");
   await expect(page.getByRole("dialog")).toContainText("3 cue");
   await page
-    .getByRole("button", { name: "Annulla", exact: true })
+    .getByRole("button", { name: "Cancel", exact: true })
     .last()
     .click();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
+  await page.getByRole("button", { name: "Delete path", exact: true }).click();
   await page
-    .getByRole("button", { name: "Elimina percorso", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Elimina struttura", exact: true })
+    .getByRole("button", { name: "Delete structure", exact: true })
     .click();
   expect(
     await page.evaluate(
       () => window.studio!.store.getSnapshot().document.defaultPathId,
     ),
   ).toBe("alternate");
-  await page.getByRole("button", { name: "Annulla", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);

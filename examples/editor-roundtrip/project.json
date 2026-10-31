@@ -2,8 +2,8 @@
   "schemaVersion": "1.0.0",
   "id": "editor-roundtrip",
   "metadata": {
-    "title": "Atlante di idee",
-    "language": "it",
+    "title": "Atlas of ideas",
+    "language": "en",
     "author": "SpatialDeck example"
   },
   "settings": {
@@ -25,7 +25,7 @@
   "scenes": [
     {
       "id": "intro",
-      "title": "Introduzione",
+      "title": "Introduction",
       "position": [0, 0, 0],
       "rotation": [0, 0, 0],
       "scale": 1,
@@ -40,12 +40,12 @@
           }
         }
       ],
-      "notes": "Aprire il discorso",
+      "notes": "Open the talk",
       "extensions": {}
     },
     {
       "id": "detail",
-      "title": "Dettaglio",
+      "title": "Detail",
       "position": [1400, 300, -500],
       "rotation": [15, 25, 10],
       "scale": 0.7,
@@ -56,16 +56,16 @@
           "id": "t2",
           "type": "text",
           "data": {
-            "text": "Una prospettiva diversa"
+            "text": "A different perspective"
           }
         }
       ],
-      "notes": "Nota del relatore: collegare le idee nello spazio.",
+      "notes": "Speaker note: connect the ideas in space.",
       "extensions": {}
     },
     {
       "id": "end",
-      "title": "Conclusione",
+      "title": "Conclusion",
       "position": [-800, 1200, 200],
       "rotation": [0, -20, -15],
       "scale": 1.4,
@@ -76,7 +76,7 @@
           "id": "t3",
           "type": "text",
           "data": {
-            "text": "Collegare le idee"
+            "text": "Connecting ideas"
           }
         }
       ],
@@ -88,7 +88,7 @@
   "paths": [
     {
       "id": "main",
-      "name": "Principale",
+      "name": "Main",
       "startNodeId": "n1",
       "nodes": [
         {

@@ -212,7 +212,7 @@ describe("editing operations", () => {
       height: 90,
     });
   });
-  it("rotates relative to the grab point, normalised and snapped", () => {
+  it("rotates relative to the grab point, normalized and snapped", () => {
     const f = frame({ x: 0, y: 0, width: 100, height: 100 });
     const top: Point = [50, -100],
       right: Point = [200, 50];

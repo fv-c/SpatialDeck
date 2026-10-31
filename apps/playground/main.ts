@@ -1,4 +1,4 @@
-import { createPlayer, italianMessages } from "@spatialdeck/player";
+import { createPlayer } from "@spatialdeck/player";
 import "@spatialdeck/player/fonts.css";
 // KaTeX styles with local woff2 fonts, fetched only when a formula uses them.
 import "@spatialdeck/plugins/style.css";
@@ -23,18 +23,15 @@ async function legacyDemo() {
     host.className = "player-host";
     host.id = `player-${index + 1}`;
     const controls = document.createElement("nav");
-    controls.setAttribute("aria-label", `Controlli player ${index + 1}`);
-    const player = createPlayer({ messages: italianMessages });
+    controls.setAttribute("aria-label", `Player ${index + 1} controls`);
+    const player = createPlayer();
     players.push(player);
     for (const [label, action] of [
-      ["Indietro", () => player.prev()],
-      ["Avanti", () => player.next()],
-      ["Prima scena", () => player.goTo({ nodeId: structured ? "A" : "n1" })],
-      ["Terza scena", () => player.goTo({ nodeId: structured ? "D" : "n3" })],
-      [
-        "Riavvia percorso",
-        () => player.setPath(structured ? "branch" : "main"),
-      ],
+      ["Previous", () => player.prev()],
+      ["Next", () => player.next()],
+      ["First scene", () => player.goTo({ nodeId: structured ? "A" : "n1" })],
+      ["Third scene", () => player.goTo({ nodeId: structured ? "D" : "n3" })],
+      ["Restart path", () => player.setPath(structured ? "branch" : "main")],
     ] as const) {
       const button = document.createElement("button");
       button.textContent = label;
@@ -42,7 +39,7 @@ async function legacyDemo() {
       controls.append(button);
     }
     const input = document.createElement("input");
-    input.placeholder = "Campo di prova tastiera";
+    input.placeholder = "Keyboard test field";
     input.setAttribute("aria-label", `Test input ${index + 1}`);
     host.append(input);
     const status = document.createElement("output");
@@ -59,7 +56,7 @@ async function legacyDemo() {
   Object.assign(window, {
     demoPlayers: players,
     createDemoPlayer: (options: Parameters<typeof createPlayer>[0] = {}) =>
-      createPlayer({ messages: italianMessages, ...options }),
+      createPlayer(options),
     demoDocument: project,
   });
 }

@@ -7,26 +7,26 @@ import { Numeric } from "./Inspector.js";
 import { Icon, IconButton } from "./icons.js";
 
 export const fontNames: Record<FontId, string> = {
-  "system-sans": "Sans di sistema",
-  "system-serif": "Serif di sistema",
-  "system-mono": "Mono di sistema",
+  "system-sans": "System sans",
+  "system-serif": "System serif",
+  "system-mono": "System mono",
   "atkinson-hyperlegible": "Atkinson Hyperlegible",
 };
 /** Where a contrast issue lives, in the words of the panels. */
 function where(document: ProjectDocument, pointer: string): string {
-  if (pointer === "/theme/colors/text") return "testo del tema sullo sfondo";
-  if (pointer === "/theme/colors/accent") return "accento sul fondale";
+  if (pointer === "/theme/colors/text") return "theme text on the background";
+  if (pointer === "/theme/colors/accent") return "accent on the backdrop";
   const [, , scene, , block] = pointer.split("/");
   const title = document.scenes[Number(scene)]?.title ?? "";
   return block === undefined
-    ? `sfondo della scena “${title}”`
-    : `blocco ${Number(block) + 1} della scena “${title}”`;
+    ? `background of scene “${title}”`
+    : `block ${Number(block) + 1} of scene “${title}”`;
 }
 const roles: Array<[keyof Theme["colors"], string, string]> = [
-  ["text", "Colore del testo", "Testo"],
-  ["background", "Sfondo delle card", "Card"],
-  ["accent", "Accento e bordo", "Accento"],
-  ["backdrop", "Fondale", "Fondale"],
+  ["text", "Text colour", "Text"],
+  ["background", "Card background", "Card"],
+  ["accent", "Accent and border", "Accent"],
+  ["backdrop", "Backdrop", "Backdrop"],
 ];
 /** Document theme: palette, roles, local fonts and type scale; tokens only, never CSS. */
 export function ThemePanel({
@@ -43,8 +43,8 @@ export function ThemePanel({
       result.ok
         ? ""
         : result.diagnostics.some((d) => d.code === "UNKNOWN_PALETTE_COLOR")
-          ? "Il colore è ancora usato da un ruolo, una scena o un blocco."
-          : (result.diagnostics[0]?.message ?? "Modifica rifiutata."),
+          ? "The colour is still used by a role, a scene or a block."
+          : (result.diagnostics[0]?.message ?? "Edit rejected."),
     );
     return result;
   };
@@ -67,7 +67,7 @@ export function ThemePanel({
                 <label className="swatch">
                   <input
                     type="color"
-                    aria-label={`Colore ${entry.id}`}
+                    aria-label={`Colour ${entry.id}`}
                     value={entry.value}
                     onChange={(e) =>
                       report(
@@ -86,7 +86,7 @@ export function ThemePanel({
                 </label>
                 <IconButton
                   icon="close"
-                  label={`Rimuovi colore ${entry.id}`}
+                  label={`Remove colour ${entry.id}`}
                   tip="left"
                   disabled={theme.palette.length === 1}
                   onClick={() =>
@@ -106,26 +106,26 @@ export function ThemePanel({
             type="button"
             tabIndex={0}
             className="tool-button"
-            aria-label="Aggiungi colore"
+            aria-label="Add colour"
             disabled={theme.palette.length >= 32}
             onClick={() => {
               let n = theme.palette.length + 1;
-              while (theme.palette.some((p) => p.id === `colore-${n}`)) n++;
+              while (theme.palette.some((p) => p.id === `colour-${n}`)) n++;
               report(
                 store.execute(
                   editTheme((t) => {
-                    t.palette.push({ id: `colore-${n}`, value: "#5b6474" });
+                    t.palette.push({ id: `colour-${n}`, value: "#5b6474" });
                   }),
                 ),
               );
             }}
           >
             <Icon name="plus" />
-            Colore
+            Colour
           </button>
         </div>
         <div className="inspector-group">
-          <h3>Ruoli</h3>
+          <h3>Roles</h3>
           <div className="prop-grid two">
             {roles.map(([role, label, short]) => (
               <label key={role} className="prop">
@@ -155,13 +155,13 @@ export function ThemePanel({
         </div>
         <div className="inspector-group">
           <h3>
-            Tipografia <span>font locali · px</span>
+            Typography <span>local fonts · px</span>
           </h3>
           <div className="prop-grid two">
             {(
               [
-                ["body", "Font del testo", "Testo"],
-                ["heading", "Font dei titoli", "Titoli"],
+                ["body", "Body font", "Text"],
+                ["heading", "Heading font", "Headings"],
               ] as const
             ).map(([slot, label, short]) => (
               <label key={slot} className="prop">
@@ -188,8 +188,8 @@ export function ThemePanel({
               </label>
             ))}
             <Numeric
-              label="Corpo del testo"
-              short="Corpo"
+              label="Body text size"
+              short="Body"
               value={theme.typeScale.body}
               apply={(value) =>
                 report(
@@ -202,7 +202,7 @@ export function ThemePanel({
               }
             />
             <Numeric
-              label="Titoli"
+              label="Headings"
               value={theme.typeScale.title}
               apply={(value) =>
                 report(
@@ -216,16 +216,16 @@ export function ThemePanel({
             />
           </div>
         </div>
-        <section className="inspector-group" aria-label="Contrasto del tema">
-          <h3>Contrasto</h3>
+        <section className="inspector-group" aria-label="Theme contrast">
+          <h3>Contrast</h3>
           {issues.length ? (
             <ul className="contrast-list">
               {issues.map((issue) => (
                 <li key={issue.pointer}>
                   <Icon name="warning" />
                   <span>
-                    {issue.ratio.toFixed(2)}:1, sotto {issue.minimum}:1 (
-                    {issue.kind === "text" ? "testo" : "componenti"}):{" "}
+                    {issue.ratio.toFixed(2)}:1, below {issue.minimum}:1 (
+                    {issue.kind === "text" ? "text" : "components"}):{" "}
                     {where(document, issue.pointer)}
                   </span>
                 </li>
@@ -233,7 +233,7 @@ export function ThemePanel({
             </ul>
           ) : (
             <p className="panel-note">
-              Sufficiente: 4,5:1 per il testo, 3:1 per i componenti.
+              Sufficient: 4.5:1 for text, 3:1 for components.
             </p>
           )}
         </section>

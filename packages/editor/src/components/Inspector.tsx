@@ -27,7 +27,7 @@ export function Numeric({
     const parsed = parseFinite(draft);
     const result = parsed.ok ? apply(parsed.value) : parsed;
     setError(
-      result.ok ? "" : (result.diagnostics[0]?.message ?? "Valore non valido."),
+      result.ok ? "" : (result.diagnostics[0]?.message ?? "Invalid value."),
     );
   }
   return (
@@ -93,7 +93,7 @@ export function TextField({
   function commit() {
     const result = apply(draft);
     setError(
-      result.ok ? "" : (result.diagnostics[0]?.message ?? "Valore non valido."),
+      result.ok ? "" : (result.diagnostics[0]?.message ?? "Invalid value."),
     );
   }
   const props = {
@@ -154,7 +154,7 @@ export function Inspector({
   if (!scene)
     return (
       <p className="empty-inspector">
-        Seleziona una scena per modificarne lo spazio e i contenuti.
+        Select a scene to edit its space and blocks.
       </p>
     );
   const edit = (patch: Partial<Scene>) =>
@@ -170,15 +170,15 @@ export function Inspector({
     <div className="inspector-content">
       <div className="inspector-group">
         <h3>
-          Scena{" "}
+          Scene{" "}
           <span className="chip">
             {scene.layout === "canvas" ? "Canvas" : "Flow"}
           </span>
         </h3>
         <TextField
           key={`title-${scene.id}`}
-          label="Titolo scena"
-          short="Titolo"
+          label="Scene title"
+          short="Title"
           value={scene.title}
           apply={text("title")}
           onEnd={end}
@@ -186,9 +186,9 @@ export function Inspector({
       </div>
       <fieldset className="inline-fields">
         <legend>
-          Trasformazione <span>px · ° Rz Ry Rx</span>
+          Transform <span>px · ° Rz Ry Rx</span>
         </legend>
-        <PropRow label="Posizione">
+        <PropRow label="Position">
           {["X", "Y", "Z"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-p${i}`}
@@ -202,8 +202,8 @@ export function Inspector({
             />
           ))}
         </PropRow>
-        <PropRow label="Rotazione">
-          {["Rotazione X", "Rotazione Y", "Rotazione Z"].map((axis, i) => (
+        <PropRow label="Rotation">
+          {["Rotation X", "Rotation Y", "Rotation Z"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-r${i}`}
               label={axis}
@@ -217,12 +217,12 @@ export function Inspector({
             />
           ))}
         </PropRow>
-        <PropRow label="Dimensioni">
-          {["Larghezza", "Altezza"].map((axis, i) => (
+        <PropRow label="Size">
+          {["Width", "Height"].map((axis, i) => (
             <Numeric
               key={`${scene.id}-s${i}`}
               label={axis}
-              short={i ? "A" : "L"}
+              short={i ? "H" : "W"}
               value={scene.size[i]!}
               apply={(value) => {
                 const size: [number, number] = [...scene.size];
@@ -233,7 +233,7 @@ export function Inspector({
           ))}
           <Numeric
             key={`${scene.id}-scale`}
-            label="Scala"
+            label="Scale"
             short="×"
             value={scene.scale}
             apply={(scale) => edit({ scale })}
@@ -243,7 +243,7 @@ export function Inspector({
       <ContentPanel store={store} scene={scene} />
       <TextField
         key={`${scene.id}-notes`}
-        label="Note relatore"
+        label="Speaker notes"
         value={scene.notes}
         multiline
         apply={text("notes")}

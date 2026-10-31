@@ -64,7 +64,7 @@ it.each([new Error("QuotaExceededError"), new StorageConflict()])(
     const document = emptyProject(),
       autosave = new Autosave(new Repo(), new Map(), (m) => warnings.push(m));
     await autosave.flush(document);
-    expect(warnings[0]).toContain("Salva JSON");
+    expect(warnings[0]).toContain("Save JSON");
     expect(document.schemaVersion).toBe("1.3.0");
     autosave.dispose();
   },
@@ -73,11 +73,11 @@ it("open limits name the file kind that exceeded them", () => {
   const MiB = 1024 * 1024;
   expect(openLimitError({ name: "a.json", size: 10 * MiB })).toBeNull();
   expect(openLimitError({ name: "a.json", size: 10 * MiB + 1 })).toBe(
-    "Il file JSON supera 10 MiB.",
+    "The JSON file exceeds 10 MiB.",
   );
   expect(openLimitError({ name: "a.spatialdeck", size: 220 * MiB })).toBeNull();
   expect(openLimitError({ name: "a.spatialdeck", size: 220 * MiB + 1 })).toBe(
-    "L’archivio .spatialdeck supera 220 MiB.",
+    "The .spatialdeck archive exceeds 220 MiB.",
   );
 });
 it("generates v4 IDs without randomUUID, as in non-secure contexts", () => {

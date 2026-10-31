@@ -84,7 +84,7 @@ describe("asset signatures", () => {
     ["unterminated DOCTYPE", '<!DOCTYPE svg [ <!ENTITY a "x"> <svg/>'],
   ])("rejects non-SVG: %s", async (_name, text) => {
     const { asset, blob } = resource(encoder.encode(text), "image/svg+xml");
-    await expect(verifyAsset(asset, blob)).rejects.toThrow(/firma/);
+    await expect(verifyAsset(asset, blob)).rejects.toThrow(/signature/);
   });
   it.each([
     ["VTT 2-byte", "text/vtt", "WEBVTT\n\n00:00.000 --> 00:01.000\n", "è", 1],
@@ -160,7 +160,7 @@ describe("digest outside secure contexts", () => {
     const other = resource(bytes, "text/vtt");
     await expect(
       verifyAsset({ ...other.asset, sha256: "f".repeat(64) }, other.blob),
-    ).rejects.toThrow(/Digest/);
+    ).rejects.toThrow(/digest/i);
     const lease = await createAssetResolver(
       [asset],
       new Map([[asset.id, blob]]),
@@ -181,7 +181,7 @@ describe("verification cache", () => {
     expect(digest).toHaveBeenCalledTimes(1);
     await expect(
       verifyAsset({ ...asset, sha256: "0".repeat(64) }, blob),
-    ).rejects.toThrow(/Digest/);
+    ).rejects.toThrow(/digest/i);
     const copy = new Blob([bytes], { type: "text/vtt" });
     await verifyAsset(asset, copy);
     expect(digest).toHaveBeenCalledTimes(2);
@@ -190,7 +190,7 @@ describe("verification cache", () => {
         { ...asset, sha256: reference(encoder.encode("other")) },
         copy,
       ),
-    ).rejects.toThrow(/Digest/);
+    ).rejects.toThrow(/digest/i);
     expect(digest).toHaveBeenCalledTimes(2);
   });
 });
@@ -220,16 +220,16 @@ describe("binary signatures", () => {
       await expect(verifyAsset(asset, blob)).resolves.toBeUndefined();
       const zeros = resource(new Uint8Array(bytes.length), mime);
       await expect(verifyAsset(zeros.asset, zeros.blob)).rejects.toThrow(
-        /firma/,
+        /signature/,
       );
     },
   );
   it("rejects unsupported MIME types and files over the size limit", async () => {
     const pdf = resource(bytesOf("%PDF-1.7"), "application/pdf");
-    await expect(verifyAsset(pdf.asset, pdf.blob)).rejects.toThrow(/firma/);
+    await expect(verifyAsset(pdf.asset, pdf.blob)).rejects.toThrow(/signature/);
     const { asset, blob } = resource(bytesOf("WEBVTT\n"), "text/vtt");
     await expect(
       verifyAsset({ ...asset, byteLength: 60 * 1024 * 1024 }, blob),
-    ).rejects.toThrow(/Dimensione/);
+    ).rejects.toThrow(/asset size/);
   });
 });

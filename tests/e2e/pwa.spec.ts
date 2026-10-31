@@ -104,7 +104,7 @@ test("Studio shell: offline reload with the IndexedDB project, explicit update k
       first.filter((k) => k.startsWith("spatialdeck-studio-")),
     ).toHaveLength(1);
     // Work that exists only in IndexedDB (autosave), plus a cache of another app.
-    await page.getByRole("button", { name: "Crea la prima scena" }).click();
+    await page.getByRole("button", { name: "Create the first scene" }).click();
     await expect
       .poll(
         () =>
@@ -127,9 +127,9 @@ test("Studio shell: offline reload with the IndexedDB project, explicit update k
     await page.reload();
     await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
     await expect(
-      page.getByRole("dialog", { name: "Recupero locale disponibile" }),
+      page.getByRole("dialog", { name: "Local recovery available" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Recupera revisione" }).click();
+    await page.getByRole("button", { name: "Recover revision" }).click();
     await expect
       .poll(() =>
         page.evaluate(
@@ -155,7 +155,7 @@ test("Studio shell: offline reload with the IndexedDB project, explicit update k
     );
     await Promise.all([
       page.waitForEvent("load"),
-      notice.getByRole("button", { name: "Aggiorna e ricarica" }).click(),
+      notice.getByRole("button", { name: "Update and reload" }).click(),
     ]);
     await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
     const after = await shellCaches(page);

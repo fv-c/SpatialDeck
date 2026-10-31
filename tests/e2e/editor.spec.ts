@@ -13,7 +13,7 @@ async function open(page: Page) {
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
 }
 async function upload(page: Page, document: unknown = fixture) {
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(document)),
@@ -56,14 +56,12 @@ test("editor → real JSON download → new browser session → player preserves
 }, info) => {
   await open(page);
   for (let i = 1; i <= 3; i++) {
-    await page
-      .getByRole("button", { name: "Nuova scena", exact: true })
-      .click();
-    await page.getByLabel("Titolo scena", { exact: true }).fill(`Idea ${i}`);
-    await page.getByLabel("Titolo scena", { exact: true }).press("Tab");
+    await page.getByRole("button", { name: "New scene", exact: true }).click();
+    await page.getByLabel("Scene title", { exact: true }).fill(`Idea ${i}`);
+    await page.getByLabel("Scene title", { exact: true }).press("Tab");
   }
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(3);
   await page.getByRole("button", { name: /Idea 2/ }).click();
   const selected = await page.evaluate(
@@ -89,31 +87,31 @@ test("editor → real JSON download → new browser session → player preserves
     ["X", "333"],
     ["Y", "-120"],
     ["Z", "175"],
-    ["Rotazione X", "12"],
-    ["Rotazione Y", "23"],
-    ["Rotazione Z", "34"],
-    ["Scala", "1.4"],
-    ["Larghezza", "880"],
-    ["Altezza", "500"],
+    ["Rotation X", "12"],
+    ["Rotation Y", "23"],
+    ["Rotation Z", "34"],
+    ["Scale", "1.4"],
+    ["Width", "880"],
+    ["Height", "500"],
   ])
     await number(page, label!, value!);
   await number(page, "X", "555");
-  await page.getByRole("button", { name: "Annulla", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(
     page.getByRole("textbox", { name: "X", exact: true }),
   ).toHaveValue("333");
-  await page.getByRole("button", { name: "Ripristina", exact: true }).click();
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(
     page.getByRole("textbox", { name: "X", exact: true }),
   ).toHaveValue("555");
   await page
-    .getByLabel("Testo 1", { exact: true })
-    .fill("Una forma di pensiero nello spazio <script>letterale</script>");
-  await page.getByLabel("Testo 1", { exact: true }).press("Tab");
+    .getByLabel("Text 1", { exact: true })
+    .fill("A way of thinking in space <script>literal</script>");
+  await page.getByLabel("Text 1", { exact: true }).press("Tab");
   await page
-    .getByLabel("Note relatore")
-    .fill("Nota privata, conservata nel documento.");
-  await page.getByLabel("Note relatore").press("Tab");
+    .getByLabel("Speaker notes")
+    .fill("Private note, kept in the document.");
+  await page.getByLabel("Speaker notes").press("Tab");
   const document = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
@@ -128,7 +126,7 @@ test("editor → real JSON download → new browser session → player preserves
     ),
     points = await landmarks(page);
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   const download = await downloadPromise;
   const downloadPath = (await download.path())!;
   const saved = JSON.parse(
@@ -147,7 +145,7 @@ test("editor → real JSON download → new browser session → player preserves
     }),
     reopened = await context.newPage();
   await open(reopened);
-  await reopened.getByLabel("File progetto JSON").setInputFiles(downloadPath);
+  await reopened.getByLabel("JSON project file").setInputFiles(downloadPath);
   await expect
     .poll(() =>
       reopened.evaluate(() => window.studio!.store.getSnapshot().document),
@@ -163,7 +161,7 @@ test("editor → real JSON download → new browser session → player preserves
   for (let i = 0; i < points.length; i++)
     for (let j = 0; j < 2; j++)
       expect(Math.abs(points[i]![j]! - reopenedPoints[i]![j]!)).toBeLessThan(1);
-  await reopened.getByRole("button", { name: "Presenta" }).click();
+  await reopened.getByRole("button", { name: "Present", exact: true }).click();
   const nodeId = saved.paths[0]!.nodes.find((n) => n.sceneId === selected)!.id;
   await reopened.evaluate(async (nodeId) => {
     await window.studio!.presentation!.goTo({ nodeId }, { durationMs: 0 });
@@ -204,7 +202,7 @@ test("editor → real JSON download → new browser session → player preserves
   }
   await reopened.keyboard.press("Escape");
   await expect(
-    reopened.getByRole("button", { name: "Presenta" }),
+    reopened.getByRole("button", { name: "Present", exact: true }),
   ).toBeFocused();
   expect(
     await reopened.evaluate(() => window.studio!.store.getSnapshot().document),
@@ -216,8 +214,8 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
 }, info) => {
   await open(page);
   await upload(page);
-  await page.getByLabel("Note relatore").fill("Recovered note");
-  await page.getByLabel("Note relatore").press("Tab");
+  await page.getByLabel("Speaker notes").fill("Recovered note");
+  await page.getByLabel("Speaker notes").press("Tab");
   await expect
     .poll(() =>
       page.evaluate(
@@ -241,7 +239,7 @@ test("real IndexedDB reload offers recovery; ten revisions retained and stale wr
       () => window.studio!.store.getSnapshot().document.scenes.length,
     ),
   ).toBe(0);
-  await page.getByRole("button", { name: "Recupera revisione" }).click();
+  await page.getByRole("button", { name: "Recover revision" }).click();
   await expect
     .poll(() =>
       page.evaluate(() => window.studio!.store.getSnapshot().document),
@@ -282,8 +280,8 @@ test("two tabs detect concurrent revisions and keep the losing document download
 }) => {
   await open(page);
   await upload(page);
-  await page.getByLabel("Note relatore").fill("first tab");
-  await page.getByLabel("Note relatore").press("Tab");
+  await page.getByLabel("Speaker notes").fill("first tab");
+  await page.getByLabel("Speaker notes").press("Tab");
   await expect
     .poll(() =>
       page.evaluate(
@@ -293,9 +291,9 @@ test("two tabs detect concurrent revisions and keep the losing document download
     .toBe(1);
   const second = await context.newPage();
   await open(second);
-  await second.getByRole("button", { name: "Recupera revisione" }).click();
-  await page.getByLabel("Note relatore").fill("winner");
-  await page.getByLabel("Note relatore").press("Tab");
+  await second.getByRole("button", { name: "Recover revision" }).click();
+  await page.getByLabel("Speaker notes").fill("winner");
+  await page.getByLabel("Speaker notes").press("Tab");
   await expect
     .poll(() =>
       page.evaluate(
@@ -305,16 +303,16 @@ test("two tabs detect concurrent revisions and keep the losing document download
       ),
     )
     .toBe("winner");
-  await second.getByLabel("Note relatore").fill("loser kept in memory");
-  await second.getByLabel("Note relatore").press("Tab");
-  await expect(second.locator(".warning")).toContainText("Un’altra scheda");
+  await second.getByLabel("Speaker notes").fill("loser kept in memory");
+  await second.getByLabel("Speaker notes").press("Tab");
+  await expect(second.locator(".warning")).toContainText("Another tab");
   expect(
     await second.evaluate(
       () => window.studio!.store.getSnapshot().document.scenes[0]!.notes,
     ),
   ).toBe("loser kept in memory");
   const dl = second.waitForEvent("download");
-  await second.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await second.getByRole("button", { name: "Save JSON", exact: true }).click();
   expect((await dl).suggestedFilename()).toMatch(/\.json$/);
 });
 test("denied IndexedDB and quota failure keep document, manual save, and atomic heads/recovery", async ({
@@ -328,14 +326,12 @@ test("denied IndexedDB and quota failure keep document, manual save, and atomic 
     });
   });
   await open(page);
-  await expect(page.locator(".warning")).toContainText(
-    "Recupero non disponibile",
-  );
-  await page.getByRole("button", { name: "Nuova scena", exact: true }).click();
+  await expect(page.locator(".warning")).toContainText("Recovery unavailable");
+  await page.getByRole("button", { name: "New scene", exact: true }).click();
   const dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   await dl;
-  await expect(page.locator(".warning")).toContainText("Salva JSON");
+  await expect(page.locator(".warning")).toContainText("Save JSON");
 });
 test("quota injection rolls back documents and recovery in the same real transaction", async ({
   page,
@@ -381,12 +377,12 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
 }) => {
   await open(page);
   await upload(page);
-  await page.getByLabel("Note relatore").fill("active");
-  await page.getByLabel("Note relatore").press("Tab");
+  await page.getByLabel("Speaker notes").fill("active");
+  await page.getByLabel("Speaker notes").press("Tab");
   const before = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "bad.json",
     mimeType: "application/json",
     buffer: Buffer.from("bad json"),
@@ -398,21 +394,21 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
   await upload(page);
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
-    .getByRole("button", { name: "Annulla", exact: true })
+    .getByRole("button", { name: "Cancel", exact: true })
     .last()
     .click();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
-  await number(page, "Scala", "0");
+  await number(page, "Scale", "0");
   await expect(
-    page.getByRole("textbox", { name: "Scala", exact: true }),
+    page.getByRole("textbox", { name: "Scale", exact: true }),
   ).toHaveAttribute("aria-invalid", "true");
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await page
-    .getByRole("textbox", { name: "Scala", exact: true })
+    .getByRole("textbox", { name: "Scale", exact: true })
     .press("Escape");
   const rect = page.locator('[data-map-scene="intro"] rect'),
     box = (await rect.boundingBox())!;
@@ -428,23 +424,21 @@ test("invalid JSON, cancel dirty open, number errors, drag Escape, duplicate/del
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
   await page
-    .getByRole("button", { name: "Duplica scena", exact: true })
+    .getByRole("button", { name: "Duplicate scene", exact: true })
     .click();
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(4);
-  await page
-    .getByRole("button", { name: "Elimina scena", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Delete scene", exact: true }).click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Elimina scena", exact: true })
+    .getByRole("button", { name: "Delete scene", exact: true })
     .click();
-  await page.getByRole("button", { name: "Annulla", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(4);
-  await page.getByRole("button", { name: "Annulla", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(before);
@@ -471,23 +465,23 @@ test("essential authoring workflow is keyboard-only, including file open/save an
     throw new Error(`Keyboard did not reach ${label}`);
   }
   for (let i = 0; i < 3; i++) {
-    await reach("Nuova scena");
+    await reach("New scene");
     await page.keyboard.press("Enter");
   }
   await reach("X", "textbox");
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type("250");
   await page.keyboard.press("Tab");
-  await reach("Testo 1", "textbox");
+  await reach("Text 1", "textbox");
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type("Keyboard text");
   await page.keyboard.press("Tab");
-  await reach("Note relatore", "textbox");
+  await reach("Speaker notes", "textbox");
   await page.keyboard.type("Keyboard notes");
   await page.keyboard.press("Tab");
-  await reach("Annulla", "button", true);
+  await reach("Undo", "button", true);
   await page.keyboard.press("Enter");
-  await reach("Ripristina");
+  await reach("Redo");
   await page.keyboard.press("Enter");
   const model = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
@@ -495,7 +489,7 @@ test("essential authoring workflow is keyboard-only, including file open/save an
   const dl = page.waitForEvent("download");
   await page.keyboard.press("ControlOrMeta+s");
   const path = (await (await dl).path())!;
-  await reach("Apri", "button", true);
+  await reach("Open", "button", true);
   const chooser = page.waitForEvent("filechooser");
   await page.keyboard.press("Enter");
   await (await chooser).setFiles(path);
@@ -504,13 +498,15 @@ test("essential authoring workflow is keyboard-only, including file open/save an
       page.evaluate(() => window.studio!.store.getSnapshot().document),
     )
     .toEqual(model);
-  await reach("Presenta");
+  await reach("Present");
   await page.keyboard.press("Enter");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Presenta" })).toBeFocused();
+  await expect(
+    page.getByRole("button", { name: "Present", exact: true }),
+  ).toBeFocused();
   expect(
     await page.evaluate(() => window.studio!.store.getSnapshot().document),
   ).toEqual(model);
@@ -528,14 +524,16 @@ test("tablet and mobile remain usable, collapsible panels and reduced motion pre
         () => document.documentElement.scrollWidth <= window.innerWidth,
       ),
     ).toBe(true);
-    await expect(page.getByRole("button", { name: "Presenta" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Present", exact: true }),
+    ).toBeVisible();
     if (width === 390 && info.project.name === "chromium")
       await page.screenshot({
         path: evidencePath("regressions/editor-mobile.png"),
         fullPage: true,
       });
   }
-  await page.getByRole("button", { name: "Presenta" }).click();
+  await page.getByRole("button", { name: "Present", exact: true }).click();
   await page.locator(".presentation-player").focus();
   await page.keyboard.press("ArrowRight");
   expect(
@@ -588,7 +586,7 @@ test("player updateDocument validates atomically, cancels transitions and rebuil
     history: 1,
     count: 1,
   });
-  await page.getByRole("button", { name: "Presenta" }).click();
+  await page.getByRole("button", { name: "Present", exact: true }).click();
   const state = await page.evaluate(async () => {
     const player = window.studio!.presentation!,
       doc = structuredClone(window.studio!.store.getSnapshot().document);
@@ -619,7 +617,7 @@ test("preview coalesces edits, preserves input focus and disposes players when c
   await expect
     .poll(() => page.evaluate(() => window.studio!.preview!.getState().nodeId))
     .toBe("n1");
-  await page.getByLabel("Note relatore").focus();
+  await page.getByLabel("Speaker notes").focus();
   const result = await page.evaluate(async () => {
     const player = window.studio!.preview!;
     let changes = 0;
@@ -643,7 +641,7 @@ test("preview coalesces edits, preserves input focus and disposes players when c
   });
   expect(result.changes).toBeLessThanOrEqual(1);
   expect(result.changes).toBeGreaterThan(0);
-  expect(result.focused).toBe("Note relatore");
+  expect(result.focused).toBe("Speaker notes");
   expect(result.pose[0]).toBe(29);
   const disposed = await page.evaluate(() => {
     const player = window.studio!.preview!;
@@ -651,7 +649,7 @@ test("preview coalesces edits, preserves input focus and disposes players when c
     return player.getState().status;
   });
   expect(disposed).toBe("idle");
-  await page.getByRole("button", { name: "Anteprima", exact: true }).click();
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
   expect(
     await page.evaluate(
       () =>
@@ -663,7 +661,7 @@ test("preview coalesces edits, preserves input focus and disposes players when c
     ),
   ).toBe("destroyed");
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(0);
-  await page.getByRole("button", { name: "Anteprima", exact: true }).click();
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(page.locator(".preview-player .sd-player")).toHaveCount(1);
 });
 test("player invalid update during transition leaves it running, active deletion resets to start and then empty", async ({
@@ -671,7 +669,7 @@ test("player invalid update during transition leaves it running, active deletion
 }) => {
   await open(page);
   await upload(page);
-  await page.getByRole("button", { name: "Presenta" }).click();
+  await page.getByRole("button", { name: "Present", exact: true }).click();
   const result = await page.evaluate(async () => {
     const player = window.studio!.presentation!,
       doc = structuredClone(window.studio!.store.getSnapshot().document);
@@ -713,7 +711,7 @@ test("save shortcut commits the focused text draft before downloading the valida
 }) => {
   await open(page);
   await upload(page);
-  await page.getByLabel("Note relatore").fill("Still focused when saving");
+  await page.getByLabel("Speaker notes").fill("Still focused when saving");
   const download = page.waitForEvent("download");
   await page.keyboard.press("ControlOrMeta+s");
   const saved = JSON.parse(

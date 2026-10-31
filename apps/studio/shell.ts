@@ -12,10 +12,10 @@ function banner(registration: ServiceWorkerRegistration) {
   bar.setAttribute("role", "status");
   const text = document.createElement("span");
   text.textContent =
-    "È disponibile una nuova versione di Studio. I progetti locali restano.";
+    "A new version of Studio is available. Local projects are kept.";
   const button = document.createElement("button");
   button.type = "button";
-  button.textContent = "Aggiorna e ricarica";
+  button.textContent = "Update and reload";
   button.addEventListener("click", async () => {
     button.disabled = true;
     const pending: Promise<unknown>[] = [];
@@ -38,7 +38,7 @@ function banner(registration: ServiceWorkerRegistration) {
   });
   const later = document.createElement("button");
   later.type = "button";
-  later.textContent = "Più tardi";
+  later.textContent = "Later";
   later.addEventListener("click", () => bar.remove());
   bar.append(text, button, later);
   document.body.append(bar);

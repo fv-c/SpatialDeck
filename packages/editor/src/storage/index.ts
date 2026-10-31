@@ -21,14 +21,14 @@ export interface Revision {
 export class StorageConflict extends Error {
   constructor() {
     super(
-      "Un’altra scheda ha salvato una revisione più recente. Salva una copia JSON del lavoro attivo.",
+      "Another tab saved a newer revision. Save a JSON copy of the active work.",
     );
   }
 }
 const NEWER =
-  "Una versione più recente di SpatialDeck Studio ha aggiornato l’archivio locale in un’altra scheda. Autosave e recupero sono sospesi: il lavoro resta in memoria, usa Salva JSON e ricarica la pagina.";
+  "A newer version of SpatialDeck Studio upgraded the local storage in another tab. Autosave and recovery are suspended: the work stays in memory; use Save JSON and reload the page.";
 const BLOCKED =
-  "Archivio locale bloccato da un’altra scheda di SpatialDeck Studio con una versione precedente. Chiudi o ricarica le altre schede: l’autosave riprende da solo e il lavoro resta in memoria.";
+  "Local storage is blocked by another SpatialDeck Studio tab running an older version. Close or reload the other tabs: autosave resumes on its own and the work stays in memory.";
 export class StorageVersionError extends Error {
   constructor() {
     super(NEWER);
@@ -44,8 +44,8 @@ export function openLimitError(file: {
   if (file.size <= limit) return null;
   const mib = limit / 1024 / 1024;
   return archive
-    ? `L’archivio .spatialdeck supera ${mib} MiB.`
-    : `Il file JSON supera ${mib} MiB.`;
+    ? `The .spatialdeck archive exceeds ${mib} MiB.`
+    : `The JSON file exceeds ${mib} MiB.`;
 }
 /** Download name from the project title: one underscore per run of other characters. */
 export function downloadName(title: string, extension: string): string {
@@ -54,7 +54,7 @@ export function downloadName(title: string, extension: string): string {
 }
 /** Revision times in the language of the Studio interface, not the browser's. */
 export function revisionTime(updatedAt: number): string {
-  return new Date(updatedAt).toLocaleString("it-IT", {
+  return new Date(updatedAt).toLocaleString("en-GB", {
     dateStyle: "short",
     timeStyle: "medium",
   });
@@ -79,7 +79,7 @@ const range = (projectId: string, last = Number.MAX_SAFE_INTEGER) =>
 function done<T>(tx: IDBTransaction, value: () => T): Promise<T> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve(value());
-    tx.onabort = () => reject(tx.error ?? new Error("Transazione interrotta."));
+    tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted."));
   });
 }
 /** Deletes assets no longer referenced by any retained revision, among the given candidates only. */
@@ -201,7 +201,7 @@ export class RecoveryRepository {
     attempt = 0,
   ): Promise<Revision> {
     const validated = validateDocument(document);
-    if (!validated.ok) throw new Error("Autosave: documento invalido.");
+    if (!validated.ok) throw new Error("Autosave: invalid document.");
     // Keys come from declared or memoized digests. Verification is memoized per Blob.
     const entries: Array<{
       key: string;
@@ -307,7 +307,7 @@ export class RecoveryRepository {
           reject(
             conflict
               ? new StorageConflict()
-              : (writeError ?? tx.error ?? new Error("Autosave interrotto.")),
+              : (writeError ?? tx.error ?? new Error("Autosave aborted.")),
           );
       };
       tx.onerror = () => {
@@ -486,7 +486,7 @@ export class Autosave {
         // The repository reports its own persistent version warning.
         if (!(e instanceof StorageVersionError))
           this.report(
-            `Autosave non disponibile: ${String(e)} Il documento resta in memoria; usa Salva JSON.`,
+            `Autosave unavailable: ${String(e)} The document stays in memory; use Save JSON.`,
           );
       }
     });

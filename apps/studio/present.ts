@@ -1,8 +1,4 @@
-import {
-  createAssetResolver,
-  createPlayer,
-  italianMessages,
-} from "@spatialdeck/player";
+import { createAssetResolver, createPlayer } from "@spatialdeck/player";
 import type { AssetResolver, Player } from "@spatialdeck/player";
 import { connectPublic } from "@spatialdeck/player/presenter";
 import { createBuiltinRegistry } from "@spatialdeck/plugins/builtins";
@@ -21,15 +17,15 @@ const fullscreen = document.getElementById("fullscreen") as HTMLButtonElement;
 fullscreen.hidden = !document.fullscreenEnabled;
 fullscreen.addEventListener("click", () => {
   void document.documentElement.requestFullscreen?.().catch(() => {
-    status.textContent = "Schermo intero non disponibile in questo browser.";
+    status.textContent = "Full screen is not available in this browser.";
   });
 });
 const texts = {
-  waiting: "In attesa della vista relatore…",
-  connected: "Collegata alla vista relatore.",
-  closed: "La vista relatore ha chiuso la sessione.",
+  waiting: "Waiting for the presenter view…",
+  connected: "Connected to the presenter view.",
+  closed: "The presenter view ended the session.",
   "no-opener":
-    "Apri questa finestra dal pulsante Relatore di Studio: senza la vista relatore non può ricevere la presentazione.",
+    "Open this window from the Presenter button in Studio: without the presenter view it cannot receive the presentation.",
 } as const;
 if (!session || !/^[0-9a-f]{32}$/.test(session))
   status.textContent = texts["no-opener"];
@@ -37,7 +33,6 @@ else {
   let resolver: AssetResolver | undefined;
   const builtins = createBuiltinRegistry({ plugins: [samplePlugin()] });
   const player: Player = createPlayer({
-    messages: italianMessages,
     registry: builtins.registry,
     // Audio plays only here; the presenter previews are muted.
     muted: false,

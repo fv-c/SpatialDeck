@@ -150,13 +150,11 @@ describe("IndexedDB versionchange and blocked upgrades", () => {
       first = await repo.save(doc, 0);
     const newer = await rawOpen(factory, DATABASE_VERSION + 1);
     newer.close();
-    await until(() =>
-      warnings.some((w) => w && /versione più recente/.test(w)),
-    );
+    await until(() => warnings.some((w) => w && /newer version/.test(w)));
     await expect(repo.save(doc, first.revision)).rejects.toThrow(
-      /versione più recente/,
+      /newer version/,
     );
-    expect(warnings.at(-1)).toMatch(/versione più recente/);
+    expect(warnings.at(-1)).toMatch(/newer version/);
     expect(doc.schemaVersion).toBe("1.3.0");
     await repo.close();
   });
@@ -180,7 +178,9 @@ describe("IndexedDB versionchange and blocked upgrades", () => {
     const old = await rawOpen(factory, 2);
     const { repo, warnings } = repository(factory);
     const saving = repo.save(emptyProject(), 0);
-    await until(() => warnings.some((w) => w && /altra scheda/.test(w)));
+    await until(() =>
+      warnings.some((w) => w && /another SpatialDeck Studio tab/.test(w)),
+    );
     old.close();
     expect((await saving).revision).toBe(1);
     expect(warnings.at(-1)).toBeNull();
@@ -286,7 +286,7 @@ describe("storage edge cases", () => {
     });
     await expect(
       repo.save({ ...doc, schemaVersion: "9.9.9" } as never, 2),
-    ).rejects.toThrow(/invalido/);
+    ).rejects.toThrow(/invalid document/);
     await repo.close();
   });
   it("retries with the bytes when another tab collected a key between the two transactions", async () => {
@@ -322,7 +322,7 @@ describe("storage edge cases", () => {
     autosave.rebase(doc.id, 1);
     autosave.setRevision(doc.id, 5);
     await autosave.flush({ ...doc, metadata: { ...doc.metadata, title: "x" } });
-    expect(warnings.at(-1)).toMatch(/Autosave non disponibile/);
+    expect(warnings.at(-1)).toMatch(/Autosave unavailable/);
     autosave.dispose();
     await repo.close();
   });
@@ -353,17 +353,17 @@ describe("editor Blob library", () => {
 
 describe("names shown and written by Studio", () => {
   it("download names keep one underscore per run of other characters", () => {
-    expect(
-      downloadName("Temporal System — stress-test (modificato)", "json"),
-    ).toBe("Temporal_System_stress-test_modificato.json");
-    expect(downloadName("Città: «prova»", "spatialdeck")).toBe(
-      "Città_prova.spatialdeck",
+    expect(downloadName("Temporal System — stress-test (edited)", "json")).toBe(
+      "Temporal_System_stress-test_edited.json",
+    );
+    expect(downloadName("Café: «draft»", "spatialdeck")).toBe(
+      "Café_draft.spatialdeck",
     );
     expect(downloadName(" — ", "json")).toBe("spatialdeck.json");
   });
-  it("revision times use the Italian interface, not the browser locale", () => {
+  it("revision times use the British English interface, not the browser locale", () => {
     const time = revisionTime(Date.UTC(2026, 9, 29, 10, 11, 22));
-    expect(time).toMatch(/^\d{2}\/\d{2}\/\d{2},? \d{2}:\d{2}:\d{2}$/);
+    expect(time).toMatch(/^\d{2}\/\d{2}\/\d{4},? \d{2}:\d{2}:\d{2}$/);
     expect(time).not.toMatch(/AM|PM/);
   });
 });

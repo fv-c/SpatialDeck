@@ -311,7 +311,7 @@ export function inspectCamera(
         code: "PERSPECTIVE_PLANE",
         severity: "warning",
         pointer: `/scenes/${i}`,
-        message: `${scene.title}: punti sul piano prospettico o dietro di esso; usa la vista testuale per raggiungere la scena.`,
+        message: `${scene.title}: points on or behind the perspective plane; use the text view to reach the scene.`,
       });
   }
   return warnings;

@@ -29,7 +29,7 @@ async function gallery(page: Page) {
   await expect(
     page
       .locator('.sd-block [role="status"]')
-      .filter({ hasText: "Caricamento risorsa locale" }),
+      .filter({ hasText: "Loading local resource" }),
   ).toHaveCount(0);
   await page.evaluate(() => document.fonts.ready);
 }
@@ -57,7 +57,7 @@ test("gallery renders real rich content, isolated SVG IDs, MathML and accessible
   await gallery(page);
   await expect(
     page.locator('#player-1 [data-block-type="markdown"] strong'),
-  ).toHaveText("Testo forte");
+  ).toHaveText("Strong text");
   await expect(
     page.locator('#player-1 [data-block-type="html"] table'),
   ).toHaveCount(1);
@@ -91,9 +91,9 @@ test("gallery renders real rich content, isolated SVG IDs, MathML and accessible
     await scene(page, id);
   await expect(
     page.locator('#player-1 [data-block-type="plugin"]'),
-  ).toContainText("Plugin locale");
+  ).toContainText("Local plugin");
   await scene(page, "link");
-  await page.getByRole("button", { name: "Torna al Markdown" }).click();
+  await page.getByRole("button", { name: "Back to Markdown" }).click();
   await expect
     .poll(() => page.evaluate(() => window.demoPlayers[0]!.getState().sceneId))
     .toBe("markdown");
@@ -251,9 +251,9 @@ test("LaTeX uses real local font layout, independent macros and bounded errors",
       ...document.querySelectorAll('#player-1 [data-block-type="latex"]'),
     ].map((n) => n.textContent);
   });
-  expect(result[0]).not.toContain("Formula non valida");
-  expect(result[1]).toContain("Formula non valida");
-  expect(result[2]).toContain("Formula non valida");
+  expect(result[0]).not.toContain("Invalid formula");
+  expect(result[1]).toContain("Invalid formula");
+  expect(result[2]).toContain("Invalid formula");
 });
 test("real local audio/video advance, denied play has recovery action, exit stops/pauses and two instances isolate", async ({
   page,
@@ -267,7 +267,7 @@ test("real local audio/video advance, denied play has recovery action, exit stop
     .toBeGreaterThanOrEqual(1);
   await page
     .locator("#player-1")
-    .getByRole("button", { name: "Abilita media" })
+    .getByRole("button", { name: "Enable media" })
     .click();
   await expect
     .poll(() => audio.evaluate((a) => (a as HTMLAudioElement).currentTime))
@@ -289,7 +289,7 @@ test("real local audio/video advance, denied play has recovery action, exit stop
     .poll(() => video.evaluate((v) => (v as HTMLVideoElement).readyState))
     .toBeGreaterThanOrEqual(1);
   await page
-    .getByRole("button", { name: "Riproduci Forme in movimento", exact: true })
+    .getByRole("button", { name: "Play Moving shapes", exact: true })
     .click();
   await expect
     .poll(() => video.evaluate((v) => (v as HTMLVideoElement).currentTime))
@@ -313,11 +313,11 @@ test("real local audio/video advance, denied play has recovery action, exit stop
       Promise.reject(new DOMException("denied", "NotAllowedError"));
   });
   await page
-    .getByRole("button", { name: "Riproduci Forme in movimento", exact: true })
+    .getByRole("button", { name: "Play Moving shapes", exact: true })
     .click();
   await expect(
     page.locator('#player-1 [data-block-type="video"]'),
-  ).toContainText("Riproduzione rifiutata");
+  ).toContainText("Playback refused");
   await writeEvidence(
     `content-media-${info.project.name}.json`,
     JSON.stringify(
@@ -419,7 +419,7 @@ test("renderer/plugin exceptions are isolated, AbortSignal unsubscribes and ever
       onContentEvent: (name) => events.push(name),
     });
     await p.mount(host, d);
-    const isolated = host.textContent!.includes("Errore contenuto");
+    const isolated = host.textContent!.includes("Content error");
     await p.next();
     plugins.destroy();
     const before = cues;
@@ -482,17 +482,17 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
 }, info) => {
   await gallery(page);
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Scarica archivio gallery" }).click();
+  await page.getByRole("button", { name: "Download gallery archive" }).click();
   const source = (await (await download).path())!,
     bytes = await readFile(source);
   await page.goto(studioURL);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "gallery.spatialdeck",
     mimeType: "application/zip",
     buffer: bytes,
   });
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(11);
   const kinds = [
     "text",
@@ -509,7 +509,7 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
   ];
   for (const [i, kind] of kinds.entries()) {
     await page
-      .getByRole("list", { name: "Elenco scene" })
+      .getByRole("list", { name: "Scene list" })
       .getByRole("button")
       .nth(i)
       .click();
@@ -517,19 +517,17 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
       JSON.stringify(window.studio!.store.getSnapshot().document),
     );
     if (kind === "text") {
-      await page
-        .getByLabel("Testo 1", { exact: true })
-        .fill("Testo modificato");
-      await page.getByLabel("Testo 1", { exact: true }).press("Tab");
+      await page.getByLabel("Text 1", { exact: true }).fill("Edited text");
+      await page.getByLabel("Text 1", { exact: true }).press("Tab");
     } else {
       await page.locator(".block-editor summary").click();
-      const field = page.getByLabel(`Dati ${kind} 1`, { exact: true }),
+      const field = page.getByLabel(`Data ${kind} 1`, { exact: true }),
         data = JSON.parse(await field.inputValue()) as Record<string, unknown>;
       if ("source" in data) data.source = String(data.source) + " ";
-      else if (kind === "plugin") data.payload = { label: "Badge modificato" };
-      else if ("label" in data) data.label = String(data.label) + " modificato";
-      else if ("alt" in data) data.alt = String(data.alt) + " modificato";
-      else data.title = "Embed modificato";
+      else if (kind === "plugin") data.payload = { label: "Edited badge" };
+      else if ("label" in data) data.label = String(data.label) + " edited";
+      else if ("alt" in data) data.alt = String(data.alt) + " edited";
+      else data.title = "Edited embed";
       await field.fill(JSON.stringify(data));
       await field.press("Tab");
     }
@@ -537,13 +535,13 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
       JSON.stringify(window.studio!.store.getSnapshot().document),
     );
     expect(after).not.toBe(before);
-    await page.getByRole("button", { name: "Annulla", exact: true }).click();
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
     expect(
       await page.evaluate(() =>
         JSON.stringify(window.studio!.store.getSnapshot().document),
       ),
     ).toBe(before);
-    await page.getByRole("button", { name: "Ripristina", exact: true }).click();
+    await page.getByRole("button", { name: "Redo", exact: true }).click();
     expect(
       await page.evaluate(() =>
         JSON.stringify(window.studio!.store.getSnapshot().document),
@@ -553,18 +551,16 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
   const canonical = await page.evaluate(
     () => window.studio!.store.getSnapshot().document,
   );
-  await page.getByRole("button", { name: "Presenta", exact: true }).click();
+  await page.getByRole("button", { name: "Present", exact: true }).click();
   await expect(page.locator(".presentation-player .sd-player")).toHaveCount(1);
   await page
-    .getByRole("button", { name: "Torna all’editor", exact: true })
+    .getByRole("button", { name: "Back to the editor", exact: true })
     .click();
   const portable = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Salva archivio", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Save archive", exact: true }).click();
   const saved = await readFile((await (await portable).path())!);
   const jsonDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Salva JSON", exact: true }).click();
+  await page.getByRole("button", { name: "Save JSON", exact: true }).click();
   const json = JSON.parse(
     await readFile((await (await jsonDownload).path())!, "utf8"),
   );
@@ -572,13 +568,13 @@ test("gallery archive opens in Studio; every builtin edits with undo/redo and do
   const fresh = await browser.newContext(),
     vanilla = await fresh.newPage();
   await gallery(vanilla);
-  await vanilla.getByLabel("Apri gallery locale").setInputFiles({
+  await vanilla.getByLabel("Open local gallery").setInputFiles({
     name: "edited.spatialdeck",
     mimeType: "application/zip",
     buffer: saved,
   });
   await expect(
-    vanilla.getByRole("status").filter({ hasText: "Progetto aperto" }),
+    vanilla.getByRole("status").filter({ hasText: "Project opened" }),
   ).toHaveCount(1);
   expect(await vanilla.evaluate(() => window.demoDocument)).toEqual(canonical);
   await writeEvidence(
@@ -598,42 +594,44 @@ test("missing assets recover manually, Blob revisions survive reload and malform
   await gallery(page);
   const doc = await page.evaluate(() => window.demoDocument);
   await page.goto(studioURL);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "missing.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(doc)),
   });
-  await expect(page.locator(".asset-panel")).toContainText("mancante");
+  await expect(page.locator(".asset-panel")).toContainText("missing");
   const before = await page.evaluate(() =>
     JSON.stringify(window.studio!.store.getSnapshot().document),
   );
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "bad.spatialdeck",
     mimeType: "application/zip",
     buffer: Buffer.from("not a zip"),
   });
-  await expect(page.getByRole("alert")).toContainText("Apertura non riuscita");
+  await expect(page.getByRole("alert")).toContainText(
+    "Could not open the file",
+  );
   expect(
     await page.evaluate(() =>
       JSON.stringify(window.studio!.store.getSnapshot().document),
     ),
   ).toBe(before);
   await page
-    .getByLabel("Associa diagram", { exact: true })
+    .getByLabel("Link diagram", { exact: true })
     .setInputFiles("examples/content-gallery/assets/diagram.svg");
   await expect(page.locator(".asset-panel li").first()).toContainText(
-    "disponibile",
+    "available",
   );
   await page
-    .getByRole("list", { name: "Elenco scene" })
+    .getByRole("list", { name: "Scene list" })
     .getByRole("button")
     .nth(5)
     .click();
   await expect(
     page.locator('.preview-player [data-block-type="image"] img'),
   ).toHaveCount(1);
-  await page.getByLabel("Titolo scena", { exact: true }).fill("Image recovery");
-  await page.getByLabel("Titolo scena", { exact: true }).press("Tab");
+  await page.getByLabel("Scene title", { exact: true }).fill("Image recovery");
+  await page.getByLabel("Scene title", { exact: true }).press("Tab");
   await expect
     .poll(() =>
       page.evaluate(async () => {
@@ -646,13 +644,13 @@ test("missing assets recover manually, Blob revisions survive reload and malform
     .toBe(true);
   await page.reload();
   await expect(
-    page.getByRole("dialog", { name: "Recupero locale disponibile" }),
+    page.getByRole("dialog", { name: "Local recovery available" }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Recupera revisione", exact: true })
+    .getByRole("button", { name: "Recover revision", exact: true })
     .click();
   await expect(page.locator(".asset-panel li").first()).toContainText(
-    "disponibile",
+    "available",
   );
 });
 test("missing/incompatible plugin payload survives JSON, embed defaults closed and media decode failure remains actionable", async ({
@@ -677,7 +675,7 @@ test("missing/incompatible plugin payload survives JSON, embed defaults closed a
       payload: JSON.stringify(b.data.payload),
     };
   });
-  expect(result.text).toContain("Dati conservati");
+  expect(result.text).toContain("Data preserved");
   expect(result.frameCount).toBe(0);
   expect(result.polluted).toBeUndefined();
   expect(result.payload).toContain("__proto__");
@@ -736,7 +734,7 @@ test("missing/incompatible plugin payload survives JSON, embed defaults closed a
   ]);
   await expect(
     page.locator('#corrupt-media-test [data-block-type="video"]'),
-  ).toContainText("codec non supportato");
+  ).toContainText("codec is not supported");
   await page.evaluate(() => window.demoPlayers.at(-1)!.destroy());
 });
 test("authorized embed still needs consent, blocks scripts in opaque sandbox and can revoke consent", async ({
@@ -765,7 +763,7 @@ test("authorized embed still needs consent, blocks scripts in opaque sandbox and
       {
         id: "embed",
         type: "embed",
-        data: { url: "https://frame.example/", title: "Frame autorizzato" },
+        data: { url: "https://frame.example/", title: "Authorized frame" },
       },
     ];
     const p = window.createDemoPlayer({ registry });
@@ -775,7 +773,7 @@ test("authorized embed still needs consent, blocks scripts in opaque sandbox and
   expect(requests).toBe(0);
   await page
     .getByRole("button", {
-      name: "Consenti embed: Frame autorizzato",
+      name: "Allow embed: Authorized frame",
       exact: true,
     })
     .click();
@@ -784,7 +782,7 @@ test("authorized embed still needs consent, blocks scripts in opaque sandbox and
   await expect(frame).toHaveAttribute("csp", /script-src 'none'/);
   expect(await page.evaluate(() => window.hostileMarker)).toBeUndefined();
   await page
-    .getByRole("button", { name: "Rimuovi consenso embed", exact: true })
+    .getByRole("button", { name: "Remove embed consent", exact: true })
     .click();
   await expect(frame).toHaveCount(0);
 });
@@ -793,19 +791,19 @@ test("Blob recovery is atomic with revisions, retains old resources and collects
 }, info) => {
   await gallery(page);
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Scarica archivio gallery" }).click();
+  await page.getByRole("button", { name: "Download gallery archive" }).click();
   const bytes = await readFile((await (await download).path())!);
   await page.goto(studioURL);
-  await page.getByLabel("File progetto JSON").setInputFiles({
+  await page.getByLabel("JSON project file").setInputFiles({
     name: "gallery.spatialdeck",
     mimeType: "application/zip",
     buffer: bytes,
   });
   await expect(
-    page.getByRole("list", { name: "Elenco scene" }).locator("li"),
+    page.getByRole("list", { name: "Scene list" }).locator("li"),
   ).toHaveCount(11);
   await page
-    .getByLabel("Titolo progetto", { exact: true })
+    .getByLabel("Project title", { exact: true })
     .fill("Recovery Blobs");
   await expect
     .poll(() =>

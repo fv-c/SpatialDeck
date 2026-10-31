@@ -48,7 +48,7 @@ function crcUpdate(c: number, bytes: Uint8Array) {
 }
 /** Inspect central AND local headers before allocating decompressed output. ZIP64/multidisk/encrypted archives are deliberately unsupported. */
 function inventory(bytes: Uint8Array): Entry[] {
-  if (bytes.length > ARCHIVE_LIMIT) throw new Error("Archivio troppo grande.");
+  if (bytes.length > ARCHIVE_LIMIT) throw new Error("Archive too large.");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const u16 = (p: number) => view.getUint16(p, true),
     u32 = (p: number) => view.getUint32(p, true);
@@ -59,7 +59,7 @@ function inventory(bytes: Uint8Array): Entry[] {
   )
     end--;
   if (end < 0 || u32(end) !== 0x06054b50)
-    throw new Error("Directory ZIP assente.");
+    throw new Error("ZIP central directory missing.");
   const count = u16(end + 10),
     start = u32(end + 16),
     length = u32(end + 12);
@@ -70,7 +70,7 @@ function inventory(bytes: Uint8Array): Entry[] {
     count > ENTRY_LIMIT ||
     start + length !== end
   )
-    throw new Error("Directory ZIP non supportata.");
+    throw new Error("Unsupported ZIP central directory.");
   const names = new Set<string>(),
     entries: Entry[] = [];
   const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -78,7 +78,7 @@ function inventory(bytes: Uint8Array): Entry[] {
     total = 0;
   for (let i = 0; i < count; i++) {
     if (p + 46 > end || u32(p) !== 0x02014b50)
-      throw new Error("Header ZIP invalido.");
+      throw new Error("Invalid ZIP header.");
     const flags = u16(p + 8),
       method = u16(p + 10),
       compressed = u32(p + 20),
@@ -94,7 +94,7 @@ function inventory(bytes: Uint8Array): Entry[] {
       u16(p + 34) ||
       ((u32(p + 38) >>> 16) & 0xf000) === 0xa000
     )
-      throw new Error("Entry ZIP non supportata (link/cifratura/metodo).");
+      throw new Error("Unsupported ZIP entry (link, encryption or method).");
     const name = decoder.decode(bytes.subarray(p + 46, p + 46 + n));
     if (
       !name ||
@@ -103,35 +103,35 @@ function inventory(bytes: Uint8Array): Entry[] {
       name.includes("%") ||
       names.has(name)
     )
-      throw new Error("Path ZIP pericoloso o duplicato.");
+      throw new Error("Unsafe or duplicate ZIP path.");
     names.add(name);
     const json = name === "project.json" || name === "manifest.json";
     if (
       size > (json ? JSON_LIMIT : FILE_LIMIT) ||
       (total += size) > TOTAL_LIMIT
     )
-      throw new Error("Limite ZIP decompresso superato.");
+      throw new Error("Decompressed ZIP limit exceeded.");
     if (
       offset + 30 > start ||
       u32(offset) !== 0x04034b50 ||
       u16(offset + 6) !== flags ||
       u16(offset + 8) !== method
     )
-      throw new Error("Header locale incoerente.");
+      throw new Error("Inconsistent local header.");
     const ln = u16(offset + 26),
       le = u16(offset + 28);
     if (
       offset + 30 + ln + le + compressed > start ||
       decoder.decode(bytes.subarray(offset + 30, offset + 30 + ln)) !== name
     )
-      throw new Error("Path/header locale incoerente.");
+      throw new Error("Inconsistent path or local header.");
     if (
       !(flags & 8) &&
       (u32(offset + 18) !== compressed ||
         u32(offset + 22) !== size ||
         u32(offset + 14) !== u32(p + 16))
     )
-      throw new Error("Dimensioni/header ZIP incoerenti.");
+      throw new Error("Inconsistent ZIP sizes or header.");
     entries.push({
       name,
       size,
@@ -147,7 +147,7 @@ function inventory(bytes: Uint8Array): Entry[] {
   let cursor = 0;
   for (const entry of [...entries].sort((a, b) => a.offset - b.offset)) {
     if (entry.offset !== cursor)
-      throw new Error("Entry ZIP sovrapposte o nascoste.");
+      throw new Error("Overlapping or hidden ZIP entries.");
     cursor =
       entry.offset +
       30 +
@@ -161,15 +161,15 @@ function inventory(bytes: Uint8Array): Entry[] {
         u32(cursor + 4) !== entry.compressed ||
         u32(cursor + 8) !== entry.size
       )
-        throw new Error("Descriptor ZIP incoerente.");
+        throw new Error("Inconsistent ZIP data descriptor.");
       cursor += 12;
     }
   }
-  if (cursor !== start) throw new Error("Dati ZIP non indicizzati.");
+  if (cursor !== start) throw new Error("Unindexed ZIP data.");
   return entries;
 }
 export async function readArchive(blob: Blob): Promise<ArchiveProject> {
-  if (blob.size > ARCHIVE_LIMIT) throw new Error("Archivio troppo grande.");
+  if (blob.size > ARCHIVE_LIMIT) throw new Error("Archive too large.");
   const bytes = new Uint8Array(await blob.arrayBuffer()),
     entries = inventory(bytes),
     // Inflated chunks are kept as they come: Blobs are built from them without
@@ -179,8 +179,7 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
     failure: Error | undefined;
   const unzip = new Unzip((file) => {
     const entry = entries.find((e) => e.name === file.name);
-    if (!entry || files.has(file.name))
-      throw new Error("Entry non indicizzata.");
+    if (!entry || files.has(file.name)) throw new Error("Unindexed entry.");
     const chunks: Uint8Array[] = [];
     let size = 0,
       crc = 0xffffffff;
@@ -191,7 +190,7 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
         (size += chunk.length) > entry.size ||
         (total += chunk.length) > TOTAL_LIMIT
       ) {
-        failure = error ?? new Error("Limite dopo inflate superato.");
+        failure = error ?? new Error("Limit exceeded after inflate.");
         file.terminate();
         return;
       }
@@ -199,11 +198,11 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
       crc = crcUpdate(crc, chunk);
       if (final) {
         if (size !== entry.size) {
-          failure = new Error("Dimensione decompresso incoerente.");
+          failure = new Error("Inconsistent decompressed size.");
           return;
         }
         if ((crc ^ 0xffffffff) >>> 0 !== entry.crc) {
-          failure = new Error("CRC ZIP errato.");
+          failure = new Error("Wrong ZIP CRC.");
           return;
         }
         files.set(file.name, chunks);
@@ -217,10 +216,10 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
     unzip.push(bytes.subarray(i, i + 4096), i + 4096 >= bytes.length);
     if (failure) throw failure;
   }
-  if (files.size !== entries.length) throw new Error("Archivio incompleto.");
+  if (files.size !== entries.length) throw new Error("Incomplete archive.");
   const decode = (name: string) => {
     const parts = files.get(name);
-    if (!parts) throw new Error(`Manca ${name}`);
+    if (!parts) throw new Error(`Missing ${name}`);
     const decoder = new TextDecoder("utf-8", { fatal: true });
     return (
       parts.map((p) => decoder.decode(p, { stream: true })).join("") +
@@ -240,12 +239,12 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
     !Array.isArray(manifest.assets) ||
     manifest.assets.length !== valid.value.assets.length
   )
-    throw new Error("Manifest invalido.");
+    throw new Error("Invalid manifest.");
   const blobs = new Map<string, Blob>(),
     seen = new Set<string>();
   for (const item of manifest.assets as unknown[]) {
     if (!item || typeof item !== "object" || Array.isArray(item))
-      throw new Error("Asset manifest invalido.");
+      throw new Error("Invalid manifest asset.");
     const m = item as Record<string, unknown>,
       a = valid.value.assets.find((a) => a.id === m.id);
     if (
@@ -259,20 +258,20 @@ export async function readArchive(blob: Blob): Promise<ArchiveProject> {
       typeof m.sha256 !== "string" ||
       !/^[a-f0-9]{64}$/.test(m.sha256)
     )
-      throw new Error("Asset manifest incoerente.");
+      throw new Error("Inconsistent manifest asset.");
     const data = files.get(m.entry);
-    if (!data) throw new Error(`Risorsa assente: ${a.path}`);
+    if (!data) throw new Error(`Missing resource: ${a.path}`);
     const assetBlob = new Blob(data as Uint8Array<ArrayBuffer>[], {
       type: a.mime,
     });
     await verifyAsset(a, assetBlob);
     if ((await sha256(assetBlob)) !== m.sha256)
-      throw new Error("Digest manifest errato.");
+      throw new Error("Wrong manifest digest.");
     blobs.set(a.id, assetBlob);
     seen.add(a.id);
   }
   if (files.size !== blobs.size + 2)
-    throw new Error("File extra non dichiarati nel manifest.");
+    throw new Error("Extra files not declared in the manifest.");
   return { document: valid.value, blobs };
 }
 /** Already compressed formats are stored, not deflated again. */
@@ -298,7 +297,7 @@ export async function writeArchive(
   blobs: AssetBlobs,
 ): Promise<Blob> {
   const valid = serializeDocument(document);
-  if (!valid.ok) throw new Error("Documento invalido.");
+  if (!valid.ok) throw new Error("Invalid document.");
   const manifest = {
     version: "1.0.0",
     assets: [] as Array<{
@@ -316,7 +315,7 @@ export async function writeArchive(
     const blob = blobs.get(a.id);
     if (!blob)
       throw new Error(
-        `Risorsa mancante: ${a.id}. Associa il file prima di salvare l’archivio.`,
+        `Missing resource: ${a.id}. Link the file before saving the archive.`,
       );
     const name =
       a.path
@@ -333,7 +332,7 @@ export async function writeArchive(
   const project = strToU8(valid.value),
     index = strToU8(JSON.stringify(manifest));
   if (total + project.length + index.length > TOTAL_LIMIT)
-    throw new Error("Limite totale archivio decompresso superato.");
+    throw new Error("Total decompressed archive limit exceeded.");
   // Streaming ZIP, one chunk at a time with a yield in between: the main
   // thread stays responsive and compressed media are stored as they are.
   const output: Uint8Array[] = [];

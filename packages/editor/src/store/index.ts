@@ -161,8 +161,7 @@ export class EditorStore {
    * merge into a single undo command until endCoalesce() or any other command.
    */
   coalesce(key: string, edit: DocumentEdit): Result<void> {
-    if (this.drag)
-      return failure("DRAG_ACTIVE", "Termina o annulla il trascinamento.");
+    if (this.drag) return failure("DRAG_ACTIVE", "Finish or cancel the drag.");
     const session = this.session;
     if (
       !session ||
@@ -204,8 +203,7 @@ export class EditorStore {
     this.session = undefined;
   }
   execute(edit: DocumentEdit, selectNew = false): Result<void> {
-    if (this.drag)
-      return failure("DRAG_ACTIVE", "Termina o annulla il trascinamento.");
+    if (this.drag) return failure("DRAG_ACTIVE", "Finish or cancel the drag.");
     const before = this.document,
       selection = this.selection;
     const next = this.apply(edit);
@@ -257,7 +255,7 @@ export class EditorStore {
     }
   }
   moveDrag(x: number, y: number): Result<void> {
-    if (!this.drag) return failure("DRAG_INACTIVE", "Nessun trascinamento.");
+    if (!this.drag) return failure("DRAG_INACTIVE", "No drag in progress.");
     const candidate = structuredClone(this.drag.document);
     const scene = candidate.scenes.find((s) => s.id === this.drag!.selection)!;
     scene.position = [x, y, scene.position[2]];
@@ -268,7 +266,7 @@ export class EditorStore {
     return success(undefined);
   }
   moveWorldDrag(x: number, y: number): Result<void> {
-    if (!this.drag) return failure("DRAG_INACTIVE", "Nessun trascinamento.");
+    if (!this.drag) return failure("DRAG_INACTIVE", "No drag in progress.");
     const candidate = structuredClone(this.drag.document),
       scene = candidate.scenes.find((s) => s.id === this.drag!.selection)!;
     const world = getWorldMatrix(candidate, scene.id);
@@ -299,7 +297,7 @@ export class EditorStore {
     return true;
   }
   previewGesture(edit: DocumentEdit): Result<void> {
-    if (!this.drag) return failure("DRAG_INACTIVE", "Nessun trascinamento.");
+    if (!this.drag) return failure("DRAG_INACTIVE", "No drag in progress.");
     const edited = edit(structuredClone(this.drag.document));
     if (!edited.ok) return edited;
     updateCapabilities(edited.value);
@@ -345,6 +343,6 @@ export class EditorStore {
 }
 export function parseFinite(text: string): Result<number> {
   if (!text.trim() || !Number.isFinite(Number(text)))
-    return failure("INVALID_NUMBER", "Inserisci un numero finito.");
+    return failure("INVALID_NUMBER", "Enter a finite number.");
   return success(Number(text));
 }

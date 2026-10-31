@@ -2,8 +2,8 @@
   "schemaVersion": "1.2.0",
   "id": "content-gallery",
   "metadata": {
-    "title": "SpatialDeck · Contenuti locali",
-    "language": "it",
+    "title": "SpatialDeck · Local content",
+    "language": "en",
     "author": "SpatialDeck contributors"
   },
   "settings": {
@@ -36,11 +36,11 @@
           "id": "text-block",
           "type": "text",
           "data": {
-            "text": "Testo letterale: <script> resta visibile come testo."
+            "text": "Literal text: <script> stays visible as text."
           }
         }
       ],
-      "notes": "Note text: sorgente e asset locali.",
+      "notes": "Text notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -57,11 +57,11 @@
           "id": "markdown-block",
           "type": "markdown",
           "data": {
-            "source": "## Markdown locale\n\n**Testo forte**, *corsivo* e una lista:\n\n- nessuna CDN\n- dati conservati\n\n[Documentazione](https://example.org/)"
+            "source": "## Local Markdown\n\n**Strong text**, *italics* and a list:\n\n- no CDN\n- data preserved\n\n[Documentation](https://example.org/)"
           }
         }
       ],
-      "notes": "Note markdown: sorgente e asset locali.",
+      "notes": "Markdown notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -78,11 +78,11 @@
           "id": "html-block",
           "type": "html",
           "data": {
-            "source": "<p><strong>HTML semantico</strong> e una tabella.</p><table><caption>Dati locali</caption><tr><th scope=\"col\">Formato</th><th scope=\"col\">Stato</th></tr><tr><td>JSON</td><td>Canonico</td></tr></table>"
+            "source": "<p><strong>Semantic HTML</strong> and a table.</p><table><caption>Local data</caption><tr><th scope=\"col\">Format</th><th scope=\"col\">Status</th></tr><tr><td>JSON</td><td>Canonical</td></tr></table>"
           }
         }
       ],
-      "notes": "Note html: sorgente e asset locali.",
+      "notes": "HTML notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -100,11 +100,11 @@
           "type": "svg",
           "data": {
             "source": "<svg viewBox=\"0 0 640 180\"><defs><linearGradient id=\"blue\"><stop offset=\"0\" stop-color=\"#215baf\"/><stop offset=\"1\" stop-color=\"#be5261\"/></linearGradient></defs><rect x=\"10\" y=\"20\" width=\"600\" height=\"140\" fill=\"url(#blue)\"/></svg>",
-            "alt": "Rettangolo con sfumatura blu e rosa"
+            "alt": "Rectangle with a blue to pink gradient"
           }
         }
       ],
-      "notes": "Note svg: sorgente e asset locali.",
+      "notes": "SVG notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -123,11 +123,11 @@
           "data": {
             "source": "\\int_0^1 x^2\\,dx = \\frac{1}{3}",
             "display": true,
-            "alt": "Integrale da zero a uno di x al quadrato uguale a un terzo"
+            "alt": "Integral from zero to one of x squared equals one third"
           }
         }
       ],
-      "notes": "Note latex: sorgente e asset locali.",
+      "notes": "Latex notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -145,12 +145,12 @@
           "type": "image",
           "data": {
             "assetId": "diagram",
-            "alt": "Un cerchio blu collegato a un quadrato rosa",
+            "alt": "A blue circle connected to a pink square",
             "fit": "contain"
           }
         }
       ],
-      "notes": "Note image: sorgente e asset locali.",
+      "notes": "Image notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -168,14 +168,14 @@
           "type": "audio",
           "data": {
             "assetId": "tone",
-            "label": "Tono sinusoidale di due secondi",
+            "label": "Two-second sine tone",
             "autoplay": true,
             "loop": false,
             "onExit": "stop"
           }
         }
       ],
-      "notes": "Note audio: sorgente e asset locali.",
+      "notes": "Audio notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -193,8 +193,8 @@
           "type": "video",
           "data": {
             "assetId": "motion",
-            "label": "Forme in movimento",
-            "alt": "Pattern locale di prova di due secondi",
+            "label": "Moving shapes",
+            "alt": "Two-second local test pattern",
             "autoplay": false,
             "loop": false,
             "onExit": "pause",
@@ -203,7 +203,7 @@
           }
         }
       ],
-      "notes": "Note video: sorgente e asset locali.",
+      "notes": "Video notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -220,7 +220,7 @@
           "id": "link-block",
           "type": "link",
           "data": {
-            "label": "Torna al Markdown",
+            "label": "Back to Markdown",
             "target": {
               "pathId": "gallery",
               "nodeId": "markdown"
@@ -228,7 +228,7 @@
           }
         }
       ],
-      "notes": "Note link: sorgente e asset locali.",
+      "notes": "Link notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -246,11 +246,11 @@
           "type": "embed",
           "data": {
             "url": "https://example.org/",
-            "title": "Esempio web esterno disattivato"
+            "title": "Disabled external web example"
           }
         }
       ],
-      "notes": "Note embed: sorgente e asset locali.",
+      "notes": "Embed notes: source and local assets.",
       "extensions": {},
       "parentId": null
     },
@@ -271,12 +271,12 @@
             "apiVersion": "1.0.0",
             "dataVersion": "1.0.0",
             "payload": {
-              "label": "Plugin locale · API 1.0.0"
+              "label": "Local plugin · API 1.0.0"
             }
           }
         }
       ],
-      "notes": "Note plugin: sorgente e asset locali.",
+      "notes": "Plugin notes: source and local assets.",
       "extensions": {},
       "parentId": null
     }
@@ -307,14 +307,14 @@
       "id": "captions",
       "path": "assets/captions/captions.vtt",
       "mime": "text/vtt",
-      "byteLength": 61,
-      "sha256": "d49bb2bcbb9bd6b0e7c40675efe4046ae0053d336dcfa3ba24294cb7718948a8"
+      "byteLength": 62,
+      "sha256": "0d04aba99ffcff3ec6862d1edc1334c563d2e1a1f7444e358c2070e577857238"
     }
   ],
   "paths": [
     {
       "id": "gallery",
-      "name": "Gallery contenuti",
+      "name": "Content gallery",
       "startNodeId": "text",
       "nodes": [
         {
@@ -378,7 +378,7 @@
           "id": "edge-0",
           "from": "text",
           "to": "markdown",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -388,7 +388,7 @@
           "id": "edge-1",
           "from": "markdown",
           "to": "html",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -398,7 +398,7 @@
           "id": "edge-2",
           "from": "html",
           "to": "svg",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -408,7 +408,7 @@
           "id": "edge-3",
           "from": "svg",
           "to": "latex",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -418,7 +418,7 @@
           "id": "edge-4",
           "from": "latex",
           "to": "image",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -428,7 +428,7 @@
           "id": "edge-5",
           "from": "image",
           "to": "audio",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -438,7 +438,7 @@
           "id": "edge-6",
           "from": "audio",
           "to": "video",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -448,7 +448,7 @@
           "id": "edge-7",
           "from": "video",
           "to": "link",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -458,7 +458,7 @@
           "id": "edge-8",
           "from": "link",
           "to": "embed",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"
@@ -468,7 +468,7 @@
           "id": "edge-9",
           "from": "embed",
           "to": "plugin",
-          "label": "Avanti",
+          "label": "Next",
           "transition": {
             "durationMs": 0,
             "easing": "linear"

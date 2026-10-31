@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
@@ -7,13 +7,13 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; media-src 'self' blob:; font-src 'self'; frame-src 'none'; connect-src 'self'; object-src 'none'; base-uri 'self'"
     />
-    <title>SpatialDeck · Presentazione pubblica</title>
+    <title>SpatialDeck · Audience view</title>
   </head>
   <body class="public-window">
-    <main id="stage" aria-label="Presentazione pubblica"></main>
+    <main id="stage" aria-label="Audience presentation"></main>
     <div class="public-bar">
-      <p id="status" role="status">In attesa della vista relatore…</p>
-      <button id="fullscreen" type="button">Schermo intero</button>
+      <p id="status" role="status">Waiting for the presenter view…</p>
+      <button id="fullscreen" type="button">Full screen</button>
     </div>
     <script type="module" src="/present.ts"></script>
   </body>

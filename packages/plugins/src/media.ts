@@ -30,7 +30,7 @@ async function imageLease(
     if (!lease.blob)
       throw new AssetError(
         "signature",
-        "SVG richiede il Blob originale per sanitizzazione.",
+        "SVG needs the original Blob for sanitization.",
       );
     const fragment = sanitizeContent(
       host,
@@ -39,7 +39,7 @@ async function imageLease(
       prefix,
     );
     const svg = fragment.querySelector("svg");
-    if (!svg) throw new AssetError("signature", "SVG non valido.");
+    if (!svg) throw new AssetError("signature", "Invalid SVG.");
     const url = URL.createObjectURL(
       new Blob([new XMLSerializer().serializeToString(svg)], {
         type: "image/svg+xml",

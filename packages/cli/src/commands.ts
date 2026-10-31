@@ -76,7 +76,7 @@ export interface Report {
 const sha = (data: string | Uint8Array) =>
   createHash("sha256").update(data).digest("hex");
 const HTML_TARGET = 25 * 1024 * 1024;
-/** Relative tolerance of the rendered world matrix (CSS number serialisation). */
+/** Relative tolerance of the rendered world matrix (CSS number serialization). */
 const POSE_TOLERANCE = 1e-5;
 
 /** Every manifest field describes what this run did; `verification` lists only checks it performed. */
@@ -629,7 +629,7 @@ async function renderAt(
       `renderAt(${t}) failed: ${result.diagnostics.map((d) => d.message).join("; ")}`,
     );
   // The pose on screen must be the sampler's pose: compare the world matrix
-  // relative to its magnitude, since CSSOM serialises about six significant digits.
+  // relative to its magnitude, since CSSOM serializes about six significant digits.
   const rendered = await session.page.evaluate(() => {
     const world = document.querySelector<HTMLElement>(
       "#spatialdeck-stage .sd-world",

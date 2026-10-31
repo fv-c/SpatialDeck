@@ -105,18 +105,18 @@ test("outline reads all text in path order and navigates with reduced motion", a
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page
     .locator("#player-1")
-    .getByRole("button", { name: "Vista testuale" })
+    .getByRole("button", { name: "Text view" })
     .click();
   const outline = page.locator("#player-1 .sd-outline");
   await expect(outline).toBeVisible();
   await expect(outline.locator("p")).toHaveText([
     "SpatialDeck",
-    "Una prospettiva diversa",
-    "Collegare le idee",
+    "A different perspective",
+    "Connecting ideas",
   ]);
-  await outline.getByRole("button", { name: "Conclusione" }).click();
+  await outline.getByRole("button", { name: "Conclusion" }).click();
   await expect(
-    outline.getByRole("button", { name: "Conclusione" }),
+    outline.getByRole("button", { name: "Conclusion" }),
   ).toBeFocused();
   expect(
     await page.evaluate(() => window.demoPlayers[0]!.getState().nodeId),
@@ -418,7 +418,7 @@ test("CSS 3D unavailable falls back to a navigable outline", async ({
   await page.reload();
   const outline = page.locator("#player-1 .sd-outline");
   await expect(outline).toBeVisible();
-  await outline.getByRole("button", { name: "Dettaglio" }).click();
+  await outline.getByRole("button", { name: "Detail" }).click();
   expect(
     await page.evaluate(() => window.demoPlayers[0]!.getState().nodeId),
   ).toBe("n2");

@@ -30,7 +30,7 @@ export function AssetPanel({
   async function add(file: File, existing?: Asset) {
     try {
       if (file.size > 50 * 1024 * 1024)
-        throw new Error("Il file supera 50 MiB.");
+        throw new Error("The file exceeds 50 MiB.");
       const id = existing?.id ?? randomId(),
         name =
           file.name
@@ -78,13 +78,13 @@ export function AssetPanel({
   return (
     <details open className="asset-panel">
       <summary>
-        Risorse <span>{document.assets.length}</span>
+        Resources <span>{document.assets.length}</span>
       </summary>
       {/* The native picker stays the focusable control; the label is its visible face. */}
       <label className="file-button">
         <input
           type="file"
-          aria-label="Aggiungi risorsa locale"
+          aria-label="Add local resource"
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
@@ -92,7 +92,7 @@ export function AssetPanel({
           }}
         />
         <Icon name="plus" />
-        Aggiungi risorsa
+        Add resource
       </label>
       <ul className="asset-list">
         {document.assets.map((a) => (
@@ -108,27 +108,27 @@ export function AssetPanel({
             <span
               className={`asset-status ${blobs.has(a.id) ? "" : "missing"}`}
             >
-              {blobs.has(a.id) ? "disponibile" : "mancante"}
+              {blobs.has(a.id) ? "available" : "missing"}
             </span>
             <label className="file-button small">
               <input
                 type="file"
-                aria-label={`Associa ${a.id}`}
+                aria-label={`Link ${a.id}`}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   e.target.value = "";
                   if (file) void add(file, a);
                 }}
               />
-              {blobs.has(a.id) ? "Sostituisci" : "Associa file mancante"}
+              {blobs.has(a.id) ? "Replace" : "Link missing file"}
             </label>
           </li>
         ))}
       </ul>
       {!document.assets.length && (
         <p className="panel-note">
-          Il JSON conserva i riferimenti; l’archivio .spatialdeck include i
-          file.
+          The JSON keeps the references; the .spatialdeck archive includes the
+          files.
         </p>
       )}
       {error && <p role="alert">{error}</p>}

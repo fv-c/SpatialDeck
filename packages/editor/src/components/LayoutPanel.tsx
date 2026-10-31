@@ -31,16 +31,16 @@ import { Icon, IconButton } from "./icons.js";
 import type { IconName } from "./icons.js";
 import { blockTypes } from "./blockTypes.js";
 
-/** Italian text for the layout diagnostics a field can produce. */
+/** Studio text for the layout diagnostics a field can produce. */
 function layoutResult(result: Result<void>): Result<void> {
   if (result.ok) return result;
   const d = result.diagnostics[0];
   if (d?.code === "FRAME_OUTSIDE")
-    return failure(d.code, "Il frame deve restare dentro la scena.", d.pointer);
+    return failure(d.code, "The frame must stay inside the scene.", d.pointer);
   if (d?.code === "SCHEMA_INVALID")
     return failure(
       d.code,
-      "Valore fuori intervallo: larghezza e altezza almeno 8, rotazione tra −360 e 360, livello intero tra −1000 e 1000.",
+      "Value out of range: width and height at least 8, rotation between −360 and 360, layer an integer between −1000 and 1000.",
       d.pointer,
     );
   return result;
@@ -60,17 +60,17 @@ export function layoutDiagnostics(
   const warnings: string[] = [];
   for (const issue of contrastIssues(document)) {
     const where = issue.pointer.startsWith(`/scenes/${sceneIndex}/blocks/`)
-      ? `blocco ${Number(issue.pointer.split("/")[4]) + 1}`
+      ? `block ${Number(issue.pointer.split("/")[4]) + 1}`
       : issue.pointer === `/scenes/${sceneIndex}/appearance`
-        ? "sfondo della scena"
+        ? "scene background"
         : issue.pointer === "/theme/colors/text"
-          ? "testo del tema sullo sfondo"
+          ? "theme text on the background"
           : issue.pointer === "/theme/colors/accent"
-            ? "accento sul fondale"
+            ? "accent on the backdrop"
             : null;
     if (where)
       warnings.push(
-        `Contrasto ${issue.ratio.toFixed(2)}:1, sotto ${issue.minimum}:1 (${issue.kind === "text" ? "testo" : "componenti"}): ${where}.`,
+        `Contrast ${issue.ratio.toFixed(2)}:1, below ${issue.minimum}:1 (${issue.kind === "text" ? "text" : "components"}): ${where}.`,
       );
   }
   scene.blocks.forEach((block, i) => {
@@ -81,9 +81,7 @@ export function layoutDiagnostics(
       (element.scrollHeight > element.clientHeight + 1 ||
         element.scrollWidth > element.clientWidth + 1)
     )
-      warnings.push(
-        `Contenuto tagliato: il blocco ${i + 1} eccede il proprio frame.`,
-      );
+      warnings.push(`Clipped content: block ${i + 1} overflows its frame.`);
   });
   const content = host?.querySelector<HTMLElement>(
     `.sd-scene[data-scene-id="${scene.id}"] .sd-content`,
@@ -104,7 +102,7 @@ export function layoutDiagnostics(
     scene.blocks.forEach((block, i) => {
       if (block.frame && framesIntersect(band, block.frame))
         warnings.push(
-          `Titolo: il blocco ${i + 1} occupa la fascia del titolo visibile.`,
+          `Title: block ${i + 1} overlaps the band of the visible title.`,
         );
     });
   }
@@ -115,7 +113,7 @@ export function layoutDiagnostics(
     content.scrollHeight > content.clientHeight + 1
   )
     warnings.push(
-      `Contenuto oltre la scena: ${content.scrollHeight - content.clientHeight} px restano fuori dalla vista spaziale e vengono tagliati in PDF e video.`,
+      `Content beyond the scene: ${content.scrollHeight - content.clientHeight} px stay outside the spatial view and are cut in PDF and video.`,
     );
   scene.blocks.forEach((below, i) => {
     if (
@@ -132,7 +130,7 @@ export function layoutDiagnostics(
         framesIntersect(above.frame, below.frame!)
       )
         warnings.push(
-          `Sovrapposizione: il blocco ${j + 1} copre i controlli interattivi del blocco ${i + 1}.`,
+          `Overlap: block ${j + 1} covers the interactive controls of block ${i + 1}.`,
         );
     });
   });
@@ -140,15 +138,15 @@ export function layoutDiagnostics(
 }
 const styleOptions: Record<keyof BlockStyle, Array<[string, string]>> = {
   align: [
-    ["start", "Inizio"],
-    ["center", "Centro"],
-    ["end", "Fine"],
-    ["justify", "Giustificato"],
+    ["start", "Start"],
+    ["center", "Centre"],
+    ["end", "End"],
+    ["justify", "Justified"],
   ],
   verticalAlign: [
-    ["start", "In alto"],
-    ["center", "Al centro"],
-    ["end", "In basso"],
+    ["start", "Top"],
+    ["center", "Middle"],
+    ["end", "Bottom"],
   ],
   size: [
     ["xs", "XS"],
@@ -161,10 +159,10 @@ const styleOptions: Record<keyof BlockStyle, Array<[string, string]>> = {
   color: [],
 };
 const styleLabels: Record<keyof BlockStyle, string> = {
-  align: "Allineamento testo",
-  verticalAlign: "Allineamento verticale",
-  size: "Dimensione testo",
-  color: "Colore testo",
+  align: "Text alignment",
+  verticalAlign: "Vertical alignment",
+  size: "Text size",
+  color: "Text colour",
 };
 export function LayoutPanel({
   store,
@@ -216,7 +214,7 @@ export function LayoutPanel({
   }, [store, document, scene, host, revision]);
   const report = (result: Result<void>) => {
     const r = layoutResult(result);
-    setError(r.ok ? "" : (r.diagnostics[0]?.message ?? "Modifica rifiutata."));
+    setError(r.ok ? "" : (r.diagnostics[0]?.message ?? "Edit rejected."));
     return r;
   };
   const frames = (patch: Record<string, Frame>, message: string) => {
@@ -232,7 +230,7 @@ export function LayoutPanel({
     );
     frames(
       Object.fromEntries(framed.map((b, i) => [b.id, result[i]!])),
-      `Allineati: ${label}.`,
+      `Aligned: ${label}.`,
     );
   }
   function distribute(axis: "horizontal" | "vertical") {
@@ -244,8 +242,8 @@ export function LayoutPanel({
     frames(
       Object.fromEntries(framed.map((b, i) => [b.id, result[i]!])),
       axis === "horizontal"
-        ? "Distribuiti in orizzontale."
-        : "Distribuiti in verticale.",
+        ? "Distributed horizontally."
+        : "Distributed vertically.",
     );
   }
   function stack(order: StackOrder, label: string) {
@@ -315,7 +313,7 @@ export function LayoutPanel({
         ),
       ),
     );
-    if (r.ok) announce(`${styleLabels[key]} aggiornato.`);
+    if (r.ok) announce(`${styleLabels[key]} updated.`);
   };
   const segmented = (
     key: "align" | "verticalAlign",
@@ -342,39 +340,39 @@ export function LayoutPanel({
     </div>
   );
   const selectionText = single
-    ? `blocco ${scene.blocks.indexOf(single) + 1}`
+    ? `block ${scene.blocks.indexOf(single) + 1}`
     : chosen.length
-      ? `${chosen.length} selezionati`
-      : "nessuna selezione";
+      ? `${chosen.length} selected`
+      : "no selection";
   return (
     <section
       className="layout-panel inspector-section"
       aria-labelledby="layout-panel-title"
     >
       <div className="section-head">
-        <h2 id="layout-panel-title">Impaginazione</h2>
+        <h2 id="layout-panel-title">Layout</h2>
         <span className="chip">{canvas ? "Canvas" : "Flow"}</span>
         <div className="section-tools">
           {canvas && (
             <IconButton
               icon="layers"
-              label="Torna a flow"
-              shortcut="rimuove i frame, con conferma"
+              label="Switch to flow"
+              shortcut="removes the frames, after confirmation"
               onClick={onFlow}
             />
           )}
           <IconButton
             icon="select-all"
-            label="Seleziona tutti"
+            label="Select all"
             disabled={!scene.blocks.length}
             onClick={() => {
               onSelect(scene.blocks.map((b) => b.id));
-              announce(`Selezionati ${scene.blocks.length} blocchi.`);
+              announce(`Selected ${scene.blocks.length} blocks.`);
             }}
           />
           <IconButton
             icon="deselect"
-            label="Deseleziona"
+            label="Deselect"
             tip="left"
             disabled={!selection.length}
             onClick={() => onSelect([])}
@@ -396,8 +394,8 @@ export function LayoutPanel({
       {!canvas && (
         <div className="convert-row">
           <p>
-            I contenuti sono impilati. In canvas ognuno ha posizione,
-            dimensione, rotazione e livello.
+            The blocks are stacked. In canvas each one has a position, a size, a
+            rotation and a layer.
           </p>
           <button
             type="button"
@@ -407,7 +405,7 @@ export function LayoutPanel({
               const measured = measureFlowFrames(host, document, scene);
               if (!measured) {
                 setError(
-                  "Anteprima non pronta: attendi che la scena sia visibile e riprova.",
+                  "Preview not ready: wait until the scene is visible and try again.",
                 );
                 return;
               }
@@ -416,48 +414,48 @@ export function LayoutPanel({
               );
               if (r.ok)
                 announce(
-                  `Scena convertita in canvas: ${scene.blocks.length} frame creati.`,
+                  `Scene converted to canvas: ${scene.blocks.length} frames created.`,
                 );
             }}
           >
-            Converti in canvas
+            Convert to canvas
           </button>
         </div>
       )}
       {canvas && (
         <div className="inspector-group">
           <h3>
-            Disposizione <span>{selectionText}</span>
+            Arrangement <span>{selectionText}</span>
           </h3>
           {single?.frame && (
             <div className="prop-grid layout-numbers inline-fields">
               {frameField("x", "X frame", "X")}
               {frameField("y", "Y frame", "Y")}
-              {frameField("rotation", "Rotazione frame", "R")}
-              {frameField("width", "Larghezza frame", "L")}
-              {frameField("height", "Altezza frame", "A")}
-              {frameField("z", "Livello z", "Z")}
+              {frameField("rotation", "Frame rotation", "R")}
+              {frameField("width", "Frame width", "W")}
+              {frameField("height", "Frame height", "H")}
+              {frameField("z", "Z layer", "Z")}
             </div>
           )}
           <div
             className="tool-row"
             role="group"
-            aria-label="Allinea e distribuisci"
+            aria-label="Align and distribute"
           >
             {(
               [
-                ["left", "A sinistra", "align-left"],
-                ["center", "Al centro orizzontale", "align-center"],
-                ["right", "A destra", "align-right"],
-                ["top", "In alto", "align-top"],
-                ["middle", "Al centro verticale", "align-middle"],
-                ["bottom", "In basso", "align-bottom"],
+                ["left", "Left", "align-left"],
+                ["center", "Horizontal centre", "align-center"],
+                ["right", "Right", "align-right"],
+                ["top", "Top", "align-top"],
+                ["middle", "Vertical centre", "align-middle"],
+                ["bottom", "Bottom", "align-bottom"],
               ] as const
             ).map(([alignment, label, icon]) => (
               <IconButton
                 key={alignment}
                 icon={icon}
-                label={`Allinea ${label.toLowerCase()}`}
+                label={`Align ${label.toLowerCase()}`}
                 disabled={!framed.length}
                 onClick={() => align(alignment, label.toLowerCase())}
               />
@@ -465,25 +463,25 @@ export function LayoutPanel({
             <span className="tool-separator" aria-hidden="true" />
             <IconButton
               icon="distribute-h"
-              label="Distribuisci in orizzontale"
+              label="Distribute horizontally"
               disabled={framed.length < 3}
               onClick={() => distribute("horizontal")}
             />
             <IconButton
               icon="distribute-v"
-              label="Distribuisci in verticale"
+              label="Distribute vertically"
               tip="left"
               disabled={framed.length < 3}
               onClick={() => distribute("vertical")}
             />
           </div>
-          <div className="tool-row" role="group" aria-label="Livelli e griglia">
+          <div className="tool-row" role="group" aria-label="Layers and grid">
             {(
               [
-                ["forward", "Porta avanti", "forward"],
-                ["backward", "Porta indietro", "backward"],
-                ["front", "In primo piano", "front"],
-                ["back", "In fondo", "back"],
+                ["forward", "Bring forward", "forward"],
+                ["backward", "Send backward", "backward"],
+                ["front", "Bring to front", "front"],
+                ["back", "Send to back", "back"],
               ] as const
             ).map(([order, label, icon]) => (
               <IconButton
@@ -491,20 +489,20 @@ export function LayoutPanel({
                 icon={icon}
                 label={label}
                 disabled={!framed.length}
-                onClick={() => stack(order, `${label}: livello aggiornato.`)}
+                onClick={() => stack(order, `${label}: layer updated.`)}
               />
             ))}
             <span className="tool-separator" aria-hidden="true" />
             <IconButton
               icon="grid"
-              label="Griglia magnetica"
+              label="Snap to grid"
               pressed={grid > 0}
               onClick={() => onGrid(grid > 0 ? 0 : 16)}
             />
             {grid > 0 && (
               <select
                 className="compact-select"
-                aria-label="Passo griglia"
+                aria-label="Grid step"
                 value={grid}
                 onChange={(e) => onGrid(Number(e.target.value))}
               >
@@ -520,7 +518,7 @@ export function LayoutPanel({
       )}
       <div className="inspector-group">
         <h3>
-          Stile del blocco <span>{chosen.length ? selectionText : "—"}</span>
+          Block style <span>{chosen.length ? selectionText : "—"}</span>
         </h3>
         <div className="style-row">
           {segmented("align", {
@@ -544,7 +542,7 @@ export function LayoutPanel({
             const value = styleValue(key);
             return (
               <label key={key} className="prop">
-                <span>{key === "size" ? "Dimensione" : "Colore"}</span>
+                <span>{key === "size" ? "Size" : "Colour"}</span>
                 <select
                   aria-label={styleLabels[key]}
                   disabled={!chosen.length}
@@ -553,10 +551,10 @@ export function LayoutPanel({
                 >
                   {value === "mixed" && (
                     <option value="mixed" disabled>
-                      Valori diversi
+                      Mixed values
                     </option>
                   )}
-                  <option value="">Predefinito</option>
+                  <option value="">Default</option>
                   {options.map(([v, label]) => (
                     <option key={v} value={v}>
                       {label}
@@ -569,12 +567,12 @@ export function LayoutPanel({
         </div>
       </div>
       <div className="inspector-group">
-        <h3>Aspetto della scena</h3>
+        <h3>Scene appearance</h3>
         <div className="prop-grid two">
           <label className="prop">
-            <span>Variante</span>
+            <span>Variant</span>
             <select
-              aria-label="Variante della scena"
+              aria-label="Scene variant"
               value={scene.appearance.variant}
               onChange={(e) =>
                 report(
@@ -587,13 +585,13 @@ export function LayoutPanel({
               }
             >
               <option value="card">Card</option>
-              <option value="plain">Semplice</option>
+              <option value="plain">Plain</option>
             </select>
           </label>
           <label className="prop">
-            <span>Sfondo</span>
+            <span>Background</span>
             <select
-              aria-label="Sfondo della scena"
+              aria-label="Scene background"
               value={scene.appearance.background ?? ""}
               onChange={(e) =>
                 report(
@@ -605,7 +603,7 @@ export function LayoutPanel({
                 )
               }
             >
-              <option value="">Predefinito</option>
+              <option value="">Default</option>
               {palette.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.id}
@@ -626,18 +624,18 @@ export function LayoutPanel({
               )
             }
           />
-          <span>Titolo visibile</span>
+          <span>Visible title</span>
         </label>
         <p className="panel-note">
-          Nascosto, il titolo resta nome accessibile e voce della vista
-          testuale.
+          When hidden, the title remains the accessible name and the entry in
+          the text view.
         </p>
       </div>
       <div className="inspector-group reading-order">
         <h3>
-          Ordine di lettura <span>DOM · Tab · vista testuale</span>
+          Reading order <span>DOM · Tab · text view</span>
         </h3>
-        <ol aria-label="Ordine di lettura">
+        <ol aria-label="Reading order">
           {scene.blocks.map((block, i) => (
             <li
               key={block.id}
@@ -667,7 +665,7 @@ export function LayoutPanel({
                 {block.frame && (
                   <span
                     className="order-z"
-                    aria-label={`livello ${block.frame.z}`}
+                    aria-label={`layer ${block.frame.z}`}
                   >
                     z{block.frame.z}
                   </span>
@@ -675,33 +673,33 @@ export function LayoutPanel({
               </button>
               <IconButton
                 icon="up"
-                label={`Anticipa nella lettura il blocco ${i + 1}`}
+                label={`Move block ${i + 1} earlier in reading order`}
                 tip="left"
                 disabled={i === 0}
                 onClick={() => {
                   const r = report(
                     store.execute(moveInReadingOrder(scene.id, block.id, -1)),
                   );
-                  if (r.ok) announce(`Blocco ora in posizione ${i}.`);
+                  if (r.ok) announce(`Block now at position ${i}.`);
                 }}
               />
               <IconButton
                 icon="down"
-                label={`Posticipa nella lettura il blocco ${i + 1}`}
+                label={`Move block ${i + 1} later in reading order`}
                 tip="left"
                 disabled={i === scene.blocks.length - 1}
                 onClick={() => {
                   const r = report(
                     store.execute(moveInReadingOrder(scene.id, block.id, 1)),
                   );
-                  if (r.ok) announce(`Blocco ora in posizione ${i + 2}.`);
+                  if (r.ok) announce(`Block now at position ${i + 2}.`);
                 }}
               />
             </li>
           ))}
         </ol>
         <p className="panel-note">
-          Il livello z cambia solo la sovrapposizione, mai l’ordine di lettura.
+          The z layer only changes stacking, never the reading order.
         </p>
       </div>
       <section
@@ -709,7 +707,7 @@ export function LayoutPanel({
         aria-labelledby="layout-diagnostics-title"
       >
         <h3 id="layout-diagnostics-title">
-          Diagnostica{" "}
+          Diagnostics{" "}
           <span className={`count ${warnings.length ? "has-issues" : ""}`}>
             {warnings.length}
           </span>
@@ -724,7 +722,7 @@ export function LayoutPanel({
             ))}
           </ul>
         ) : (
-          <p className="panel-note">Nessun problema rilevato nella scena.</p>
+          <p className="panel-note">No issues found in the scene.</p>
         )}
       </section>
     </section>
